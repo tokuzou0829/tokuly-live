@@ -6,7 +6,7 @@ type CountPrpps ={
 function FetchDataComponent(props:CountPrpps) {
   const {id} = props;
   const [data, setData] = useState(''); // データの初期値は空文字列
-  const apiUrl = 'https://live.tokuly.com/nclients?app=live&name='+id;
+  const apiUrl = 'https://live-data.tokuly.com/nclients?app=live&name='+id;
 
   // データをフェッチする関数
   const fetchData = async () => {
