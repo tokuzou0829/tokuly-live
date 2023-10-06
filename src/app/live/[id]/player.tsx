@@ -22,7 +22,7 @@ class Video extends Component<VideoProps> {
   loadVideo() {
     // 受け取った id プロパティを使って動的なビデオソースURLを生成
     const { id } = this.props;
-    const videoSrc = `https://live.tokuly.com/hls/${id}.m3u8`;
+    const videoSrc = `https://live-data.tokuly.com/hls/${id}.m3u8`;
 
     if (Hls.isSupported()) {
       var hls = new Hls();
