@@ -25,12 +25,12 @@ export default function RootLayout({
       <header>
         <div className="header">
           <a href="/"><Image src={icon} style={{ height: '50px',width:'50px', marginLeft: '30px', borderRadius: '10px', aspectRatio:'1/1' }} alt="Logo" /></a>
-          <div className="header-contents"><a href="#" style={{ textDecoration: 'none' }}><p>配信中</p></a></div>
+          <div className="header-contents"><a href="/" style={{ textDecoration: 'none' }}><p>配信中</p></a></div>
           {/*
           <div className="header-login"><a href="" style={{ textDecoration: 'none' }}><p style={{ paddingLeft: '14px' }}>ログイン</p></a></div>
           <div className="header-signup"><a href="" style={{ textDecoration: 'none' }}><p style={{ paddingLeft: '14px' }}>サインアップ</p></a></div>
           */}
-          <div className="header-login"><a href="" style={{ textDecoration: 'none' }}><p style={{ paddingLeft: '14px' }}>配信する</p></a></div>
+          <div className="header-login"><a href="https://tokuly.com/dashboard/live" target='_blank' style={{ textDecoration: 'none' }}><p style={{ paddingLeft: '14px' }}>配信する</p></a></div>
           {/*
            <a href="/">
             <Image src={icon} style={{ height: '40px',width:'40px',borderRadius: '100px', marginRight:'10px' }} alt="Logo" />

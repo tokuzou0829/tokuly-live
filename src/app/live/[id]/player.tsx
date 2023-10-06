@@ -38,7 +38,7 @@ class Video extends Component<VideoProps> {
           autoPlay
           controls
           ref={this.myRef}
-          style={{ width: '100%' }}
+          style={{ width: '100%',maxHeight: 600 , background:'black'}}
         ></video>
       </>
     );

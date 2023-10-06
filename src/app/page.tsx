@@ -22,8 +22,9 @@ export default async function Home() {
       {lives.lives.length === 0 ? (
         <p style={{fontSize:20,textAlign:'center',marginTop:20}}>まだ配信は行われていないようです</p>
       ) : (
-        lives.lives.map((live, index) => (
-          <a key={index} href={"/live/"+live.stream_name} className="m-3 block">
+        <div className="flex flex-wrap">
+        {lives.lives.map((live, index) => (
+          <a key={index} href={"/live/"+live.stream_name} className="m-3 block w-[250px] shrink-0">
             <div className="relative">
               <img src={live.thumbnail_url} className='w-[250px] rounded-lg' />
               <div className='absolute bg-red-600 w-[100px] h-[25px] top-[5px] left-[5px] rounded-md'>
@@ -38,7 +39,8 @@ export default async function Home() {
               </div>
             </div>
           </a>
-        ))
+        ))}
+        </div>
       )}
     </div>
   )

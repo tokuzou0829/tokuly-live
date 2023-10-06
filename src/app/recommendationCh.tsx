@@ -7,13 +7,15 @@ type Channels = {
     name:string,
     icon_url:string,
     handle:string,
+    now_stream:boolean,
+    game:string,
   }
 export default async function RecommendationCh(){
     const response = await fetch("https://api.tokuly.com/live/channel/recommendation",{method: "POST", cache: 'no-store'});
     const channels:Channels = await response.json();
     return (
         channels.channels.map((ch,index) =>(
-            <Ch key={index} icon_url={ch.icon_url} name={ch.name} handle={ch.handle} />
+            <Ch key={index} icon_url={ch.icon_url} name={ch.name} handle={ch.handle} game={ch.game} />
         ))
     );
 }
