@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './tokuly-livestyle.css'; // スタイルシートをインポート
 import icon from './tokuly.png';
-
+import RecommendationCh from './recommendationCh';
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
@@ -26,11 +26,16 @@ export default function RootLayout({
         <div className="header">
           <a href="/"><Image src={icon} style={{ height: '50px',width:'50px', marginLeft: '30px', borderRadius: '10px', aspectRatio:'1/1' }} alt="Logo" /></a>
           <div className="header-contents"><a href="#" style={{ textDecoration: 'none' }}><p>配信中</p></a></div>
+          {/*
           <div className="header-login"><a href="" style={{ textDecoration: 'none' }}><p style={{ paddingLeft: '14px' }}>ログイン</p></a></div>
           <div className="header-signup"><a href="" style={{ textDecoration: 'none' }}><p style={{ paddingLeft: '14px' }}>サインアップ</p></a></div>
-          <a href="/">
+          */}
+          <div className="header-login"><a href="" style={{ textDecoration: 'none' }}><p style={{ paddingLeft: '14px' }}>配信する</p></a></div>
+          {/*
+           <a href="/">
             <Image src={icon} style={{ height: '40px',width:'40px',borderRadius: '100px', marginRight:'10px' }} alt="Logo" />
-          </a>
+           </a>
+          */}
         </div>
       </header>
       {/* sidebar */}
@@ -39,30 +44,7 @@ export default function RootLayout({
       <div className="sidebar">
         <div style={{ height: '120px' }}></div>
         <p style={{ fontWeight: '600', marginTop: '-43px', marginLeft: '25px', fontSize: '15px' }}>おすすめのチャンネル</p>
-
-        <div className="users"><a href="#" style={{ textDecoration: 'none',display:'flex',alignItems:'center' }}>
-          <Image src={icon} className="usersimg" alt="User" />
-          <div>
-            <p className="sidebar-text-user">Tokuzou</p>
-            <p className="sidebar-text-game">VALORANT</p>
-          </div>
-        </a></div>
-
-        <div className="users"><a href="#" style={{ textDecoration: 'none',display:'flex',alignItems:'center' }}>
-          <Image src={icon} className="usersimg" alt="User" />
-          <div>
-            <p className="sidebar-text-user">Tokuzou</p>
-            <p className="sidebar-text-game">VALORANT</p>
-          </div>
-        </a></div>
-
-        <div className="users"><a href="#" style={{ textDecoration: 'none',display:'flex',alignItems:'center' }}>
-          <Image src={icon} className="usersimg" alt="User" />
-          <div>
-            <p className="sidebar-text-user">Tokuzou</p>
-            <p className="sidebar-text-game">VALORANT</p>
-          </div>
-        </a></div>
+        <RecommendationCh />
       </div>
       {/* end-sidebar */}
       <div style={{overflowY: "scroll",width: '100%'}}>
