@@ -27,9 +27,9 @@ export default async function LivePlayer({ params }: { params: { handle: string 
     <div className="h-[100%] w-[100%]">
         {errorCode == 200 ?(
             <div className="h-[100%] w-[100%]">
-                <img src={ch.banner_url} className=" w-[100%] h-[15%] object-cover" />
+                <img src={ch.banner_url} className=" w-[100%] h-[15%] object-cover bg-[#bffff9]" />
                 <div className=" flex items-center mx-[20px] mt-[10px]">
-                    <img src={ch.icon_url} className=" w-[80px] h-[80px] rounded-full mr-[10px]" />
+                    <img src={ch.icon_url} className=" w-[80px] h-[80px] rounded-full mr-[10px]  object-cover" />
                     <div>
                         <p className=" text-xl font-semibold">{ch.name}</p>
                     </div>
@@ -47,7 +47,7 @@ export default async function LivePlayer({ params }: { params: { handle: string 
                             </div>
                         </div>
                         <div className='flex m-1'>
-                            <img src={ch.icon_url} className='w-[40px] h-[40px] rounded-full aspect-square mr-1'/>
+                            <img src={ch.icon_url} className='w-[40px] h-[40px] rounded-full aspect-square mr-1 object-cover'/>
                             <div>
                             <p className='font-bold mb-0'>{stream.title}</p>
                             <p className='mt-0 text-sm'>{ch.name}</p>

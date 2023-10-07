@@ -32,7 +32,7 @@ export default async function Home() {
               </div>
             </div>
             <div className='flex m-1'>
-              <img src={live.ch_icon} className='w-[40px] h-[40px] rounded-full aspect-square mr-1'/>
+              <img src={live.ch_icon} className='w-[40px] h-[40px] rounded-full aspect-square mr-1  object-cover'/>
               <div>
                 <p className='font-bold mb-0'>{live.title}</p>
                 <p className='mt-0 text-sm'>{live.ch_name}</p>
