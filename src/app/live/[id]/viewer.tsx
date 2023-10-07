@@ -25,7 +25,7 @@ function FetchDataComponent(props:CountPrpps) {
   // コンポーネントがマウントされたときと3秒ごとにデータをフェッチ
   useEffect(() => {
     fetchData(); // マウント時にもフェッチする
-    const intervalId = setInterval(fetchData, 3000);
+    const intervalId = setInterval(fetchData, 6000);
 
     // コンポーネントがアンマウントされたときにクリーンアップ
     return () => {
