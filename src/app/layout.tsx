@@ -30,7 +30,7 @@ export default function RootLayout({
           <div className="header-login"><a href="" style={{ textDecoration: 'none' }}><p style={{ paddingLeft: '14px' }}>ログイン</p></a></div>
           <div className="header-signup"><a href="" style={{ textDecoration: 'none' }}><p style={{ paddingLeft: '14px' }}>サインアップ</p></a></div>
           */}
-          <div className="header-login"><a href="https://tokuly.com/dashboard/live" target='_blank' style={{ textDecoration: 'none' }}><p style={{ paddingLeft: '14px' }}>配信する</p></a></div>
+          <div className="header-login"><a href="https://tokuly.com/studio" target='_blank' style={{ textDecoration: 'none' }}><p style={{ paddingLeft: '14px' }}>配信する</p></a></div>
           {/*
            <a href="/">
             <Image src={icon} style={{ height: '40px',width:'40px',borderRadius: '100px', marginRight:'10px' }} alt="Logo" />
@@ -42,8 +42,8 @@ export default function RootLayout({
 
       <div style={{ display:'flex',height: '100%'}}>
       <div className="sidebar">
-        <div style={{ height: '120px' }}></div>
-        <p style={{ fontWeight: '600', marginTop: '-43px', marginLeft: '25px', fontSize: '15px' }}>おすすめのチャンネル</p>
+        <div style={{ height: '75px' }}></div>
+        <p style={{ fontWeight: '600', marginLeft: '15px', fontSize: '15px' }}>おすすめのチャンネル</p>
         <RecommendationCh />
       </div>
       {/* end-sidebar */}
