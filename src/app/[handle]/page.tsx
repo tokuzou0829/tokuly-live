@@ -41,7 +41,7 @@ export default async function LivePlayer({ params }: { params: { handle: string 
                     {ch.streams.map((stream, index) => (
                         <a key={index} href={"/live/"+stream.stream_name} className="block w-[250px] shrink-0 mr-2">
                         <div className="relative">
-                            <img src={stream.thumbnail_url} className='w-[250px] rounded-lg' />
+                            <img src={stream.thumbnail_url} className='w-[250px] rounded-lg aspect-video object-cover' />
                             <div className='absolute bg-red-600 w-[100px] h-[25px] top-[5px] left-[5px] rounded-md'>
                             <p className=' text-white text-center	font-semibold	'>ライブ配信</p>
                             </div>
@@ -49,7 +49,7 @@ export default async function LivePlayer({ params }: { params: { handle: string 
                         <div className='flex m-1'>
                             <img src={ch.icon_url} className='w-[40px] h-[40px] rounded-full aspect-square mr-1 object-cover'/>
                             <div>
-                            <p className='font-bold mb-0'>{stream.title}</p>
+                            <p className='font-bold mb-0 truncate w-[205px]'>{stream.title}</p>
                             <p className='mt-0 text-sm'>{ch.name}</p>
                             </div>
                         </div>
