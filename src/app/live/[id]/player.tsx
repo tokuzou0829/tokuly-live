@@ -28,6 +28,10 @@ class Video extends Component<VideoProps> {
       var hls = new Hls();
       hls.loadSource(videoSrc);
       hls.attachMedia(this.myRef.current!);
+    }else{
+      var video = this.myRef.current!;
+      video.src = videoSrc;
+      video.load();
     }
   }
 
