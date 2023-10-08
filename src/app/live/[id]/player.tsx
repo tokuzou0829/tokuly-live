@@ -42,6 +42,7 @@ class Video extends Component<VideoProps> {
           autoPlay
           controls
           webkit-playsinline
+          playsInline
           ref={this.myRef}
           style={{ width: '100%',maxHeight: 600 , background:'black'}}
         ></video>
