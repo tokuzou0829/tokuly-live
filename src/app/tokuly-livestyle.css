@@ -86,6 +86,9 @@
     .sidebar{
         display: none;
     }
+    .sm-center{
+        justify-content: center;
+    }
  }
 .users{
     height: 45px; 

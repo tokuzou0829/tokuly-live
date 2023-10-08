@@ -22,7 +22,7 @@ export default async function Home() {
       {lives.lives.length === 0 ? (
         <p style={{fontSize:20,textAlign:'center',marginTop:20}}>まだ配信は行われていないようです</p>
       ) : (
-        <div className="flex flex-wrap">
+        <div className="flex flex-wrap sm-center">
         {lives.lives.map((live, index) => (
           <a key={index} href={"/live/"+live.stream_name} className="m-3 block w-[250px] shrink-0">
             <div className="relative">
