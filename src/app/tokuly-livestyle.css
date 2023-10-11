@@ -59,6 +59,7 @@
     display: flex;
     align-items: center;
     border-radius: 5px;
+    text-align: center;
 }
 
 .header-signup a{

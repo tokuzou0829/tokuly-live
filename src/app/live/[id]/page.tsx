@@ -10,7 +10,7 @@ export default async function LivePage({ params }: { params: { id: string } }) {
   body: "name="+params.id});
   const errorCode:Number = await res.status;
   return (
-    <div>
+    <div className='w-[100%] h-[100%]'>
         {errorCode == 200 ?(
             <Live id={params.id} />
         ):(
