@@ -2,6 +2,8 @@
 import { signIn, signOut } from "next-auth/react";
 import { usePathname } from 'next/navigation'
 import { Button } from "@/components/ui/button";
+import NextAuth, { type DefaultSession } from "next-auth";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,8 +14,21 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-
-export default function AccountDropdownMenu({session}) {
+interface Session {
+  user: {
+    id: string;
+    createdAt: string;
+    kids: boolean;
+    prefectureId: null | number;
+    updatedAt: string;
+    image:string;
+  } & DefaultSession["user"];
+}
+type Props = {
+  session:Session | null
+}
+export default function AccountDropdownMenu(props:Props) {
+    const {session} = props;
     const pathname = usePathname();
     return (
         <>
