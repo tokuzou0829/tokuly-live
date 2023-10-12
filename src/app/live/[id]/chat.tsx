@@ -80,9 +80,9 @@ interface Session {
     };
   
     return (
-      <div className="w-[100%] lg:w-[25%] h-[600px] bg-[#cdf9f9] rounded-[10px] lg:rounded-[0px]">
-        <div className="h-[40px] text-center mt-[10px]">
-          <p className="">チャット</p>
+      <div className="w-[100%] lg:w-[25%] h-[600px] bg-[White] rounded-[10px] lg:rounded-[0px]">
+        <div className="h-[40px] text-center border-b-[1px]">
+          <p className=" pt-2">チャット</p>
         </div>
         <div className="h-[80%] bg-[#ffffff] overflow-y-scroll flex flex-col-reverse">
           {messages.map((message, index) => (
@@ -98,7 +98,7 @@ interface Session {
                 autoComplete="off"
                 value={msg}
                 onChange={(e) => setMsg(e.target.value)}
-                className="w-[95%] m-[10px] block"
+                className="w-[95%] m-[10px] block border-solid divide-inherit border-2 rounded-md	h-[30px]"
               />
             </div>
             <div className="text-right mr-[20px]">
@@ -108,7 +108,7 @@ interface Session {
             </div>
           </form>
         ) : (
-          <p>ログインしてチャットに参加</p>
+          <p className="m-[auto]">ログインしてチャットに参加</p>
         )}
       </div>
     );
