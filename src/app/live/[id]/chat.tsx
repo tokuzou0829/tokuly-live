@@ -22,6 +22,7 @@ interface Session {
   
   // Define the type for a chat message
   type ChatMessage = {
+    id:number | null;
     name: string;
     text: string;
   };
@@ -35,7 +36,6 @@ interface Session {
     const [urlName, setUrlName] = useState<string | null | undefined>(null);;
   
     useEffect(() => {
-      if (session?.user) {
         const socket = io('https://live-data.tokuly.com', {
           path: '/chat/socket.io/',
         });
@@ -45,10 +45,13 @@ interface Session {
         const params = url.searchParams;
   
         const roomId = id;
-        const name = session.user.name;
         setUrlRoomId(roomId);
-        setUrlName(name);
-  
+        if (session?.user) {
+          const name = session.user.name;
+          setUrlName(name);
+        }else{
+          setUrlName("guest");
+        }
         socket.on('connect', () => {
           socket.emit('join', { roomId, name });
         });
@@ -60,11 +63,10 @@ interface Session {
         return () => {
           socket.disconnect();
         };
-      }
     }, []);
   
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-      if (socket) {
+      if (socket && session?.user) {
         e.preventDefault();
   
         if (msg === '') {
