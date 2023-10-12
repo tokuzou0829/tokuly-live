@@ -108,7 +108,9 @@ interface Session {
             </div>
           </form>
         ) : (
-          <p className="m-[auto]">ログインしてチャットに参加</p>
+          <div className="w-[100%] h-[60px] border-t-[1px]">
+            <p className=" w-[fit-content] pt-[25px] m-[auto]">ログインしてチャットに参加</p>
+          </div>
         )}
       </div>
     );
