@@ -10,6 +10,7 @@ import { getServerSession } from "next-auth"
 import AccountDropdownMenu from './menu';
 import { useRouter } from "next/router";
 import NextAuth, { type DefaultSession } from "next-auth";
+
 interface Session {
   user: {
     id: string;

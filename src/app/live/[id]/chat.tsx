@@ -2,19 +2,8 @@
 import React, { useEffect, useState } from 'react';
 import io, { Socket } from 'socket.io-client';
 import Image from 'next/image';
-import NextAuth, { type DefaultSession } from "next-auth";
+import NextAuth, { type Session } from "next-auth";
 
-interface Session {
-    user: {
-      id: string;
-      createdAt: string;
-      kids: boolean;
-      prefectureId: null | number;
-      updatedAt: string;
-      image: string;
-    } & DefaultSession["user"];
-  }
-  
   interface ChatProps {
     id: number;
     session: Session | null;
@@ -34,7 +23,7 @@ interface Session {
     const [messages, setMessages] = useState<ChatMessage[]>([]); // Use the ChatMessage type
     const [urlRoomId, setUrlRoomId] = useState<number>(0);
     const [urlName, setUrlName] = useState<string | null | undefined>(null);;
-  
+    const [token, setToken] = useState<string | null | undefined>(null);;
     useEffect(() => {
         const socket = io('https://live-data.tokuly.com', {
           path: '/chat/socket.io/',
@@ -48,13 +37,18 @@ interface Session {
         setUrlRoomId(roomId);
         if (session?.user) {
           const name = session.user.name;
+          const token = session.user.token;
           setUrlName(name);
+          setToken(token)
+          socket.on('connect', () => {
+            socket.emit('join', { roomId:roomId, name:name, token:token });
+          });
         }else{
           setUrlName("guest");
+          socket.on('connect', () => {
+            socket.emit('join', { roomId:roomId, name:"guest", token:token });
+          });
         }
-        socket.on('connect', () => {
-          socket.emit('join', { roomId, name });
-        });
   
         socket.on('message', (msg) => {
           setMessages((prevMessages) => [msg, ...prevMessages]);
@@ -73,7 +67,7 @@ interface Session {
           return;
         }
   
-        socket.emit('post', { text: msg, name: urlName });
+        socket.emit('post', { text: msg});
   
         setMsg('');
       }
@@ -82,7 +76,7 @@ interface Session {
     return (
       <div className="w-[100%] lg:w-[25%] h-[600px] bg-[White] rounded-[10px] lg:rounded-[0px]">
         <div className="h-[40px] text-center border-b-[1px]">
-          <p className=" pt-2">チャット</p>
+          <p className=" pt-2">チャット{urlName}{token}</p>
         </div>
         <div className="h-[80%] bg-[#ffffff] overflow-y-scroll flex flex-col-reverse">
           {messages.map((message, index) => (

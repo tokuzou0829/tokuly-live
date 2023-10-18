@@ -16,11 +16,6 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 interface Session {
   user: {
-    id: string;
-    createdAt: string;
-    kids: boolean;
-    prefectureId: null | number;
-    updatedAt: string;
     image:string;
   } & DefaultSession["user"];
 }
