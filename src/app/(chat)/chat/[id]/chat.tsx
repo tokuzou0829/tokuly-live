@@ -1,0 +1,132 @@
+"use client";
+import React, { useEffect, useState } from 'react';
+import io, { Socket } from 'socket.io-client';
+import Image from 'next/image';
+import NextAuth, { type Session } from "next-auth";
+
+  interface ChatProps {
+    id: number;
+    session: Session | null;
+  }
+  
+  // Define the type for a chat message
+  type ChatMessage = {
+    id:number | null;
+    name: string;
+    text: string;
+  };
+  
+  export default function Chat(props: ChatProps) {
+    const { id, session } = props;
+    const [socket, setSocket] = useState<Socket | null>(null); // Type the socket
+    const [msg, setMsg] = useState('');
+    const [messages, setMessages] = useState<ChatMessage[]>([]); // Use the ChatMessage type
+    const [urlRoomId, setUrlRoomId] = useState<number>(0);
+    const [urlName, setUrlName] = useState<string | null | undefined>(null);;
+    const [token, setToken] = useState<string | null | undefined>(null);;
+    useEffect(() => {
+      const data = new URLSearchParams();
+      data.append("stream_id",id.toString());
+      // リクエストを送信
+      fetch('https://api.tokuly.com/live/stream/chat/get', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: data.toString(),
+      })
+      .then(response => response.json())
+      .then(responseData => {
+          const res:ChatMessage[] = responseData;
+          setMessages(res);
+          console.log('API Response:', responseData);
+      })
+      .catch(error => {
+          console.error('API Request Error:', error);
+      });
+    }, []);
+    useEffect(() => {
+        const socket = io('https://live-data.tokuly.com', {
+          path: '/chat/socket.io/',
+        });
+        setSocket(socket);
+  
+        const url = new URL(window.location.href);
+        const params = url.searchParams;
+  
+        const roomId = id;
+        setUrlRoomId(roomId);
+        if (session?.user) {
+          const name = session.user.name;
+          const token = session.user.token;
+          setUrlName(name);
+          setToken(token)
+          socket.on('connect', () => {
+            socket.emit('join', { roomId:roomId, name:name, token:token });
+          });
+        }else{
+          setUrlName("guest");
+          socket.on('connect', () => {
+            socket.emit('join', { roomId:roomId, name:"guest", token:token });
+          });
+        }
+  
+        socket.on('message', (msg) => {
+          setMessages((prevMessages) => [msg, ...prevMessages]);
+        });
+  
+        return () => {
+          socket.disconnect();
+        };
+    }, []);
+  
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+      if (socket && session?.user) {
+        e.preventDefault();
+  
+        if (msg === '') {
+          return;
+        }
+  
+        socket.emit('post', { text: msg});
+  
+        setMsg('');
+      }
+    };
+  
+    return (
+      <div className="w-[100%] h-[100%] bg-[White]">
+        <div className="h-[5%] text-center border-b-[1px]">
+          <p className="pt-[2%]">チャット</p>
+        </div>
+        <div className="h-[85%] bg-[#ffffff] overflow-y-scroll flex flex-col-reverse">
+          {messages.map((message, index) => (
+            <p className="m-1" key={index}>{`${message.name}: ${message.text}`}</p>
+          ))}
+        </div>
+        {session?.user ? (
+          <form onSubmit={handleSubmit} className='h-[10%]'>
+            <div className="flex justify-center items-center">
+              <input
+                type="text"
+                id="msg"
+                autoComplete="off"
+                value={msg}
+                onChange={(e) => setMsg(e.target.value)}
+                className="w-[100%] m-[10px] block border-solid divide-inherit border-2 rounded-md	h-[30px]"
+              />
+              <div className="text-right ml-[auto] mr-[10px] shrink-0">
+              <button type="submit" className="ml-[auto]">
+                送信
+              </button>
+            </div>
+            </div>
+          </form>
+        ) : (
+          <div className="w-[100%] h-[60px] border-t-[1px]">
+            <p className=" w-[fit-content] pt-[25px] m-[auto]">ログインしてチャットに参加</p>
+          </div>
+        )}
+      </div>
+    );
+  }

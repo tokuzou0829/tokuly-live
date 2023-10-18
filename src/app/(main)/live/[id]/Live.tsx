@@ -4,7 +4,7 @@ import Video from './player';
 import Viewer from './viewer';
 import Chat from './chat';
 import { getServerSession } from "next-auth"
-import { handler } from '../../api/auth/[...nextauth]/route'
+import { handler } from '../../../api/auth/[...nextauth]/route'
 import NextAuth, { type Session } from "next-auth";
 
 interface LiveProps {
