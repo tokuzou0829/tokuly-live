@@ -76,7 +76,7 @@ import NextAuth, { type Session } from "next-auth";
     return (
       <div className="w-[100%] lg:w-[25%] h-[600px] bg-[White] rounded-[10px] lg:rounded-[0px]">
         <div className="h-[40px] text-center border-b-[1px]">
-          <p className=" pt-2">チャット{urlName}{token}</p>
+          <p className=" pt-2">チャット</p>
         </div>
         <div className="h-[80%] bg-[#ffffff] overflow-y-scroll flex flex-col-reverse">
           {messages.map((message, index) => (
