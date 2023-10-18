@@ -25,6 +25,27 @@ import NextAuth, { type Session } from "next-auth";
     const [urlName, setUrlName] = useState<string | null | undefined>(null);;
     const [token, setToken] = useState<string | null | undefined>(null);;
     useEffect(() => {
+      const data = new URLSearchParams();
+      data.append("stream_id",id.toString());
+      // リクエストを送信
+      fetch('https://api.tokuly.com/live/stream/chat/get', {
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: data.toString(),
+      })
+      .then(response => response.json())
+      .then(responseData => {
+          const res:ChatMessage[] = responseData;
+          setMessages(res);
+          console.log('API Response:', responseData);
+      })
+      .catch(error => {
+          console.error('API Request Error:', error);
+      });
+    }, []);
+    useEffect(() => {
         const socket = io('https://live-data.tokuly.com', {
           path: '/chat/socket.io/',
         });
