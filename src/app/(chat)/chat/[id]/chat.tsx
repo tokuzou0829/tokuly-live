@@ -96,9 +96,9 @@ import NextAuth, { type Session } from "next-auth";
   
     return (
       <div className="w-[100%] h-[100%] bg-[White]">
-        <div className="h-[5%] text-center border-b-[1px]">
-          <p className="pt-[2%]">チャット</p>
-        </div>
+      <div className="h-[5%] text-center border-b-[1px] flex justify-center items-center">
+        <p className="m-0">チャット</p>
+      </div>
         <div className="h-[85%] bg-[#ffffff] overflow-y-scroll flex flex-col-reverse">
           {messages.map((message, index) => (
             <p className="m-1" key={index}>{`${message.name}: ${message.text}`}</p>
