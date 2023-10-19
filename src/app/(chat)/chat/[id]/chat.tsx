@@ -108,7 +108,7 @@ import NextAuth, { type Session } from "next-auth";
             <p className="m-1 chat-message" key={index}>{`${message.name}: ${message.text}`}</p>
           ))}
           {is_connection && (
-            <p className="text-[#5f5f5f] m-[10px] chat-message">チャットに接続しました</p>
+            <p className="text-[#5f5f5f] m-[10px] chat-status">チャットに接続しました</p>
           )}
           {history_messages.map((message, index) => (
             <p className="m-1 chat-message" key={index}>{`${message.name}: ${message.text}`}</p>
