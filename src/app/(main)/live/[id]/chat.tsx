@@ -106,7 +106,7 @@ import NextAuth, { type Session } from "next-auth";
         <div className="h-[80%] bg-[#ffffff] overflow-y-scroll flex flex-col-reverse">
         {messages.map((message, index) => (
             <div className="m-1 flex items-center chat-message" key={index}>
-              <span className='mr-[10px] text-[grey] text-[14px] chat-message-name'>{message.name}</span>
+              <span className='mr-[10px] text-[grey] text-[14px] shrink-0 break-keep chat-message-name'>{message.name}</span>
               <span className='text-[16px] chat-message-text'> {message.text}</span>
             </div>          ))}
           {is_connection && (
@@ -114,7 +114,7 @@ import NextAuth, { type Session } from "next-auth";
           )}
           {history_messages.map((message, index) => (
             <div className="m-1 flex items-center chat-message" key={index}>
-              <span className='mr-[10px] text-[grey] text-[14px] chat-message-name'>{message.name}</span>
+              <span className='mr-[10px] text-[grey] text-[14px] shrink-0 break-keep chat-message-name'>{message.name}</span>
               <span className='text-[16px] chat-message-text'> {message.text}</span>
             </div>
           ))}
