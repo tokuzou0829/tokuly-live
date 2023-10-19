@@ -1,6 +1,6 @@
 import React from 'react';
 import Image from 'next/image';
-import Video from './player';
+import Video from './videoframe';
 import Viewer from './viewer';
 import Chat from './chat';
 import { getServerSession } from "next-auth"
@@ -13,6 +13,7 @@ interface LiveProps {
 type Live = {
     id:number,
     title:string,
+    status:string,
     stream_name:string,
     thumbnail_url:string,
     ch_name:string,
@@ -32,7 +33,7 @@ export default async function LivePlayer(props: LiveProps) {
   return (
     <div className='w-[100%] overflow-hidden'>
       <div className='lg:flex'>
-        <Video id={id} />
+        <Video live={live} />
         <Chat id={live.id} session={session}></Chat>
       </div>
         <div className='flex m-2 w-[100%]'>

@@ -99,23 +99,23 @@ import NextAuth, { type Session } from "next-auth";
     };
   
     return (
-      <div className="w-[100%] h-[100%] bg-[White]">
-      <div className="h-[5%] text-center border-b-[1px] flex justify-center items-center">
+      <div className="w-[100%] h-[100%] bg-[White] chat-body">
+      <div className="h-[5%] text-center border-b-[1px] flex justify-center items-center chat-label">
         <p className="m-0">チャット</p>
       </div>
-        <div className="h-[85%] bg-[#ffffff] overflow-y-scroll flex flex-col-reverse">
+        <div className="h-[85%] overflow-y-scroll flex flex-col-reverse">
           {messages.map((message, index) => (
-            <p className="m-1" key={index}>{`${message.name}: ${message.text}`}</p>
+            <p className="m-1 chat-message" key={index}>{`${message.name}: ${message.text}`}</p>
           ))}
           {is_connection && (
-            <p className="text-[#5f5f5f] m-[10px]">チャットに接続しました</p>
+            <p className="text-[#5f5f5f] m-[10px] chat-message">チャットに接続しました</p>
           )}
           {history_messages.map((message, index) => (
-            <p className="m-1" key={index}>{`${message.name}: ${message.text}`}</p>
+            <p className="m-1 chat-message" key={index}>{`${message.name}: ${message.text}`}</p>
           ))}
         </div>
         {session?.user ? (
-          <form onSubmit={handleSubmit} className='h-[10%]'>
+          <form onSubmit={handleSubmit} className='h-[10%] chat-input'>
             <div className="flex justify-center items-center">
               <input
                 type="text"
@@ -133,7 +133,7 @@ import NextAuth, { type Session } from "next-auth";
             </div>
           </form>
         ) : (
-          <div className="w-[100%] h-[60px] border-t-[1px]">
+          <div className="w-[100%] h-[60px] border-t-[1px] chat-input">
             <p className=" w-[fit-content] pt-[25px] m-[auto]">ログインしてチャットに参加</p>
           </div>
         )}
