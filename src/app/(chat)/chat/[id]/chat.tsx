@@ -103,7 +103,7 @@ import NextAuth, { type Session } from "next-auth";
       <div className="h-[5%] text-center border-b-[1px] flex justify-center items-center chat-label">
         <p className="m-0">チャット</p>
       </div>
-        <div className="h-[85%] overflow-y-scroll flex flex-col-reverse">
+        <div className="h-[85%] overflow-y-scroll flex flex-col-reverse chat-message-box">
           {messages.map((message, index) => (
             <p className="m-1 chat-message" key={index}>{`${message.name}: ${message.text}`}</p>
           ))}
