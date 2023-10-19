@@ -20,7 +20,9 @@ import NextAuth, { type Session } from "next-auth";
     const { id, session } = props;
     const [socket, setSocket] = useState<Socket | null>(null); // Type the socket
     const [msg, setMsg] = useState('');
+    const [is_connection , setIs_connection] = useState<boolean>(false);
     const [messages, setMessages] = useState<ChatMessage[]>([]); // Use the ChatMessage type
+    const [history_messages, setHistory_messages] = useState<ChatMessage[]>([]);
     const [urlRoomId, setUrlRoomId] = useState<number>(0);
     const [urlName, setUrlName] = useState<string | null | undefined>(null);;
     const [token, setToken] = useState<string | null | undefined>(null);;
@@ -38,7 +40,7 @@ import NextAuth, { type Session } from "next-auth";
       .then(response => response.json())
       .then(responseData => {
           const res:ChatMessage[] = responseData;
-          setMessages(res);
+          setHistory_messages(res);
           console.log('API Response:', responseData);
       })
       .catch(error => {
@@ -63,11 +65,13 @@ import NextAuth, { type Session } from "next-auth";
           setToken(token)
           socket.on('connect', () => {
             socket.emit('join', { roomId:roomId, name:name, token:token });
+            setIs_connection(true);
           });
         }else{
           setUrlName("guest");
           socket.on('connect', () => {
             socket.emit('join', { roomId:roomId, name:"guest", token:token });
+            setIs_connection(true);
           });
         }
   
@@ -101,6 +105,12 @@ import NextAuth, { type Session } from "next-auth";
       </div>
         <div className="h-[85%] bg-[#ffffff] overflow-y-scroll flex flex-col-reverse">
           {messages.map((message, index) => (
+            <p className="m-1" key={index}>{`${message.name}: ${message.text}`}</p>
+          ))}
+          {is_connection && (
+            <p className="text-[#5f5f5f] m-[10px]">チャットに接続しました</p>
+          )}
+          {history_messages.map((message, index) => (
             <p className="m-1" key={index}>{`${message.name}: ${message.text}`}</p>
           ))}
         </div>
