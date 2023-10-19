@@ -105,13 +105,18 @@ import NextAuth, { type Session } from "next-auth";
       </div>
         <div className="h-[85%] overflow-y-scroll flex flex-col-reverse chat-message-box">
           {messages.map((message, index) => (
-            <p className="m-1 chat-message" key={index}>{`${message.name}: ${message.text}`}</p>
-          ))}
+            <div className="m-1 flex items-center chat-message" key={index}>
+              <span className='chat-message-name mr-[10px] text-[grey] text-[14px]'>{message.name}</span>
+              <span className='text-[16px] chat-message-text'> {message.text}</span>
+            </div>          ))}
           {is_connection && (
             <p className="text-[#5f5f5f] m-[10px] chat-status">チャットに接続しました</p>
           )}
           {history_messages.map((message, index) => (
-            <p className="m-1 chat-message" key={index}>{`${message.name}: ${message.text}`}</p>
+            <div className="m-1 flex items-center chat-message" key={index}>
+              <span className='chat-message-name mr-[10px] text-[grey] text-[14px]'>{message.name}</span>
+              <span className='text-[16px] chat-message-text'> {message.text}</span>
+            </div>
           ))}
         </div>
         {session?.user ? (
