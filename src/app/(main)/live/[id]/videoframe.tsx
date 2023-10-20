@@ -1,5 +1,5 @@
 "use client";
-import React from 'react';
+import React,{useState,useEffect} from 'react';
 import Image from 'next/image';
 import Video from './player';
 import DefaultErrorPage from 'next/error'
@@ -19,9 +19,25 @@ type Live = {
   }
 export default function Videoflame(props:Flameprops) {
   const {live} = props;
+  const [status,setStatus] = useState<string>(live.status);
+  useEffect(() => {
+    const id = setInterval(ChecksStatus,5000)
+    return () => clearInterval(id)
+  },[])
+  async function ChecksStatus(){
+    if(status !== 'online'){
+      const res = await fetch("https://api.tokuly.com/live/stream/data",{ cache: 'no-store',method: 'POST',  headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: "name="+live.stream_name});
+      const errorCode:Number = await res.status;
+      const newLivedata:Live= await res.json();
+      setStatus(newLivedata.status);
+    }
+  }
   return (
     <div className='w-[100%] h-[100%]'>
-        {live.status == 'online' ?(
+        {status == 'online' ?(
             <Video id={live.stream_name} />
         ):(
             <div style={{ width: '100%',maxHeight: 600 , background:'black',aspectRatio:'16/9',backgroundImage:'url('+live.thumbnail_url+')',backgroundSize:'cover',position:'relative'}}>
