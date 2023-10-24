@@ -85,3 +85,47 @@ main{
     @apply bg-background text-foreground;
   }
 }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    outline: none;
+    background: transparent;
+    cursor: pointer;
+    width: 100px;
+  }
+   
+  /* Track: Chrome, Safari, Opera, Edge Chromium */
+  input[type="range"]::-webkit-slider-runnable-track {
+    background: #fff;
+    height: 4px;
+    border-radius: 8px;
+  }
+   
+  /* Thumb: Chrome, Safari, Opera, Edge Chromium */
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 15px;
+    width: 15px;
+    margin-top: -4px; /* 位置の調整が必要 */
+    background-color: #fff;
+    border-radius: 50%;
+  }
+   
+  /* Track: Firefox */
+  input[type="range"]::-moz-range-track {
+    /*background: #fff;*/
+    background-image: linear-gradient(#ff4500, #ff4500);
+    height: 4px;
+    border-radius: 8px;
+  }
+   
+  /* Thumb: Firefox */
+  input[type="range"]::-moz-range-thumb {
+    border: none;
+    height: 15px;
+    width: 15px;
+    background-color: #fff;
+    border-radius: 50%;
+  }

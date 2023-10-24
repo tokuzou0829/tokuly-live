@@ -32,7 +32,7 @@ export default async function LivePlayer(props: LiveProps) {
   const live:Live= await res.json();
   return (
     <div className='w-[100%] overflow-hidden'>
-      <div className='lg:flex'>
+      <div className='xl:flex'>
         <Video live={live} />
         <Chat id={live.id} session={session}></Chat>
       </div>
