@@ -20,7 +20,10 @@ export default async function Home() {
   return (
     <div>
       {lives.lives.length === 0 ? (
-        <p style={{fontSize:20,textAlign:'center',marginTop:20}}>まだ配信は行われていないようです</p>
+        <>
+          <p style={{fontSize:20,textAlign:'center',marginTop:20,marginBottom:5}}>まだ配信は行われていないようです</p>
+          <a style={{display:'block',fontSize:20,textAlign:'center',marginTop:0,textDecoration:'underline'}} href="https://tokuly.com/studio" target="_blank">配信を始める！</a>
+        </>
       ) : (
         <div className="flex flex-wrap sm-center">
         {lives.lives.map((live, index) => (
