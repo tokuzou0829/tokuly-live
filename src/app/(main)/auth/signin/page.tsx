@@ -89,6 +89,8 @@ export default function LoginForm(){
       >
         {loading ? "処理中..." : "サインイン"}
       </button>
+      <p className="mt-[10px]">アカウントを持っていませんか?</p>
+      <p><a href="https://tokuly.com/register" target="_blank" className="text-[blue] underline">tokuly.com</a>からアカウントを作成できます</p>
     </form>
   );
 };
