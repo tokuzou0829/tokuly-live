@@ -56,9 +56,9 @@ export default function AccountDropdownMenu(props:Props) {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
-                      <DropdownMenuItem><a href="https://tokuly.com/studio">配信する</a></DropdownMenuItem>
-                      <DropdownMenuItem>チャンネルに移動</DropdownMenuItem>
-                      <DropdownMenuItem><a href="https://tokuly.com/">tokulyに移動</a></DropdownMenuItem>
+                    <a href="https://tokuly.com/studio" target="_blank"><DropdownMenuItem className="cursor-pointer">配信する</DropdownMenuItem></a>
+                    <a href="https://tokuly.com/user/profile" target="_blank"><DropdownMenuItem className="cursor-pointer">アカウント管理</DropdownMenuItem></a>
+                    <a href="https://tokuly.com/" target="_blank"><DropdownMenuItem className="cursor-pointer">tokulyに移動</DropdownMenuItem></a>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
