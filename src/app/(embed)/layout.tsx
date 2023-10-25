@@ -1,4 +1,4 @@
-import '../globals.css'
+import '@/app/globals.css'
 export const metadata = {
   title: 'TokulyLive',
   description: '完璧で究極の配信プラットフォーム',

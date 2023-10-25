@@ -3,7 +3,7 @@ import Image from 'next/image';
 import DefaultErrorPage from 'next/error'
 import Chat from './chat';
 import { getServerSession } from "next-auth"
-import { handler } from '../../../api/auth/[...nextauth]/route'
+import { handler } from '../../../../api/auth/[...nextauth]/route'
 import NextAuth, { type Session } from "next-auth";
 type Live = {
     id:number,

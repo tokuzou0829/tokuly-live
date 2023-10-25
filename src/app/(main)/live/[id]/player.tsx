@@ -199,14 +199,13 @@ const enterFullScreen = () => {
   }, []);
 
   return (
-    <div ref={playerRef} className={"w-full relative player" + className}>
+    <div ref={playerRef} className={"w-full relative player " + className}>
       <video
         autoPlay
         webkit-playsinline="true"
         playsInline
         ref={myRef}
         className="w-full h-full bg-black aspect-w-16 aspect-h-9"
-        style={ isFullScreen ? {} : { maxHeight: '600px'} }
         onMouseEnter={handleVideoHoverEnter}
         onPlay={handleVideoPlay}
         onPause={handleVideoPause}
