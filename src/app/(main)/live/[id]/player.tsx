@@ -36,7 +36,15 @@ class Video extends Component<VideoProps, VideoState> {
     const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
 
     if (Hls.isSupported()) {
-      const hls = new Hls();
+      const hls = new Hls({
+        "enableWorker": true,
+        "maxBufferLength": 1,
+        "liveBackBufferLength": 0,
+        "liveSyncDuration": 0,
+        "liveMaxLatencyDuration": 15,
+        "liveDurationInfinity": true,
+        "highBufferWatchdogPeriod": 1,
+      });
       hls.loadSource(videoSrc);
       hls.attachMedia(this.myRef.current!);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -59,7 +67,6 @@ class Video extends Component<VideoProps, VideoState> {
   toggleControls = () => {
     const video = this.myRef.current!;
     if (video.paused) {
-      video.currentTime = video.duration;
       video.play();
     } else {
       video.pause();
