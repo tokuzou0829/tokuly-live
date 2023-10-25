@@ -5,6 +5,7 @@ import Hls from 'hls.js';
 
 interface VideoProps {
   id: string;
+  className?:string;
 }
 
 interface VideoState {
@@ -13,26 +14,16 @@ interface VideoState {
   volume: number;
 }
 
-class Video extends Component<VideoProps, VideoState> {
-  private myRef: RefObject<HTMLVideoElement>;
-  private overlayRef: RefObject<HTMLDivElement>;
+function Player(props: VideoProps) {
+  const { id ,className} = props;
+  const myRef = React.createRef<HTMLVideoElement>();
+  const overlayRef = React.createRef<HTMLDivElement>();
 
-  constructor(props: VideoProps) {
-    super(props);
-    this.myRef = React.createRef<HTMLVideoElement>();
-    this.overlayRef = React.createRef<HTMLDivElement>();
-    this.state = {
-      showControls: false,
-      isPlaying: true,
-      volume: 1,
-    };
-  }
+  const [showControls, setShowControls] = React.useState(false);
+  const [isPlaying, setIsPlaying] = React.useState(true);
+  const [volume, setVolume] = React.useState(1);
 
-  componentDidMount() {
-    this.loadVideo();
-  }
-  loadVideo() {
-    const { id } = this.props;
+  const loadVideo = () => {
     const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
 
     if (Hls.isSupported()) {
@@ -46,26 +37,26 @@ class Video extends Component<VideoProps, VideoState> {
         "highBufferWatchdogPeriod": 1,
       });
       hls.loadSource(videoSrc);
-      hls.attachMedia(this.myRef.current!);
+      hls.attachMedia(myRef.current!);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-          this.myRef.current!.currentTime = this.myRef.current!.duration;
-          this.myRef.current!.play();
+        myRef.current!.currentTime = myRef.current!.duration;
+        myRef.current!.play();
       });
     } else {
-      const video = this.myRef.current!;
+      const video = myRef.current!;
       video.src = videoSrc;
       video.load();
-      this.myRef.current!.currentTime = this.myRef.current!.duration;
+      myRef.current!.currentTime = myRef.current!.duration;
       video.oncanplay = () => {
-        this.myRef.current!.play();
+        myRef.current!.play();
       };
     }
 
-    this.myRef.current!.addEventListener('pause', this.handleVideoPause);
-  }
+    myRef.current!.addEventListener('pause', handleVideoPause);
+  };
 
-  toggleControls = () => {
-    const video = this.myRef.current!;
+  const toggleControls = () => {
+    const video = myRef.current!;
     if (video.paused) {
       video.play();
     } else {
@@ -73,79 +64,79 @@ class Video extends Component<VideoProps, VideoState> {
     }
   };
 
-  handleVideoPlay = () => {
-    this.setState({ isPlaying: true });
+  const handleVideoPlay = () => {
+    setIsPlaying(true);
   };
 
-  handleVideoPause = () => {
-    this.setState({ isPlaying: false });
+  const handleVideoPause = () => {
+    setIsPlaying(false);
   };
 
-  handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const volume = parseFloat(e.target.value);
-    this.setState({ volume });
-    this.myRef.current!.volume = volume;
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    myRef.current!.volume = newVolume;
   };
 
-  handleVideoHoverEnter = () => {
-    this.setState({ showControls: true });
+  const handleVideoHoverEnter = () => {
+    setShowControls(true);
   };
 
-  handleVideoHoverLeave = () => {
-    if (!this.myRef.current!.paused) {
-      this.setState({ showControls: false });
+  const handleVideoHoverLeave = () => {
+    if (!myRef.current!.paused) {
+      setShowControls(false);
     }
   };
 
-  render() {
-    const { showControls, isPlaying, volume } = this.state;
-    return (
-<div className="w-full relative player">
-  <video
-    autoPlay
-    webkit-playsinline="true"
-    playsInline
-    ref={this.myRef}
-    className="w-full h-full bg-black aspect-w-16 aspect-h-9"
-    style={{maxHeight:'600px'}}
-    onMouseEnter={this.handleVideoHoverEnter}
-    onPlay={this.handleVideoPlay}
-    onPause={this.handleVideoPause}
-  ></video>
-  <div
-    ref={this.overlayRef}
-    className={`absolute bottom-0 left-0 ${showControls ? 'block' : 'hidden'} h-full w-full bg-black bg-opacity-50`}
-    onMouseLeave={this.handleVideoHoverLeave}
-  >
-    <div className="flex items-end h-full mt-[-10px] ml-[10px] relative">
-      <div className='flex items-center'>
-          <button onClick={this.toggleControls} className="text-white">
-            {isPlaying ? <FontAwesomeIcon icon={faPause} /> : <FontAwesomeIcon icon={faPlay} />}
-          </button>
-          <div className="flex ml-3 items-center">
-            <FontAwesomeIcon className="text-white" icon={faVolumeHigh} />
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={volume}
-              onChange={this.handleVolumeChange}
-              className='ml-[5px] h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer bg-gray-700'
+  React.useEffect(() => {
+    loadVideo();
+  }, []);
 
-            />
+  return (
+    <div className={"w-full relative player" + className}>
+      <video
+        autoPlay
+        webkit-playsinline="true"
+        playsInline
+        ref={myRef}
+        className="w-full h-full bg-black aspect-w-16 aspect-h-9"
+        style={{maxHeight:'600px'}}
+        onMouseEnter={handleVideoHoverEnter}
+        onPlay={handleVideoPlay}
+        onPause={handleVideoPause}
+      ></video>
+      <div
+        ref={overlayRef}
+        className={`absolute bottom-0 left-0 ${showControls ? 'block' : 'hidden'} h-full w-full bg-black bg-opacity-50`}
+        onMouseLeave={handleVideoHoverLeave}
+      >
+        <div className="flex items-end h-full mt-[-10px] ml-[10px] relative">
+          <div className='flex items-center'>
+            <button onClick={toggleControls} className="text-white">
+              {isPlaying ? <FontAwesomeIcon icon={faPause} /> : <FontAwesomeIcon icon={faPlay} />}
+            </button>
+            <div className="flex ml-3 items-center">
+              <FontAwesomeIcon className="text-white" icon={faVolumeHigh} />
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={volume}
+                onChange={handleVolumeChange}
+                className='ml-[5px] h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer bg-gray-700'
+              />
+            </div>
           </div>
-      </div>
-      <div className='absolute bg-red-600 w-[100px] h-[25px] top-[20px] right-[10px] rounded-md'>
-          <p className=' text-white text-center	font-semibold	'>ライブ配信</p>
+          <div className='absolute bg-red-600 w-[100px] h-[25px] top-[20px] right-[10px] rounded-md'>
+            <p className=' text-white text-center	font-semibold	'>ライブ配信</p>
+          </div>
+        </div>
       </div>
     </div>
-  </div>
-</div>
-
-    );
-  }
+  );
 }
 
-export default Video;
+export default Player;
+
 

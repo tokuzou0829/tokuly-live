@@ -2,6 +2,7 @@ import React, { useEffect,useState } from 'react';
 import Image from 'next/image';
 import './tokuly-livestyle.css'; // スタイルシートをインポート
 import icon from './tokuly.png';
+import TopLive from './toplive';
 type Lives = {
   lives: Live[]
 }
@@ -25,6 +26,9 @@ export default async function Home() {
           <a style={{display:'block',fontSize:20,textAlign:'center',marginTop:0,textDecoration:'underline'}} href="https://tokuly.com/studio" target="_blank">配信を始める！</a>
         </>
       ) : (
+        <>
+        <TopLive lives={lives.lives}></TopLive>
+        <p className=" text-[20px] m-[10px] font-bold">オンラインの配信</p>
         <div className="flex flex-wrap sm-center">
         {lives.lives.map((live, index) => (
           <a key={index} href={"/live/"+live.stream_name} className="m-3 block w-[250px] shrink-0">
@@ -44,6 +48,7 @@ export default async function Home() {
           </a>
         ))}
         </div>
+        </>
       )}
     </div>
   )
