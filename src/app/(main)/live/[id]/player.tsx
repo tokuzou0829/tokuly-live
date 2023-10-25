@@ -1,7 +1,7 @@
 "use client";
 import React, { useRef, useEffect, useState } from 'react';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlay, faPause, faVolumeHigh, faExpand, faCompress } from "@fortawesome/free-solid-svg-icons";
+import { faPlay, faPause, faVolumeHigh, faExpand, faCompress,faVolumeMute } from "@fortawesome/free-solid-svg-icons";
 import Hls from 'hls.js';
 
 interface VideoProps {
@@ -20,7 +20,7 @@ function Player(props: VideoProps) {
   const [volume, setVolume] = useState<number>();
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   const [isHovered, setIsHovered] = useState(false);
-
+  const [isMuted, setIsMuted] = useState(false);
   const cursorHideTimeoutRef = useRef<number | null>(null);
 
   const resetCursorHideTimeout = () => {
@@ -118,7 +118,16 @@ function Player(props: VideoProps) {
       video.pause();
     }
   };
-
+  const toggleMute = () =>{
+    const video = myRef.current!;
+    if(!video.muted){
+        video.muted = true;
+        setIsMuted(true);
+    }else{
+      video.muted = false;
+      setIsMuted(false);
+    }
+  }
   const handleVideoPlay = () => {
     setIsPlaying(true);
   };
@@ -214,7 +223,13 @@ const enterFullScreen = () => {
               {isPlaying ? <FontAwesomeIcon icon={faPause} /> : <FontAwesomeIcon icon={faPlay} />}
             </button>
             <div className="flex ml-3 items-center">
-              <FontAwesomeIcon className="text-white" icon={faVolumeHigh} />
+              <button onClick={(e) => {e.stopPropagation();toggleMute();}} className="text-white">
+              {isMuted ? (
+                <FontAwesomeIcon className="text-white" icon={faVolumeMute} />
+              ) : (
+                <FontAwesomeIcon className="text-white" icon={faVolumeHigh} />
+              )}
+              </button>
               <input
                 type="range"
                 min="0"
