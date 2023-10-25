@@ -21,7 +21,8 @@ function Player(props: VideoProps) {
 
   const [showControls, setShowControls] = React.useState(false);
   const [isPlaying, setIsPlaying] = React.useState(true);
-  const [volume, setVolume] = React.useState<any>(localStorage.getItem('volume'));
+  const initialVolume = localStorage.getItem('volume') || 1;
+  const [volume, setVolume] = React.useState<any>(initialVolume)
   // Load volume from local storage on component mount
   useEffect(() => {
     const savedVolume = localStorage.getItem('volume');
