@@ -19,6 +19,48 @@ function Player(props: VideoProps) {
   const [isPlaying, setIsPlaying] = useState<boolean>(true); // isPlayingに型を追加
   const [volume, setVolume] = useState<number>();
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  const cursorHideTimeoutRef = useRef<number | null>(null);
+
+  const resetCursorHideTimeout = () => {
+    if (cursorHideTimeoutRef.current) {
+      clearTimeout(cursorHideTimeoutRef.current);
+    }
+
+    cursorHideTimeoutRef.current = window.setTimeout(() => {
+      if (playerRef.current && isPlaying) {
+        playerRef.current.style.cursor = 'none';
+        setShowControls(false);
+      }
+    }, 3000);
+  };
+
+  const handleMouseMove = () => {
+    if (playerRef.current && !showControls) {
+      if(playerRef.current.style.cursor == 'none'){
+        setShowControls(true);
+      }
+      playerRef.current.style.cursor = 'auto'; // オーバーレイ内でのみカーソルを表示
+      resetCursorHideTimeout();
+    }
+  };
+
+  // コンポーネントがアンマウントされたときにクリーンアップ
+  useEffect(() => {
+    if (playerRef.current) {
+      playerRef.current.style.cursor = 'auto'; // カーソルを表示
+    }
+
+    document.addEventListener('mousemove', handleMouseMove);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      if (cursorHideTimeoutRef.current) {
+        clearTimeout(cursorHideTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Load volume from local storage on component mount
   useEffect(() => {
@@ -92,10 +134,14 @@ function Player(props: VideoProps) {
   };
 
   const handleVideoHoverEnter = () => {
-    setShowControls(true);
+    setIsHovered(true);
+    if(playerRef.current && playerRef.current.style.cursor == 'auto'){
+      setShowControls(true);
+    }
   };
 
   const handleVideoHoverLeave = () => {
+    setIsHovered(false);
     if (!myRef.current!.paused) {
       setShowControls(false);
     }
