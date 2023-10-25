@@ -10,6 +10,7 @@ interface OptionProps {
   sub: string;
   video_id:string;
   active: boolean;
+  handle:string;
   onClick: () => void;
   style: { [key: string]: string };
 }
@@ -26,7 +27,7 @@ type Live = {
 type LiveProps = {
     lives:Live[];
 }
-function Option({ image, icon, main, sub, active, onClick, style,video_id }: OptionProps) {
+function Option({ image, icon, main, sub, active, onClick, style,video_id,handle }: OptionProps) {
   const optionClass = active ? 'option active' : 'option';
 
   return (
@@ -37,15 +38,17 @@ function Option({ image, icon, main, sub, active, onClick, style,video_id }: Opt
           <a href={"/live/"+video_id} className="absolute bottom-0 right-0 text-white m-[10px] font-bold p-[10px] rounded-full bg-opacity-60 bg-black">配信を見る</a>
         </>
       )}
-      <div className="label">
-        <div className="icon" style={{ backgroundImage: `url(${icon})`, backgroundSize: 'cover' }}></div>
-        {active && (
-        <div className="info">
-          <div className="main">{main}</div>
-          <div className="sub">{sub}</div>
+      <a href={"/"+handle}>
+        <div className="label">
+            <div className="icon" style={{ backgroundImage: `url(${icon})`, backgroundSize: 'cover' }}></div>
+            {active && (
+            <div className="info">
+            <div className="main">{main}</div>
+            <div className="sub">{sub}</div>
+            </div>
+            )}
         </div>
-        )}
-      </div>
+      </a>
     </div>
   );
 }
@@ -69,6 +72,7 @@ function TopLive(props:LiveProps) {
           main={option.ch_name}
           sub={option.title}
           video_id={option.stream_name}
+          handle={option.ch_handle}
           active={index === activeOption}
           onClick={() => handleOptionClick(index)}
           style={{ '--optionBackground': `url(${option.thumbnail_url})` }}
