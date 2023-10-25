@@ -31,7 +31,6 @@ class Video extends Component<VideoProps, VideoState> {
   componentDidMount() {
     this.loadVideo();
   }
-
   loadVideo() {
     const { id } = this.props;
     const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
@@ -41,12 +40,14 @@ class Video extends Component<VideoProps, VideoState> {
       hls.loadSource(videoSrc);
       hls.attachMedia(this.myRef.current!);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        this.myRef.current!.play();
+          this.myRef.current!.currentTime = this.myRef.current!.duration;
+          this.myRef.current!.play();
       });
     } else {
       const video = this.myRef.current!;
       video.src = videoSrc;
       video.load();
+      this.myRef.current!.currentTime = this.myRef.current!.duration;
       video.oncanplay = () => {
         this.myRef.current!.play();
       };
@@ -58,8 +59,8 @@ class Video extends Component<VideoProps, VideoState> {
   toggleControls = () => {
     const video = this.myRef.current!;
     if (video.paused) {
+      video.currentTime = video.duration;
       video.play();
-      this.loadVideo();
     } else {
       video.pause();
     }
