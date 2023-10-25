@@ -1,4 +1,4 @@
-import React, { Component, RefObject } from 'react';
+import React, { Component, RefObject,useEffect } from 'react';
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faPlay, faPause, faVolumeHigh } from "@fortawesome/free-solid-svg-icons";
 import Hls from 'hls.js';
@@ -21,7 +21,20 @@ function Player(props: VideoProps) {
 
   const [showControls, setShowControls] = React.useState(false);
   const [isPlaying, setIsPlaying] = React.useState(true);
-  const [volume, setVolume] = React.useState(1);
+  const [volume, setVolume] = React.useState<any>(localStorage.getItem('volume'));
+  // Load volume from local storage on component mount
+  useEffect(() => {
+    const savedVolume = localStorage.getItem('volume');
+    if (savedVolume !== null) {
+      setVolume(savedVolume);
+      myRef.current!.volume = parseFloat(savedVolume);
+    }
+  }, []);
+
+  // Save volume to local storage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('volume', volume.toString());
+  }, [volume]);
 
   const loadVideo = () => {
     const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
