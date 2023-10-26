@@ -11,12 +11,12 @@ interface VideoProps {
 
 function Player(props: VideoProps) {
   const { id, className } = props;
-  const playerRef = useRef<HTMLDivElement | null>(null); // playerRefに型を追加
-  const myRef = useRef<HTMLVideoElement | null>(null); // myRefに型を追加
-  const overlayRef = useRef<HTMLDivElement | null>(null); // overlayRefに型を追加
+  const playerRef = useRef<HTMLDivElement | null>(null);
+  const myRef = useRef<HTMLVideoElement | null>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
 
-  const [showControls, setShowControls] = useState<boolean>(false); // showControlsに型を追加
-  const [isPlaying, setIsPlaying] = useState<boolean>(true); // isPlayingに型を追加
+  const [showControls, setShowControls] = useState<boolean>(false);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false); 
   const [volume, setVolume] = useState<number>();
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   const [isHovered, setIsHovered] = useState(false);
