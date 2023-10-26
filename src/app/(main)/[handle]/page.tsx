@@ -1,6 +1,7 @@
 import React from 'react';
 import Image from 'next/image';
 import DefaultErrorPage from 'next/error'
+import Link from 'next/link';
 type Channel = {
     id:string,
     name:string,
@@ -41,7 +42,7 @@ export default async function LivePlayer({ params }: { params: { handle: string 
                     <p className=" text-xl font-semibold">このクリエイターは配信中です！</p>
                     <div className="overflow-scroll	w-[100%] flex py-3">
                     {ch.streams.map((stream, index) => (
-                        <a key={index} href={"/live/"+stream.stream_name} className="block w-[250px] shrink-0 mr-2">
+                        <Link key={index} href={"/live/"+stream.stream_name} className="block w-[250px] shrink-0 mr-2">
                         <div className="relative">
                             <img src={stream.thumbnail_url} className='w-[250px] rounded-lg aspect-video object-cover bg-gray-500' />
                             <div className='absolute bg-red-600 w-[100px] h-[25px] top-[5px] left-[5px] rounded-md'>
@@ -55,7 +56,7 @@ export default async function LivePlayer({ params }: { params: { handle: string 
                             <p className='mt-0 text-sm'>{ch.name}</p>
                             </div>
                         </div>
-                        </a>
+                        </Link>
                     ))}
                     </div>
                 </div>
@@ -65,7 +66,7 @@ export default async function LivePlayer({ params }: { params: { handle: string 
                         <p className=" text-xl font-semibold">このクリエイターの予定</p>
                         <div className="overflow-scroll	w-[100%] flex py-3">
                             {ch.waiting.map((stream, index) => (
-                            <a key={index} href={"/live/"+stream.stream_name} className="block w-[250px] shrink-0 mr-2">
+                            <Link key={index} href={"/live/"+stream.stream_name} className="block w-[250px] shrink-0 mr-2">
                             <div className="relative">
                                 <img src={stream.thumbnail_url} className='w-[250px] rounded-lg aspect-video object-cover bg-gray-500' />
                             </div>
@@ -76,7 +77,7 @@ export default async function LivePlayer({ params }: { params: { handle: string 
                                 <p className='mt-0 text-sm'>{ch.name}</p>
                                 </div>
                             </div>
-                            </a>
+                            </Link>
                         ))}
                         </div>
                     </div>

@@ -10,7 +10,7 @@ import { getServerSession } from "next-auth"
 import AccountDropdownMenu from './menu';
 import { useRouter } from "next/router";
 import NextAuth, { type DefaultSession } from "next-auth";
-
+import Link from 'next/link';
 interface Session {
   user: {
     id: string;
@@ -38,8 +38,8 @@ export default async function RootLayout({
     <div style={{ backgroundColor: 'rgb(240, 240, 240)',height: '100%' }}>
       <header>
         <div className="header">
-          <a href="/"><Image src={icon} style={{ height: '50px',width:'50px', marginLeft: '30px', borderRadius: '10px', aspectRatio:'1/1' }} alt="Logo" /></a>
-          <div className="header-contents"><a href="/" style={{ textDecoration: 'none' }}><p>配信中</p></a></div>
+          <Link href="/"><Image src={icon} style={{ height: '50px',width:'50px', marginLeft: '30px', borderRadius: '10px', aspectRatio:'1/1' }} alt="Logo" /></Link>
+          <div className="header-contents"><Link href="/" style={{ textDecoration: 'none' }}><p>配信中</p></Link></div>
           {/*
           <div className="header-login"><a href="" style={{ textDecoration: 'none' }}><p style={{ paddingLeft: '14px' }}>ログイン</p></a></div>
           <div className="header-signup"><a href="" style={{ textDecoration: 'none' }}><p style={{ paddingLeft: '14px' }}>サインアップ</p></a></div>

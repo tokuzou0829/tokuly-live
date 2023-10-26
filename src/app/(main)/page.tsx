@@ -3,6 +3,7 @@ import Image from 'next/image';
 import './tokuly-livestyle.css'; // スタイルシートをインポート
 import icon from './tokuly.png';
 import TopLive from './toplive';
+import Link from 'next/link';
 type Lives = {
   lives: Live[]
 }
@@ -23,7 +24,7 @@ export default async function Home() {
       {lives.lives.length === 0 ? (
         <>
           <p style={{fontSize:20,textAlign:'center',marginTop:20,marginBottom:5}}>まだ配信は行われていないようです</p>
-          <a style={{display:'block',fontSize:20,textAlign:'center',marginTop:0,textDecoration:'underline'}} href="https://tokuly.com/studio" target="_blank">配信を始める！</a>
+          <Link style={{display:'block',fontSize:20,textAlign:'center',marginTop:0,textDecoration:'underline'}} href="https://tokuly.com/studio" target="_blank">配信を始める！</Link>
         </>
       ) : (
         <>
@@ -31,7 +32,7 @@ export default async function Home() {
         <p className=" text-[20px] m-[10px] font-bold">オンラインの配信</p>
         <div className="flex flex-wrap sm-center">
         {lives.lives.map((live, index) => (
-          <a key={index} href={"/live/"+live.stream_name} className="m-3 block w-[250px] shrink-0">
+          <Link key={index} href={"/live/"+live.stream_name} className="m-3 block w-[250px] shrink-0">
             <div className="relative">
               <img src={live.thumbnail_url} className='w-[250px] rounded-lg aspect-video object-cover' />
               <div className='absolute bg-red-600 w-[100px] h-[25px] top-[5px] left-[5px] rounded-md'>
@@ -45,9 +46,10 @@ export default async function Home() {
                 <p className='mt-0 text-sm'>{live.ch_name}</p>
               </div>
             </div>
-          </a>
+          </Link>
         ))}
         </div>
+        <Link style={{display:'block',fontSize:20,textAlign:'center',marginTop:20,textDecoration:'none'}} href="https://tokuly.com/studio" target="_blank">配信を始める！</Link>
         </>
       )}
     </div>

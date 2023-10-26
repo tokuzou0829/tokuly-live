@@ -3,7 +3,7 @@ import { signIn, signOut } from "next-auth/react";
 import { usePathname } from 'next/navigation'
 import { Button } from "@/components/ui/button";
 import NextAuth, { type DefaultSession } from "next-auth";
-
+import Link from "next/link";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,9 +56,9 @@ export default function AccountDropdownMenu(props:Props) {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
-                    <a href="https://tokuly.com/studio" target="_blank"><DropdownMenuItem className="cursor-pointer">配信する</DropdownMenuItem></a>
-                    <a href="https://tokuly.com/user/profile" target="_blank"><DropdownMenuItem className="cursor-pointer">アカウント管理</DropdownMenuItem></a>
-                    <a href="https://tokuly.com/" target="_blank"><DropdownMenuItem className="cursor-pointer">tokulyに移動</DropdownMenuItem></a>
+                    <Link href="https://tokuly.com/studio" target="_blank"><DropdownMenuItem className="cursor-pointer">配信する</DropdownMenuItem></Link>
+                    <Link href="https://tokuly.com/user/profile" target="_blank"><DropdownMenuItem className="cursor-pointer">アカウント管理</DropdownMenuItem></Link>
+                    <Link href="https://tokuly.com/" target="_blank"><DropdownMenuItem className="cursor-pointer">tokulyに移動</DropdownMenuItem></Link>
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem

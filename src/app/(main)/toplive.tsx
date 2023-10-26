@@ -1,5 +1,6 @@
 "use client";
 import React, { useState } from 'react';
+import Link from 'next/link';
 import './in.css';
 import Player from './live/[id]/player';
 
@@ -35,10 +36,10 @@ function Option({ image, icon, main, sub, active, onClick, style,video_id,handle
       {active && (
         <>
           <Player id={video_id} className={"absolute h-[100%]"}></Player>
-          <a href={"/live/"+video_id} className="absolute bottom-0 right-0 text-white m-[10px] font-bold p-[10px] rounded-full bg-opacity-60 bg-black">配信を見る</a>
+          <Link href={"/live/"+video_id} className="absolute bottom-0 right-0 text-white m-[10px] font-bold p-[10px] rounded-full bg-opacity-60 bg-black">配信を見る</Link>
         </>
       )}
-      <a href={"/"+handle}>
+      <Link href={"/"+handle}>
         <div className="label">
             <div className="icon" style={{ backgroundImage: `url(${icon})`, backgroundSize: 'cover' }}></div>
             {active && (
@@ -48,7 +49,7 @@ function Option({ image, icon, main, sub, active, onClick, style,video_id,handle
             </div>
             )}
         </div>
-      </a>
+      </Link>
     </div>
   );
 }
