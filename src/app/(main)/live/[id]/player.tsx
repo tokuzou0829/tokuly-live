@@ -1,8 +1,28 @@
 "use client";
 import React, { useRef, useEffect, useState } from 'react';
+import { Copy } from "lucide-react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlay, faPause, faVolumeHigh, faExpand, faCompress,faVolumeMute } from "@fortawesome/free-solid-svg-icons";
+import { faPlay, faPause, faVolumeHigh, faExpand, faCompress,faVolumeMute,faShare } from "@fortawesome/free-solid-svg-icons";
 import Hls from 'hls.js';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface VideoProps {
   id: string;
@@ -14,6 +34,7 @@ function Player(props: VideoProps) {
   const playerRef = useRef<HTMLDivElement | null>(null);
   const myRef = useRef<HTMLVideoElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
+  const LinkText = useRef<HTMLInputElement | null>(null);
 
   const [showControls, setShowControls] = useState<boolean>(false);
   const [isPlaying, setIsPlaying] = useState<boolean>(false); 
@@ -23,34 +44,35 @@ function Player(props: VideoProps) {
   const [isMuted, setIsMuted] = useState(false);
   const cursorHideTimeoutRef = useRef<number | null>(null);
 
-  const resetCursorHideTimeout = () => {
-    if (cursorHideTimeoutRef.current) {
-      clearTimeout(cursorHideTimeoutRef.current);
-    }
-
-    cursorHideTimeoutRef.current = window.setTimeout(() => {
-      if (playerRef.current && isPlaying) {
-        playerRef.current.style.cursor = 'none';
-        setShowControls(false);
-      }
-    }, 3000);
-  };
-
-  const handleMouseMove = () => {
-    if (playerRef.current && !showControls) {
-      if(playerRef.current.style.cursor == 'none'){
-        setShowControls(true);
-      }
-      playerRef.current.style.cursor = 'auto'; // オーバーレイ内でのみカーソルを表示
-      resetCursorHideTimeout();
-    }
-  };
-
   // コンポーネントがアンマウントされたときにクリーンアップ
   useEffect(() => {
     if (playerRef.current) {
       playerRef.current.style.cursor = 'auto'; // カーソルを表示
     }
+
+    const resetCursorHideTimeout = () => {
+      if (cursorHideTimeoutRef.current) {
+        clearTimeout(cursorHideTimeoutRef.current);
+      }
+  
+      cursorHideTimeoutRef.current = window.setTimeout(() => {
+        if (playerRef.current && myRef.current!.played) {
+          console.log("hide");
+          playerRef.current.style.cursor = 'none';
+          setShowControls(false);
+        }
+      }, 3000);
+    };
+  
+    const handleMouseMove = () => {
+      if (playerRef.current) {
+        if(playerRef.current.style.cursor == 'none'){
+          setShowControls(true);
+        }
+        playerRef.current.style.cursor = 'auto'; // オーバーレイ内でのみカーソルを表示
+        resetCursorHideTimeout();
+      }
+    };
 
     document.addEventListener('mousemove', handleMouseMove);
 
@@ -77,6 +99,13 @@ function Player(props: VideoProps) {
       window?.localStorage?.setItem('volume', volume.toString());
     }
   }, [volume]);
+
+  function copyLink(){
+    if(LinkText.current){
+      const link = LinkText.current.value;
+      return navigator.clipboard.writeText(link);
+    }
+  }
 
   const loadVideo = () => {
     const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
@@ -210,12 +239,15 @@ const enterFullScreen = () => {
         onPlay={handleVideoPlay}
         onPause={handleVideoPause}
       ></video>
+      <ContextMenu>
+      <Dialog>
       <div
         ref={overlayRef}
         className={`absolute bottom-0 left-0 ${showControls ? 'block' : 'hidden'} h-full w-full bg-black bg-opacity-50`}
         onMouseLeave={handleVideoHoverLeave}
         onClick={toggleControls}
       >
+      <ContextMenuTrigger>
         <div className="flex items-end h-full mt-[-10px] ml-[10px] relative">
           <div className='flex items-center'>
             <button onClick={(e) => {e.stopPropagation();toggleControls();}} className="text-white">
@@ -256,7 +288,47 @@ const enterFullScreen = () => {
             <p className=' text-white text-center font-semibold'>ライブ配信</p>
           </div>
         </div>
+        </ContextMenuTrigger>
+        <ContextMenuContent>
+            <DialogTrigger asChild>
+              <ContextMenuItem onClick={(e) => {e.stopPropagation();}}><FontAwesomeIcon icon={faShare} className="mr-[10px]" />共有する</ContextMenuItem>
+            </DialogTrigger>
+        </ContextMenuContent>
       </div>
+      <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle>シェアリンク</DialogTitle>
+                <DialogDescription>
+                  このリンクを他の人にシェアしよう！
+                </DialogDescription>
+              </DialogHeader>
+              <div className="flex items-center space-x-2">
+                <div className="grid flex-1 gap-2">
+                  <Label htmlFor="link" className="sr-only">
+                    Link
+                  </Label>
+                  <Input
+                    id="link"
+                    defaultValue={"https://live.tokuly.com/live/"+id}
+                    readOnly
+                    ref={LinkText}
+                  />
+                </div>
+                <Button type="submit" size="sm" className="px-3" onClick={copyLink}>
+                  <span className="sr-only">Copy</span>
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+              <DialogFooter className="sm:justify-start">
+                <DialogClose asChild>
+                  <Button type="button" variant="secondary">
+                    Close
+                  </Button>
+                </DialogClose>
+              </DialogFooter>
+            </DialogContent>
+      </Dialog>
+      </ContextMenu>
     </div>
   );
 }
