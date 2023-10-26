@@ -241,93 +241,93 @@ const enterFullScreen = () => {
       ></video>
       <ContextMenu>
       <Dialog>
-      <div
-        ref={overlayRef}
-        className={`absolute bottom-0 left-0 ${showControls ? 'block' : 'hidden'} h-full w-full bg-black bg-opacity-50`}
-        onMouseLeave={handleVideoHoverLeave}
-        onClick={toggleControls}
-      >
-      <ContextMenuTrigger>
-        <div className="flex items-end h-full mt-[-10px] ml-[10px] relative">
-          <div className='flex items-center'>
-            <button onClick={(e) => {e.stopPropagation();toggleControls();}} className="text-white">
-              {isPlaying ? <FontAwesomeIcon icon={faPause} /> : <FontAwesomeIcon icon={faPlay} />}
-            </button>
-            <div className="flex ml-3 items-center">
-              <button onClick={(e) => {e.stopPropagation();toggleMute();}} className="text-white">
-              {isMuted ? (
-                <FontAwesomeIcon className="text-white" icon={faVolumeMute} />
-              ) : (
-                <FontAwesomeIcon className="text-white" icon={faVolumeHigh} />
-              )}
+        <div
+          ref={overlayRef}
+          className={`absolute bottom-0 left-0 ${showControls ? 'block' : 'hidden'} h-full w-full bg-black bg-opacity-50`}
+          onMouseLeave={handleVideoHoverLeave}
+          onClick={toggleControls}
+        >
+        <ContextMenuTrigger>
+          <div className="flex items-end h-full mt-[-10px] ml-[10px] relative">
+            <div className='flex items-center'>
+              <button onClick={(e) => {e.stopPropagation();toggleControls();}} className="text-white">
+                {isPlaying ? <FontAwesomeIcon icon={faPause} /> : <FontAwesomeIcon icon={faPlay} />}
               </button>
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.01"
-                value={volume}
-                onChange={handleVolumeChange}
-                onClick={(e) => e.stopPropagation()}
-                className='ml-[5px] h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer bg-gray-700'
-              />
-            </div>
-            <div className='ml-[auto]'>
-              {isFullScreen ? (
-              <button onClick={(e) => {e.stopPropagation();exitFullScreen()}} className="absolute bottom-[0px] right-[0px] mt-[-10px] mr-[10px] text-white">
-                <FontAwesomeIcon icon={faCompress} />
-              </button>
-            ) : (
-              <button onClick={(e) => {e.stopPropagation();enterFullScreen();}} className="absolute bottom-[0px] right-[0px] mt-[-10px] mr-[10px] text-white">
-                <FontAwesomeIcon icon={faExpand} />
-              </button>
-            )}
-            </div>
-          </div>
-          <div className='absolute bg-red-600 w-[100px] h-[25px] top-[20px] right-[10px] rounded-md'>
-            <p className=' text-white text-center font-semibold'>ライブ配信</p>
-          </div>
-        </div>
-        </ContextMenuTrigger>
-        <ContextMenuContent>
-            <DialogTrigger asChild>
-              <ContextMenuItem onClick={(e) => {e.stopPropagation();}}><FontAwesomeIcon icon={faShare} className="mr-[10px]" />共有する</ContextMenuItem>
-            </DialogTrigger>
-        </ContextMenuContent>
-      </div>
-      <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>シェアリンク</DialogTitle>
-                <DialogDescription>
-                  このリンクを他の人にシェアしよう！
-                </DialogDescription>
-              </DialogHeader>
-              <div className="flex items-center space-x-2">
-                <div className="grid flex-1 gap-2">
-                  <Label htmlFor="link" className="sr-only">
-                    Link
-                  </Label>
-                  <Input
-                    id="link"
-                    defaultValue={"https://live.tokuly.com/live/"+id}
-                    readOnly
-                    ref={LinkText}
-                  />
-                </div>
-                <Button type="submit" size="sm" className="px-3" onClick={copyLink}>
-                  <span className="sr-only">Copy</span>
-                  <Copy className="h-4 w-4" />
-                </Button>
+              <div className="flex ml-3 items-center">
+                <button onClick={(e) => {e.stopPropagation();toggleMute();}} className="text-white">
+                {isMuted ? (
+                  <FontAwesomeIcon className="text-white" icon={faVolumeMute} />
+                ) : (
+                  <FontAwesomeIcon className="text-white" icon={faVolumeHigh} />
+                )}
+                </button>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={volume}
+                  onChange={handleVolumeChange}
+                  onClick={(e) => e.stopPropagation()}
+                  className='ml-[5px] h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer bg-gray-700'
+                />
               </div>
-              <DialogFooter className="sm:justify-start">
-                <DialogClose asChild>
-                  <Button type="button" variant="secondary">
-                    Close
+              <div className='ml-[auto]'>
+                {isFullScreen ? (
+                <button onClick={(e) => {e.stopPropagation();exitFullScreen()}} className="absolute bottom-[0px] right-[0px] mt-[-10px] mr-[10px] text-white">
+                  <FontAwesomeIcon icon={faCompress} />
+                </button>
+              ) : (
+                <button onClick={(e) => {e.stopPropagation();enterFullScreen();}} className="absolute bottom-[0px] right-[0px] mt-[-10px] mr-[10px] text-white">
+                  <FontAwesomeIcon icon={faExpand} />
+                </button>
+              )}
+              </div>
+            </div>
+            <div className='absolute bg-red-600 w-[100px] h-[25px] top-[20px] right-[10px] rounded-md'>
+              <p className=' text-white text-center font-semibold'>ライブ配信</p>
+            </div>
+          </div>
+            </ContextMenuTrigger>
+            <ContextMenuContent>
+                <DialogTrigger asChild>
+                  <ContextMenuItem onClick={(e) => {e.stopPropagation();}}><FontAwesomeIcon icon={faShare} className="mr-[10px]" />共有する</ContextMenuItem>
+                </DialogTrigger>
+            </ContextMenuContent>
+          </div>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>シェアリンク</DialogTitle>
+                  <DialogDescription>
+                    このリンクを他の人にシェアしよう！
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex items-center space-x-2">
+                  <div className="grid flex-1 gap-2">
+                    <Label htmlFor="link" className="sr-only">
+                      Link
+                    </Label>
+                    <Input
+                      id="link"
+                      defaultValue={"https://live.tokuly.com/live/"+id}
+                      readOnly
+                      ref={LinkText}
+                    />
+                  </div>
+                  <Button type="submit" size="sm" className="px-3" onClick={copyLink}>
+                    <span className="sr-only">Copy</span>
+                    <Copy className="h-4 w-4" />
                   </Button>
-                </DialogClose>
-              </DialogFooter>
-            </DialogContent>
-      </Dialog>
+                </div>
+                <DialogFooter className="sm:justify-start">
+                  <DialogClose asChild>
+                    <Button type="button" variant="secondary">
+                      Close
+                    </Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+          </Dialog>
       </ContextMenu>
     </div>
   );
