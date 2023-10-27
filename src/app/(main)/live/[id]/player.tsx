@@ -2,7 +2,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Copy } from "lucide-react"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlay, faPause, faVolumeHigh, faExpand, faCompress,faVolumeMute,faShare } from "@fortawesome/free-solid-svg-icons";
+import { faPlay, faPause, faVolumeHigh, faExpand, faCompress,faVolumeMute,faShare, faCopy, faHandMiddleFinger } from "@fortawesome/free-solid-svg-icons";
 import Hls from 'hls.js';
 import {
   ContextMenu,
@@ -22,6 +22,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 
 interface VideoProps {
@@ -35,7 +36,7 @@ function Player(props: VideoProps) {
   const myRef = useRef<HTMLVideoElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const LinkText = useRef<HTMLInputElement | null>(null);
-
+  const EmdedCode =useRef<HTMLTextAreaElement | null>(null);
   const [showControls, setShowControls] = useState<boolean>(false);
   const [isPlaying, setIsPlaying] = useState<boolean>(false); 
   const [volume, setVolume] = useState<number>();
@@ -106,7 +107,12 @@ function Player(props: VideoProps) {
       return navigator.clipboard.writeText(link);
     }
   }
-
+  function copyEmdedCode(){
+    if(EmdedCode.current){
+      const link = EmdedCode.current.value;
+      return navigator.clipboard.writeText(link);
+    }
+  }
   const loadVideo = () => {
     const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
 
@@ -249,6 +255,7 @@ const enterFullScreen = () => {
         >
         <ContextMenuTrigger>
           <div className="flex items-end h-full mt-[-10px] ml-[10px] relative">
+            <input ref={LinkText} className='hidden' value={'https://live.tokuly.com/live/'+id} />
             <div className='flex items-center'>
               <button onClick={(e) => {e.stopPropagation();toggleControls();}} className="text-white">
                 {isPlaying ? <FontAwesomeIcon icon={faPause} /> : <FontAwesomeIcon icon={faPlay} />}
@@ -293,6 +300,7 @@ const enterFullScreen = () => {
                 <DialogTrigger asChild>
                   <ContextMenuItem onClick={(e) => {e.stopPropagation();}}><FontAwesomeIcon icon={faShare} className="mr-[10px]" />共有する</ContextMenuItem>
                 </DialogTrigger>
+                <ContextMenuItem onClick={(e) => {e.stopPropagation();copyLink();}}><FontAwesomeIcon icon={faCopy} className="mr-[10px]" />リンクをコピー</ContextMenuItem>
             </ContextMenuContent>
           </div>
             <DialogContent className="sm:max-w-md">
@@ -311,10 +319,27 @@ const enterFullScreen = () => {
                       id="link"
                       defaultValue={"https://live.tokuly.com/live/"+id}
                       readOnly
-                      ref={LinkText}
                     />
                   </div>
                   <Button type="submit" size="sm" className="px-3" onClick={copyLink}>
+                    <span className="sr-only">Copy</span>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <div className="grid flex-1 gap-2">
+                    <Label htmlFor="emded_code" className="">
+                      埋め込みコード
+                    </Label>
+                    <Textarea
+                      id="emded_code"
+                      ref={EmdedCode}
+                      readOnly
+                      defaultValue={`<iframe src="https://live.tokuly.com/embed/${id}" title="Tokuly video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="tokuly-live"></iframe>`}
+                    >
+                    </Textarea>
+                  </div>
+                  <Button type="submit" size="sm" className="px-3" onClick={copyEmdedCode}>
                     <span className="sr-only">Copy</span>
                     <Copy className="h-4 w-4" />
                   </Button>
