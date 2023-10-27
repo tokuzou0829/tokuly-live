@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
     },
     twitter: {
         card: "summary_large_image",
-        images: ['https://live.tokuly.com/api/og?video_id' + params.id]
+        images: ['https://live.tokuly.com/api/og?video_id=' + params.id]
     },
     openGraph: {
         title: live.title,
@@ -43,7 +43,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
         url: 'https://tokuly.com/live/'+params.id,
         siteName: 'Tokuly Live',
         images: {
-            url: 'https://live.tokuly.com/api/og?video_id' + params.id,
+            url: 'https://live.tokuly.com/api/og?video_id=' + params.id,
             width:1200,
             height:630,
         },
