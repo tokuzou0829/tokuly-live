@@ -24,7 +24,10 @@ interface Session {
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'TokulyLive',
+  title: {
+    template: '%s | Tokuly Live',
+    absolute: 'Tokuly Live',
+  },
   description: '完璧で究極の配信プラットフォーム',
 }
 
