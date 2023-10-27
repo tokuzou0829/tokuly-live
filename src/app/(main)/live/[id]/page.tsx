@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
     },
     twitter: {
         card: "summary_large_image",
-        images: [live.thumbnail_url]
+        images: ['https://live.tokuly.com/api/og?video_id' + params.id]
     },
     openGraph: {
         title: live.title,
