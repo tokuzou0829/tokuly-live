@@ -43,7 +43,9 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
         url: 'https://tokuly.com/live/'+params.id,
         siteName: 'Tokuly Live',
         images: {
-            url: live.thumbnail_url,
+            url: 'https://live.tokuly.com/api/og?video_id' + params.id,
+            width:1200,
+            height:630,
         },
     }
   };

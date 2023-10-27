@@ -43,9 +43,6 @@ export async function GET(req: NextRequest): Promise<Response | ImageResponse> {
            }}
         >
           <img style={{height: "100%",width: "100%",objectFit:'cover'}} src={live.thumbnail_url} />
-          <div style={{display: 'flex',position:'absolute',right:0,bottom:0}}>
-            <p style={{fontSize:30,color:'red'}}>Tokuly Live</p>
-          </div>
         </div>
       ),
       {
