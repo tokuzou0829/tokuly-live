@@ -10,11 +10,6 @@ type Games = {
   },
   "name": string,
 }
-export const corsHeaders = {
-  "Access-Control-Allow-Origin": "https://tokuly.com",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-};
 export async function GET(req: NextRequest): Promise<Response | NextResponse>{
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q");
@@ -34,6 +29,11 @@ export async function GET(req: NextRequest): Promise<Response | NextResponse>{
       }
       return game;
     });
+    const corsHeaders = {
+      "Access-Control-Allow-Origin": "https://tokuly.com",
+      "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    };
     return NextResponse.json(data,{ status: 200, headers: corsHeaders });
 };
   
