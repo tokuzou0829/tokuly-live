@@ -115,35 +115,50 @@ function Player(props: VideoProps) {
   }
   const loadVideo = () => {
     const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
-
-    if (Hls.isSupported()) {
-      const hls = new Hls({
-        "enableWorker": true,
-        "maxBufferLength": 1,
-        "liveBackBufferLength": 0,
-        "liveSyncDuration": 0,
-        "liveMaxLatencyDuration": 15,
-        "liveDurationInfinity": true,
-        "highBufferWatchdogPeriod": 1,
-      });
-      hls.loadSource(videoSrc);
-      hls.attachMedia(myRef.current!);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
-        myRef.current!.currentTime = myRef.current!.duration;
-        myRef.current!.play();
-      });
-    } else {
-      const video = myRef.current!;
-      video.src = videoSrc;
-      video.load();
-      myRef.current!.currentTime = myRef.current!.duration;
-      video.oncanplay = () => {
-        myRef.current!.play();
-      };
-    }
-
-    myRef.current!.addEventListener('pause', handleVideoPause);
-  };
+  
+    // Function to check the m3u8 file status
+    const checkM3u8Status = () => {
+      fetch(videoSrc, { method: 'HEAD' }) // Use HEAD method to just get the headers
+        .then(response => {
+          if (response.status === 200) {
+            clearInterval(intervalId); // Stop the interval when status is 200
+  
+            // The rest of the video loading code
+            if (Hls.isSupported()) {
+              const hls = new Hls({
+                "enableWorker": true,
+                "maxBufferLength": 1,
+                "liveBackBufferLength": 0,
+                "liveSyncDuration": 0,
+                "liveMaxLatencyDuration": 15,
+                "liveDurationInfinity": true,
+                "highBufferWatchdogPeriod": 1,
+              });
+              hls.loadSource(videoSrc);
+              hls.attachMedia(myRef.current!);
+              hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                myRef.current!.currentTime = myRef.current!.duration;
+                myRef.current!.play();
+              });
+            } else {
+              const video = myRef.current!;
+              video.src = videoSrc;
+              video.load();
+              myRef.current!.currentTime = myRef.current!.duration;
+              video.oncanplay = () => {
+                myRef.current!.play();
+              };
+            }
+  
+            myRef.current!.addEventListener('pause', handleVideoPause);
+          }
+        });
+    };
+  
+    // Check m3u8 file status every 4 seconds
+    const intervalId = setInterval(checkM3u8Status, 4000);
+    checkM3u8Status();
+  };  
 
   const toggleControls = () => {
     const video = myRef.current!;
