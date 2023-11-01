@@ -268,6 +268,7 @@ const enterFullScreen = () => {
           onMouseLeave={handleVideoHoverLeave}
           onClick={toggleControls}
         >
+          {/* Overlay menu */}
         <ContextMenuTrigger>
           <div className="flex items-end h-full mt-[-10px] ml-[10px] relative">
             <input ref={LinkText} className='hidden' value={'https://live.tokuly.com/live/'+id} />
