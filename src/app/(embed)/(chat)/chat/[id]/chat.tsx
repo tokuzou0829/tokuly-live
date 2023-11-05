@@ -70,7 +70,7 @@ import NextAuth, { type Session } from "next-auth";
         }else{
           setUrlName("guest");
           socket.on('connect', () => {
-            socket.emit('join', { roomId:roomId, name:"guest", token:token });
+            socket.emit('join', { roomId:roomId, name:"guest", token:'guest' });
             setIs_connection(true);
           });
         }

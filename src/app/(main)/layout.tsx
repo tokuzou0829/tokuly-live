@@ -5,22 +5,12 @@ import { Inter } from 'next/font/google'
 import './tokuly-livestyle.css'; // スタイルシートをインポート
 import icon from './tokuly.png';
 import RecommendationCh from './recommendationCh';
-import { handler } from '../api/auth/[...nextauth]/route'
-import { getServerSession } from "next-auth"
+import { auth } from '../api/auth/[...nextauth]/route'
 import AccountDropdownMenu from './menu';
 import { useRouter } from "next/router";
-import NextAuth, { type DefaultSession } from "next-auth";
+import NextAuth, { type Session } from "next-auth";
 import Link from 'next/link';
-interface Session {
-  user: {
-    id: string;
-    createdAt: string;
-    kids: boolean;
-    prefectureId: null | number;
-    updatedAt: string;
-    image:string;
-  } & DefaultSession["user"];
-}
+
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
@@ -36,7 +26,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  const session: Session | null  = await getServerSession(handler)
+  const session:Session | null  = await auth();
   return (
     <div style={{ backgroundColor: 'rgb(240, 240, 240)',height: '100%' }}>
       <header>

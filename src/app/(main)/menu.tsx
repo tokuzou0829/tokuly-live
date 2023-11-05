@@ -2,7 +2,7 @@
 import { signIn, signOut } from "next-auth/react";
 import { usePathname } from 'next/navigation'
 import { Button } from "@/components/ui/button";
-import NextAuth, { type DefaultSession } from "next-auth";
+import NextAuth, { type Session } from "next-auth";
 import Link from "next/link";
 import {
   DropdownMenu,
@@ -14,13 +14,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-interface Session {
-  user: {
-    image:string;
-  } & DefaultSession["user"];
-}
 type Props = {
-  session:Session | null
+  session:Session | null;
 }
 export default function AccountDropdownMenu(props:Props) {
     const {session} = props;
@@ -37,7 +32,7 @@ export default function AccountDropdownMenu(props:Props) {
                     >
                       <div>
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={session.user.image} />
+                        <AvatarImage src={`${session.user.image}`} />
                         <AvatarFallback>{session.user.name}</AvatarFallback>
                       </Avatar>
                       </div>

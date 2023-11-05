@@ -1,7 +1,34 @@
-import NextAuth from 'next-auth'
+import NextAuth, { type DefaultSession } from "next-auth"
+import { JWT } from "next-auth/jwt";
+
+declare module "next-auth/jwt" {
+  interface JWT {
+      name: string,
+      email: string,
+      picture: string,
+      sub: number,
+      token?: string| null| undefined;
+  }
+}
+declare module "next-auth" {
+  /**
+   * Returned by `useSession`, `getSession` and received as a prop on the `SessionProvider` React Context
+   */
+  interface Session {
+    user: {
+      /** The user's postal address. */
+      token: string| null| undefined;
+      // By default, TypeScript merges new interface properties and overwrite existing ones. In this case, the default session user properties will be overwritten, with the new one defined above. To keep the default session user properties, you need to add them back into the newly declared interface
+    } & DefaultSession["user"] // To keep the default types
+  }
+}
+
 import CredentialsProvider from "next-auth/providers/credentials"
 
-export const  handler = NextAuth({
+export const {
+  handlers: { GET, POST },
+  auth,
+} = NextAuth({
   providers: [
     CredentialsProvider({
       name: 'Tokuly',
@@ -9,7 +36,7 @@ export const  handler = NextAuth({
         email: { label: "email", type: "email", placeholder: "a@a.com" },
         password: { label: "password", type: "password" }
       },
-      async authorize(credentials, req) {
+      async authorize(credentials:any, req) {
         var myHeaders = new Headers();
         myHeaders.append("Content-Type", "application/x-www-form-urlencoded");
 
@@ -58,7 +85,9 @@ export const  handler = NextAuth({
     secret: process.env.NEXTAUTH_SECRET
   },
   callbacks: {
-    async jwt({ token, user }){
+    async jwt({ token, user,account }:{token:any,user:any,account:any}){
+      console.log("ac:")
+      console.log(account)
       if (user) { 
         token.token = user.token;
       }
@@ -66,14 +95,11 @@ export const  handler = NextAuth({
       console.log(token);
       return token
     },
-    async session({ session, user, token }) {
+    async session({ session, token }: { session: any; token: any }) {
           console.log("user:")
           session.user.token = token.token;
-          session.token = token.token;
           console.log(session)
           return session;
     },
   }
 })
-
-export { handler as GET, handler as POST }

@@ -3,8 +3,7 @@ import Image from 'next/image';
 import Video from './videoframe';
 import Viewer from './viewer';
 import Chat from './chat';
-import { getServerSession } from "next-auth"
-import { handler } from '../../../api/auth/[...nextauth]/route'
+import { auth } from '../../../api/auth/[...nextauth]/route'
 import NextAuth, { type Session } from "next-auth";
 
 interface LiveProps {
@@ -21,7 +20,7 @@ type Live = {
     ch_handle:string,
   }
 export default async function LivePlayer(props: LiveProps) {
-  const session:Session | null = await getServerSession(handler)
+  const session:Session | null = await auth()
   
   const {id} = props;
   const res = await fetch("https://api.tokuly.com/live/stream/data",{ cache: 'no-store',method: 'POST',  headers: {
