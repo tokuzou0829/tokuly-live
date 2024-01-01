@@ -5,12 +5,12 @@ import { ja } from "date-fns/locale"
 import { utcToZonedTime } from 'date-fns-tz';
 
 export default function LiveOverview({liveStartTime,overview}:{liveStartTime:string,overview:string}) {
-    function linkify(text: string): JSX.Element[] {
-        const urlRegex = /(\b(https?):\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])/gi;
+    function linkify(text) {
+        const urlRegex = /(\bhttps?:\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gi;
         return text.split(urlRegex).map((part, i) => 
-            urlRegex.test(part) ? <a href={part} key={i} target="_blank" rel="noopener noreferrer">{part}</a> : <span key={i}>{part}</span>
+            i % 2 === 1 ? <a href={part} key={i} target="_blank" rel="noopener noreferrer" className="text-blue-500">{part}</a> : <span key={i}>{part}</span>
         );
-    }
+    }     
     function formatDate(): string{
         const timeZone = 'Asia/Tokyo';
         const zonedDate = utcToZonedTime(liveStartTime, timeZone);
