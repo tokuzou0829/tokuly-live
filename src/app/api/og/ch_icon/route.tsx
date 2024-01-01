@@ -2,25 +2,23 @@ import { ImageResponse } from 'next/og'
 import { NextRequest } from "next/server";
 
 export const runtime = "edge";
-type Live = {
-  id:number,
-  title:string,
-  status:string,
-  stream_name:string,
-  thumbnail_url:string,
-  ch_name:string,
-  ch_icon:string,
-  ch_handle:string,
+type Channel = {
+  id:string,
+  name:string,
+  handle:string,
+  banner_url:string,
+  icon_url:string,
 }
 export async function GET(req: NextRequest): Promise<Response | ImageResponse> {
   const { searchParams } = new URL(req.url);
-  const video_id = searchParams.get("video_id");
-  const video = await fetch("https://api.tokuly.com/live/stream/data",{ cache: 'no-store',method: 'POST',  headers: {
+  const ch_handle = searchParams.get("handle");
+  
+  const video = await fetch("https://api.tokuly.com/live/channel/get",{ cache: 'no-store',method: 'POST',  headers: {
     "Content-Type": "application/x-www-form-urlencoded"
   },
-  body: "name="+video_id});
-  const live:Live= await video.json();
-  if (video_id) {
+  body: "handle="+ch_handle});
+  const live:Channel= await video.json();
+  if (ch_handle) {
     return new ImageResponse(
       (
         <div
@@ -36,12 +34,12 @@ export async function GET(req: NextRequest): Promise<Response | ImageResponse> {
             position:"relative"
            }}
         >
-          <img style={{height: "100%",width: "100%",objectFit:'cover'}} src={live.thumbnail_url} />
+          <img style={{height: "100%",width: "100%",objectFit:'cover'}} src={live.icon_url} />
         </div>
       ),
       {
-        width: 1200,
-        height: 630,
+        width: 512,
+        height: 512,
         emoji: "fluent",
       }
     );

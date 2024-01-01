@@ -1,6 +1,7 @@
 import React from 'react';
 import Image from 'next/image';
-import DefaultErrorPage from 'next/error'
+import { notFound } from 'next/navigation'
+
 import Link from 'next/link';
 type Channel = {
     id:string,
@@ -18,6 +19,36 @@ type Channel = {
     thumbnail_url:string,
     stream_name:string
   }
+  export async function generateMetadata({ params }: { params: { handle: string } }) {  
+    const res = await fetch("https://api.tokuly.com/live/channel/get",{ cache: 'no-store',method: 'POST',  headers: {
+        "Content-Type": "application/x-www-form-urlencoded"
+      },
+      body: "handle="+params.handle});
+      const errorCode:Number = await res.status;
+      const ch:Channel= await res.json();
+  
+    return {
+      title: ch.name,
+      description: ch.self_introduction,
+      icons: "/favicon.ico",
+      keywords: ["ライブ配信",ch.name],
+      twitter: {
+          card: "summary",
+          images: ['https://live.tokuly.com/api/og/ch_icon?handle=' + ch.handle]
+      },
+      openGraph: {
+          title: ch.name,
+          description: ch.self_introduction,
+          url: 'https://tokuly.com/'+ch.handle,
+          siteName: 'Tokuly Live',
+          images: {
+              url: 'https://live.tokuly.com/api/og/ch/ch_icon?handle=' + ch.handle,
+              width:1200,
+              height:630,
+          },
+      }
+    };
+  }
 export default async function LivePlayer({ params }: { params: { handle: string } }) {
   const res = await fetch("https://api.tokuly.com/live/channel/get",{ cache: 'no-store',method: 'POST',  headers: {
     "Content-Type": "application/x-www-form-urlencoded"
@@ -25,7 +56,9 @@ export default async function LivePlayer({ params }: { params: { handle: string 
   body: "handle="+params.handle});
   const errorCode:Number = await res.status;
   const ch:Channel= await res.json();
-
+  if(errorCode !== 200){
+    return notFound();
+  }
   return (
     <div className="h-[100%] w-[100%]">
         {errorCode == 200 ?(

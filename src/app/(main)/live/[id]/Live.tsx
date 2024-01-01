@@ -5,6 +5,11 @@ import Viewer from './viewer';
 import Chat from './chat';
 import { auth } from '../../../api/auth/[...nextauth]/route'
 import NextAuth, { type Session } from "next-auth";
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/ja';
+dayjs.extend(relativeTime);
+dayjs.locale('ja');
 
 interface LiveProps {
     id: string;
@@ -15,6 +20,8 @@ type Live = {
     status:string,
     stream_name:string,
     thumbnail_url:string,
+    stream_overview:string,
+    stream_start_time:string,
     ch_name:string,
     ch_icon:string,
     ch_handle:string,
@@ -23,31 +30,44 @@ export default async function LivePlayer(props: LiveProps) {
   const session:Session | null = await auth()
   
   const {id} = props;
-  const res = await fetch("https://api.tokuly.com/live/stream/data",{ cache: 'no-store',method: 'POST',  headers: {
+  const res = await fetch("https://api.tokuly.com/live/stream/data",{next: {revalidate: 180,},method: 'POST',  headers: {
     "Content-Type": "application/x-www-form-urlencoded"
   },
   body: "name="+id});
   const errorCode:Number = await res.status;
   const live:Live= await res.json();
+
+  function linkify(text: string): JSX.Element[] {
+      const urlRegex = /(\b(https?):\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])/gi;
+      return text.split(urlRegex).map((part, i) => 
+          urlRegex.test(part) ? <a href={part} key={i} target="_blank" rel="noopener noreferrer">{part}</a> : <span key={i}>{part}</span>
+      );
+  }
+  
+
   return (
     <div className='w-[100%] overflow-hidden'>
       <div className='xl:flex'>
         <Video live={live} />
         <Chat id={live.id} session={session}></Chat>
       </div>
-        <div className='flex m-2 w-[100%]'>
-              <div className=' relative w-[85px] h-[85px]'>
-                <img src={live.ch_icon} className='w-[80px] h-[80px] rounded-full aspect-square m-[auto] object-cover flex-shrink-0 min-w-[80px] m-[2.5px] mt-[0px]' />
-                <div className='absolute bg-red-600 w-[85px] h-[25px] bottom-[0px] left-[0px] rounded-md'>
-                    <p className=' text-white text-center font-semibold'>ライブ配信</p>
-                </div>
-              </div>
-              <div className='ml-[10px]'>
-                <p className='font-bold mb-0 text-xl'>{live.ch_name}</p>
-                <p className='mt-0 text-lg'>{live.title}</p>
-                <Viewer id={id} /> 
-              </div>
+      <div className='flex m-2 w-[100%]'>
+        <div className=' relative w-[85px] h-[85px]'>
+          <img src={live.ch_icon} className='w-[80px] h-[80px] rounded-full aspect-square m-[auto] object-cover flex-shrink-0 min-w-[80px] m-[2.5px] mt-[0px]' />
+          <div className='absolute bg-red-600 w-[85px] h-[25px] bottom-[0px] left-[0px] rounded-md'>
+              <p className=' text-white text-center font-semibold'>ライブ配信</p>
+          </div>
         </div>
+        <div className='ml-[10px]'>
+          <p className='font-bold mb-0 text-xl'>{live.ch_name}</p>
+          <p className='mt-0 text-lg'>{live.title}</p>
+          <Viewer id={id} /> 
+        </div>
+      </div>
+      <div className=' h-[100%] bg-[#fffefe] p-[10px] m-2 rounded-lg'>
+          <p className="font-bold text-slate-900	">{dayjs(live.stream_start_time).fromNow()}に配信開始</p>
+          <p className='mb-0'>{linkify(live.stream_overview)}</p>
+      </div>
     </div>
   )
 }

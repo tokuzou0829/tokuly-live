@@ -18,6 +18,7 @@ export const metadata: Metadata = {
     template: '%s | Tokuly Live',
     absolute: 'Tokuly Live',
   },
+  metadataBase:new URL('htttps://live.tokuly.com'),
   description: '完璧で究極の配信プラットフォーム',
 }
 

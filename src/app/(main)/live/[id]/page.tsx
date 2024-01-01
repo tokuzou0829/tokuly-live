@@ -28,11 +28,6 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
     description: null,
     icons: "/favicon.ico",
     keywords: ["ライブ配信"],
-    viewport: {
-        width: "device-width",
-        initialScale: 1,
-        maximumScale: 1,
-    },
     twitter: {
         card: "summary_large_image",
         images: ['https://live.tokuly.com/api/og?video_id=' + params.id]
