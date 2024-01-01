@@ -5,12 +5,7 @@ import Viewer from './viewer';
 import Chat from './chat';
 import { auth } from '../../../api/auth/[...nextauth]/route'
 import NextAuth, { type Session } from "next-auth";
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
-import 'dayjs/locale/ja';
-dayjs.extend(relativeTime);
-dayjs.locale('ja');
-
+import LiveOverview from './liveOverview';
 interface LiveProps {
     id: string;
 }
@@ -35,15 +30,7 @@ export default async function LivePlayer(props: LiveProps) {
   },
   body: "name="+id});
   const errorCode:Number = await res.status;
-  const live:Live= await res.json();
-
-  function linkify(text: string): JSX.Element[] {
-      const urlRegex = /(\b(https?):\/\/[-A-Z0-9+&@#/%?=~_|!:,.;]*[-A-Z0-9+&@#/%=~_|])/gi;
-      return text.split(urlRegex).map((part, i) => 
-          urlRegex.test(part) ? <a href={part} key={i} target="_blank" rel="noopener noreferrer">{part}</a> : <span key={i}>{part}</span>
-      );
-  }
-  
+  const live:Live= await res.json();  
 
   return (
     <div className='w-[100%] overflow-hidden'>
@@ -64,10 +51,7 @@ export default async function LivePlayer(props: LiveProps) {
           <Viewer id={id} /> 
         </div>
       </div>
-      <div className=' h-[100%] bg-[#fffefe] p-[10px] m-2 rounded-lg'>
-          <p className="font-bold text-slate-900	">{dayjs(live.stream_start_time).fromNow()}に配信開始</p>
-          <p className='mb-0'>{linkify(live.stream_overview)}</p>
-      </div>
+    <LiveOverview liveStartTime={live.stream_start_time} overview={live.stream_overview}></LiveOverview>
     </div>
   )
 }
