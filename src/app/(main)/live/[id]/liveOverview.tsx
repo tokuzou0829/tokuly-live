@@ -33,7 +33,7 @@ export default function LiveOverview({livename,liveStartTime,overview}:{livename
       }
           
     function formatDate(StreamStartTimeData:string): string{
-        if(StreamStartTimeData !== ""){
+        if(StreamStartTimeData){
             const timeZone = 'Asia/Tokyo';
             const zonedDate = utcToZonedTime(StreamStartTimeData, timeZone);
             return formatDistanceToNowStrict(zonedDate, {locale: ja})+'前に配信開始';
