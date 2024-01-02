@@ -11,6 +11,7 @@ type Live = {
   status:string,
   stream_name:string,
   thumbnail_url:string,
+  stream_overview:string,
   ch_name:string,
   ch_icon:string,
   ch_handle:string,
@@ -25,7 +26,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
 
   return {
     title: live.title,
-    description: null,
+    description: live.stream_overview,
     icons: "/favicon.ico",
     keywords: ["ライブ配信"],
     twitter: {
