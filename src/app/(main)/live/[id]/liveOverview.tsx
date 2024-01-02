@@ -5,7 +5,7 @@ import { ja } from "date-fns/locale"
 import { utcToZonedTime } from 'date-fns-tz';
 
 export default function LiveOverview({liveStartTime,overview}:{liveStartTime:string,overview:string}) {
-    function linkify(text) {
+    function linkify(text:string) {
         const urlRegex = /(\bhttps?:\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gi;
         return text.split(urlRegex).map((part, i) => 
             i % 2 === 1 ? <a href={part} key={i} target="_blank" rel="noopener noreferrer" className="text-blue-500">{part}</a> : <span key={i}>{part}</span>
