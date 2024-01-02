@@ -51,7 +51,7 @@ export default async function LivePlayer(props: LiveProps) {
           <Viewer id={id} /> 
         </div>
       </div>
-    <LiveOverview liveStartTime={live.stream_start_time} overview={live.stream_overview}></LiveOverview>
+    <LiveOverview livename={live.stream_name} liveStartTime={live.stream_start_time} overview={live.stream_overview}></LiveOverview>
     </div>
   )
 }
