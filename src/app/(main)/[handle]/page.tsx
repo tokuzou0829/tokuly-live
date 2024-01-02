@@ -39,7 +39,7 @@ type Channel = {
       openGraph: {
           title: ch.name,
           description: ch.self_introduction,
-          url: 'https://tokuly.com/'+ch.handle,
+          url: 'https://live.tokuly.com/'+ch.handle,
           siteName: 'Tokuly Live',
           images: {
               url: 'https://live.tokuly.com/api/og/ch_icon?handle=' + ch.handle,
