@@ -42,7 +42,7 @@ type Channel = {
           url: 'https://tokuly.com/'+ch.handle,
           siteName: 'Tokuly Live',
           images: {
-              url: 'https://live.tokuly.com/api/og/ch/ch_icon?handle=' + ch.handle,
+              url: 'https://live.tokuly.com/api/og/ch_icon?handle=' + ch.handle,
               width:1200,
               height:630,
           },
