@@ -43,8 +43,8 @@ type Channel = {
           siteName: 'Tokuly Live',
           images: {
               url: 'https://live.tokuly.com/api/og/ch_icon?handle=' + ch.handle,
-              width:1200,
-              height:630,
+              width:512,
+              height:512,
           },
       }
     };
