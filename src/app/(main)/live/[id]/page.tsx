@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
     },
     openGraph: {
         title: live.title,
-        description: null,
+        description: live.stream_overview,
         url: 'https://live.tokuly.com/live/'+params.id,
         siteName: 'Tokuly Live',
         images: {
