@@ -32,10 +32,10 @@ export default function LiveOverview({livename,liveStartTime,overview}:{livename
         ));
       }
           
-    function formatDate(stream_overview_data:string): string{
-        if(stream_overview_data===""){
+    function formatDate(StreamStartTimeData:string): string{
+        if(StreamStartTimeData !== ""){
             const timeZone = 'Asia/Tokyo';
-            const zonedDate = utcToZonedTime(stream_overview_data, timeZone);
+            const zonedDate = utcToZonedTime(StreamStartTimeData, timeZone);
             return formatDistanceToNowStrict(zonedDate, {locale: ja})+'前に配信開始';
         }else{
             return "ストリーマーを待機中"
