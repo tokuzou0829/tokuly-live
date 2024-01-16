@@ -6,6 +6,8 @@ import LayoutContent from "./layout-content";
 import Header from "@/components/header";
 import { getRecommendChannel } from "@/requests/channel";
 
+export const revalidate = 0;
+
 export const metadata: Metadata = {
   title: {
     template: "%s | Tokuly Live",
