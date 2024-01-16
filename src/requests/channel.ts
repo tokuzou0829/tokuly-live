@@ -1,24 +1,6 @@
 import * as fetch from "@/utils/fetch";
-import type { Channels } from "@/types/channel";
 import { notFound } from "next/navigation";
-
-type Channel = {
-  id: string;
-  name: string;
-  handle: string;
-  banner_url: string;
-  icon_url: string;
-  self_introduction: string;
-  game: string;
-  streams: Stream[];
-  waiting: Stream[];
-};
-
-type Stream = {
-  title: string;
-  thumbnail_url: string;
-  stream_name: string;
-};
+import type { Channel, Channels } from "@/types/channel";
 
 type Handle = {
   handle: string;

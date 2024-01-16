@@ -73,10 +73,7 @@ async function http<T>(
     config
   );
 
-  console.log(request);
   const res = await fetch(request);
-
-  console.log(res.status);
 
   if (!res.ok) {
     const error = new FetchError("データのfetch中にエラーが発生しました", {

@@ -14,3 +14,13 @@ export type Live = {
   ch_icon: string;
   ch_handle: string;
 };
+
+export type LiveList = {
+  id: number;
+  title: string;
+  stream_name: string;
+  thumbnail_url: string;
+  ch_name: string;
+  ch_icon: string;
+  ch_handle: string;
+};

@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import Video from "./player";
 import Live from "./Live";
-import type { Live as LiveType } from "@/types/live";
 
 type Flameprops = {
   live: Live;
@@ -34,8 +33,9 @@ export default function Videoflame(props: Flameprops) {
         },
         body: "name=" + live.stream_name,
       });
-      const errorCode: Number = await res.status;
       const newLivedata: Live = await res.json();
+
+      console.log(newLivedata.status);
       setStatus(newLivedata.status);
     }
   }

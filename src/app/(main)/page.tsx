@@ -1,10 +1,11 @@
-import "./tokuly-livestyle.css"; // スタイルシートをインポート
+import "./tokuly-livestyle.css";
 import TopLive from "./toplive";
 import Link from "next/link";
 import { getOnlineLiveList } from "@/requests/live";
 
 export default async function Home() {
   const lives = await getOnlineLiveList();
+
   return (
     <div>
       {lives.lives.length === 0 ? (

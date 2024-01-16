@@ -1,13 +1,13 @@
 import * as fetch from "@/utils/fetch";
 import { notFound } from "next/navigation";
-import type { Live } from "@/types/live";
+import type { Live, LiveList } from "@/types/live";
 
 type OnlineCheckParams = {
   id: string;
 };
 
 type Lives = {
-  lives: Live[];
+  lives: LiveList[];
 };
 
 export async function getOnlineLiveList(): Promise<Lives> {
@@ -19,8 +19,6 @@ export async function getOnlineLiveList(): Promise<Lives> {
 export async function getLive(param: OnlineCheckParams): Promise<Live> {
   const formData = new FormData();
   formData.append("name", param.id);
-
-  console.log(formData);
 
   try {
     return await fetch.post<FormData, Live>(`/live/stream/data`, formData, {
