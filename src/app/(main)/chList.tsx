@@ -1,25 +1,26 @@
-import React from 'react';
-import Link from 'next/link';
+import Link from "next/link";
+
 interface ChProps {
   icon_url: string;
   name: string;
   handle: string;
-  game:string;
+  game: string;
 }
 
-function Ch(props: ChProps) {
-  const { icon_url, name, handle, game } = props;
-
+function Ch({ ch }: { ch: ChProps }) {
   return (
-    <div className="users">
-      <Link href={"/"+handle} style={{ textDecoration: 'none', display: 'flex', alignItems: 'center' }}>
-        <img src={icon_url} className="usersimg object-cover" alt="User" />
-        <div>
-          <p className="sidebar-text-user">{name}</p>
-          <p className="sidebar-text-game">{game}</p>
-        </div>
-      </Link>
-    </div>
+    <Link href={`/${ch.handle}`} className="flex items-start">
+      <img
+        alt={ch.name}
+        src={ch.icon_url}
+        className="rounded-full mr-3 h-12 w-12"
+        alt="User"
+      />
+      <div>
+        <p className="font-semibold line-clamp-1">{ch.name}</p>
+        <span className="text-gray-500">{ch.game}</span>
+      </div>
+    </Link>
   );
 }
 

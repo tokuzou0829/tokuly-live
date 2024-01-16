@@ -1,9 +1,9 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import Image from "next/image";
 import Video from "./player";
-import DefaultErrorPage from "next/error";
 import Live from "./Live";
+import type { Live as LiveType } from "@/types/live";
+
 type Flameprops = {
   live: Live;
 };

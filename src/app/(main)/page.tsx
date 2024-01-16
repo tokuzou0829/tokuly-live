@@ -1,27 +1,10 @@
-import React, { useEffect, useState } from "react";
-import Image from "next/image";
 import "./tokuly-livestyle.css"; // スタイルシートをインポート
-import icon from "./tokuly.png";
 import TopLive from "./toplive";
 import Link from "next/link";
-type Lives = {
-  lives: Live[];
-};
-type Live = {
-  id: string;
-  title: string;
-  stream_name: string;
-  thumbnail_url: string;
-  ch_name: string;
-  ch_icon: string;
-  ch_handle: string;
-};
+import { getOnlineLiveList } from "@/requests/live";
+
 export default async function Home() {
-  const response = await fetch("https://api.tokuly.com/live/online/get", {
-    method: "POST",
-    cache: "no-store",
-  });
-  const lives: Lives = await response.json();
+  const lives = await getOnlineLiveList();
   return (
     <div>
       {lives.lives.length === 0 ? (

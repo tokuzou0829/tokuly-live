@@ -1,32 +1,10 @@
-import React from "react";
-import Image from "next/image";
-import Video from "./player";
-import DefaultErrorPage from "next/error";
 import Live from "./Live";
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-type Live = {
-  id: number;
-  title: string;
-  status: string;
-  stream_name: string;
-  thumbnail_url: string;
-  stream_overview: string;
-  ch_name: string;
-  ch_icon: string;
-  ch_handle: string;
-};
+import { onlineCheck, getLive } from "@/requests/live";
+
+export const revalidate = 0;
+
 export async function generateMetadata({ params }: { params: { id: string } }) {
-  const res = await fetch("https://api.tokuly.com/live/stream/data", {
-    cache: "no-store",
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: "name=" + params.id,
-  });
-  const errorCode: Number = await res.status;
-  const live: Live = await res.json();
+  const live = await getLive({ id: params.id });
 
   return {
     title: live.title,
@@ -51,17 +29,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   };
 }
 export default async function LivePage({ params }: { params: { id: string } }) {
-  const res = await fetch("https://api.tokuly.com/live/online/check", {
-    cache: "no-store",
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: "name=" + params.id,
-  });
-  const errorCode: Number = await res.status;
-  if (errorCode !== 200) {
-    return notFound();
-  }
+  await onlineCheck({ id: params.id });
+
   return <Live id={params.id} />;
 }

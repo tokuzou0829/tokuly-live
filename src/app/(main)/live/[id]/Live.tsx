@@ -1,40 +1,18 @@
-import React from "react";
-import Image from "next/image";
 import Video from "./videoframe";
 import Viewer from "./viewer";
 import Chat from "./chat";
 import { auth } from "../../../api/auth/[...nextauth]/route";
-import NextAuth, { type Session } from "next-auth";
 import LiveOverview from "./liveOverview";
+import { getLive } from "@/requests/live";
+
 interface LiveProps {
   id: string;
 }
-type Live = {
-  id: number;
-  title: string;
-  status: string;
-  stream_name: string;
-  thumbnail_url: string;
-  stream_overview: string;
-  stream_start_time: string;
-  ch_name: string;
-  ch_icon: string;
-  ch_handle: string;
-};
-export default async function LivePlayer(props: LiveProps) {
-  const session: Session | null = await auth();
 
-  const { id } = props;
-  const res = await fetch("https://api.tokuly.com/live/stream/data", {
-    next: { revalidate: 180 },
-    method: "POST",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: "name=" + id,
-  });
-  const errorCode: Number = await res.status;
-  const live: Live = await res.json();
+export const revalidate = 180;
+
+export default async function LivePlayer({ id }: LiveProps) {
+  const [session, live] = await Promise.all([auth(), getLive({ id })]);
 
   return (
     <div className="w-[100%] p-5 overflow-hidden">
@@ -58,11 +36,7 @@ export default async function LivePlayer(props: LiveProps) {
           <Viewer id={id} />
         </div>
       </div>
-      <LiveOverview
-        livename={live.stream_name}
-        liveStartTime={live.stream_start_time}
-        overview={live.stream_overview}
-      />
+      <LiveOverview live={live} />
     </div>
   );
 }

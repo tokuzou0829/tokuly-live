@@ -1,40 +1,20 @@
-import React from 'react';
-import Image from 'next/image';
-import DefaultErrorPage from 'next/error'
-import Chat from './chat';
-import { auth } from '../../../../api/auth/[...nextauth]/route'
-import NextAuth, { type Session } from "next-auth";
-type Live = {
-    id:number,
-    title:string,
-    stream_name:string,
-    thumbnail_url:string,
-    ch_name:string,
-    ch_icon:string,
-    ch_handle:string,
-  }
-export default async function LivePage({ params }: { params: { id: string } }) {
-  const session:Session | null = await auth();
-  const res = await fetch("https://api.tokuly.com/live/online/check",{cache: 'no-store',method: 'POST',  headers: {
-    "Content-Type": "application/x-www-form-urlencoded"
-  },
-  body: "name="+params.id});
+import React from "react";
+import Chat from "./chat";
+import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { onlineCheck, getLive } from "@/requests/live";
 
-  const stream_data_res = await fetch("https://api.tokuly.com/live/stream/data",{ cache: 'no-store',method: 'POST',  headers: {
-    "Content-Type": "application/x-www-form-urlencoded"
-  },
-  body: "name="+params.id});
-  const errorCode:Number = await res.status;
-  const live:Live= await stream_data_res.json();
+export const revalidate = 0;
+
+export default async function Page({ params }: { params: { id: string } }) {
+  const [session, _, live] = await Promise.all([
+    auth(),
+    onlineCheck({ id: params.id }),
+    getLive({ id: params.id }),
+  ]);
+
   return (
-    <div className='w-[100%] h-[100%]'>
-        {errorCode == 200 ?(
-            <Chat id={live.id} session={session} />
-        ):(
-            <div>
-                <p>配信が見つかりませんでした。</p>
-            </div>
-        )}
+    <div className="w-[100%] h-[100%]">
+      <Chat id={live.id} session={session} />
     </div>
-  )
+  );
 }

@@ -77,7 +77,7 @@ export default function AccountDropdownMenu(props: Props) {
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
-        <Button onClick={() => signIn("cognito", { callbackUrl: pathname })}>
+        <Button onClick={() => signIn("Tokuly", { callbackUrl: pathname })}>
           ログイン
         </Button>
       )}
