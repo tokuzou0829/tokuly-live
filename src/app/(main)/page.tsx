@@ -3,6 +3,8 @@ import TopLive from "./toplive";
 import Link from "next/link";
 import { getOnlineLiveList } from "@/requests/live";
 
+export const revalidate = 0;
+
 export default async function Home() {
   const lives = await getOnlineLiveList();
 

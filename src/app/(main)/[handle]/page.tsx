@@ -14,7 +14,6 @@ export async function generateMetadata({
   return {
     title: channel.name,
     description: channel.self_introduction,
-    icons: "/favicon.ico",
     keywords: ["ライブ配信", channel.name],
     twitter: {
       card: "summary",

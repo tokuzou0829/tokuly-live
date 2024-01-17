@@ -9,7 +9,6 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   return {
     title: live.title,
     description: live.stream_overview,
-    icons: "/favicon.ico",
     keywords: ["ライブ配信"],
     twitter: {
       card: "summary_large_image",
