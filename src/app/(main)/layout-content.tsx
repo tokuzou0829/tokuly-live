@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/resizable";
 import { ChList } from "./chList";
 import type { Channels } from "@/types/channel";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Nav } from "@/app/(main)/nav";
 import { Home, Radio } from "lucide-react";
@@ -21,6 +21,9 @@ export default function LayoutContent({
   channels: Channels;
 }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  useEffect(()=>{
+    setIsCollapsed(window.innerWidth < 1150);
+  },[])
 
   return (
     <TooltipProvider delayDuration={0}>

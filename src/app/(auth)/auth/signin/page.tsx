@@ -11,35 +11,59 @@ import { cn } from "@/lib/utils";
 
 interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
 
-function UserAuthForm({ className, ...props }: UserAuthFormProps) {
+export function UserAuthForm({ className, ...props }: UserAuthFormProps) {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState<boolean>(false);
-
+  const [formValues, setFormValues] = useState({
+    email: "",
+    password: "",
+  });
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setFormValues({ ...formValues, [name]: value });
+  };
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
   async function onSubmit(event: React.SyntheticEvent) {
     event.preventDefault();
     setIsLoading(true);
 
-    setTimeout(() => {
-      setIsLoading(false);
-    }, 3000);
+    const res = await signIn("credentials", {
+      redirect:false,
+      email: formValues.email,
+      password: formValues.password,
+      callbackUrl,
+    });
+
+    setIsLoading(false);
+
+    console.log(res);
+    if (!res?.error) {
+      router.push(callbackUrl) 
+    } else {
+      console.log("メールアドレスか、パスワードが間違っています");
+    }
   }
 
   return (
     <div className={cn("grid gap-6", className)} {...props}>
-      <form onSubmit={onSubmit}>
+      <form onSubmit={onSubmit} >
         <div className="grid gap-5">
           <div className="grid gap-2">
             <Label htmlFor="email">メールアドレス</Label>
-            <Input id="email" type="email" placeholder="m@example.com" />
+            <Input id="email" type="email" name="email" placeholder="tokulylove@example.com" onInput={handleChange}/>
           </div>
           <div className="grid gap-2">
             <Label htmlFor="password">パスワード</Label>
             <Input
-              placeholder="強力なパスワードを入力..."
+              placeholder="パスワード"
               id="password"
               type="password"
+              name="password"
+              onInput={handleChange}
             />
           </div>
-          <Button disabled={isLoading}>Eメールでログイン</Button>
+          <Button disabled={isLoading}>ログイン</Button>
         </div>
       </form>
     </div>
@@ -47,52 +71,8 @@ function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 }
 
 export default function LoginForm() {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [formValues, setFormValues] = useState({
-    email: "",
-    password: "",
-  });
-  const [error, setError] = useState("");
-
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/profile";
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      setLoading(true);
-      setFormValues({ email: "", password: "" });
-
-      const res = await signIn("credentials", {
-        redirect: false,
-        email: formValues.email,
-        password: formValues.password,
-        callbackUrl,
-      });
-
-      setLoading(false);
-
-      console.log(res);
-      if (!res?.error) {
-        router.push(callbackUrl);
-      } else {
-        setError("メールアドレスか、パスワードが間違っています");
-      }
-    } catch (error: any) {
-      setLoading(false);
-      setError(error);
-    }
-  };
-
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target;
-    setFormValues({ ...formValues, [name]: value });
-  };
-
-  const input_style =
-    "form-control block w-full px-4 py-5 text-sm font-normal text-gray-700 bg-white bg-clip-padding border border-solid border-gray-300 rounded-lg transition ease-in-out m-0 focus:text-gray-700 focus:bg-white focus:border-blue-600 focus:outline-none";
-
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
   return (
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
       <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">

@@ -69,7 +69,7 @@ export const {
         );
         const user_data = await user_res.json();
         var user = user_data;
-        console.log(user);
+       // console.log(user);
         user.image = user_data.profile_photo_url;
         if (user.result == "ok") {
           return user;
@@ -98,19 +98,19 @@ export const {
       user: any;
       account: any;
     }) {
-      console.log("ac:");
-      console.log(account);
+     // console.log("ac:");
+      //console.log(account);
       if (user) {
         token.token = user.token;
       }
-      console.log("token:");
-      console.log(token);
+     // console.log("token:");
+     // console.log(token);
       return token;
     },
     async session({ session, token }: { session: any; token: any }) {
-      console.log("user:");
+     // console.log("user:");
       session.user.token = token.token;
-      console.log(session);
+      //console.log(session);
       return session;
     },
   },
