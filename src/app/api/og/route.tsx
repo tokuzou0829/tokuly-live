@@ -1,26 +1,17 @@
-import { ImageResponse } from 'next/og'
+import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
+import { getLive } from "@/requests/live";
 
 export const runtime = "edge";
-type Live = {
-  id:number,
-  title:string,
-  status:string,
-  stream_name:string,
-  thumbnail_url:string,
-  ch_name:string,
-  ch_icon:string,
-  ch_handle:string,
-}
+export const revalidate = 0;
+
 export async function GET(req: NextRequest): Promise<Response | ImageResponse> {
   const { searchParams } = new URL(req.url);
   const video_id = searchParams.get("video_id");
-  const video = await fetch("https://api.tokuly.com/live/stream/data",{ cache: 'no-store',method: 'POST',  headers: {
-    "Content-Type": "application/x-www-form-urlencoded"
-  },
-  body: "name="+video_id});
-  const live:Live= await video.json();
+
   if (video_id) {
+    const live = await getLive({ id: video_id });
+
     return new ImageResponse(
       (
         <div
@@ -33,10 +24,13 @@ export async function GET(req: NextRequest): Promise<Response | ImageResponse> {
             alignItems: "center",
             justifyContent: "center",
             fontSize: "250px",
-            position:"relative"
-           }}
+            position: "relative",
+          }}
         >
-          <img style={{height: "100%",width: "100%",objectFit:'cover'}} src={live.thumbnail_url} />
+          <img
+            style={{ height: "100%", width: "100%", objectFit: "cover" }}
+            src={live.thumbnail_url}
+          />
         </div>
       ),
       {

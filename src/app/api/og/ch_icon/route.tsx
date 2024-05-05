@@ -1,24 +1,17 @@
-import { ImageResponse } from 'next/og'
+import { ImageResponse } from "next/og";
 import { NextRequest } from "next/server";
+import { getChannel } from "@/requests/channel";
 
 export const runtime = "edge";
-type Channel = {
-  id:string,
-  name:string,
-  handle:string,
-  banner_url:string,
-  icon_url:string,
-}
+
+export const revalidate = 0;
+
 export async function GET(req: NextRequest): Promise<Response | ImageResponse> {
   const { searchParams } = new URL(req.url);
   const ch_handle = searchParams.get("handle");
-  
-  const video = await fetch("https://api.tokuly.com/live/channel/get",{ cache: 'no-store',method: 'POST',  headers: {
-    "Content-Type": "application/x-www-form-urlencoded"
-  },
-  body: "handle="+ch_handle});
-  const live:Channel= await video.json();
   if (ch_handle) {
+    const live = await getChannel({ handle: ch_handle });
+
     return new ImageResponse(
       (
         <div
@@ -31,10 +24,13 @@ export async function GET(req: NextRequest): Promise<Response | ImageResponse> {
             alignItems: "center",
             justifyContent: "center",
             fontSize: "250px",
-            position:"relative"
-           }}
+            position: "relative",
+          }}
         >
-          <img style={{height: "100%",width: "100%",objectFit:'cover'}} src={live.icon_url} />
+          <img
+            style={{ height: "100%", width: "100%", objectFit: "cover" }}
+            src={live.icon_url}
+          />
         </div>
       ),
       {
