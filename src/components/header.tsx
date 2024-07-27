@@ -6,7 +6,7 @@ import { type Session } from "next-auth";
 export default function Header({ session }: { session: Session | null }) {
   return (
     <header className="bg-white top-0 z-50 sticky border-b border-gtay-200">
-      <div className="h-16 max-w-screen-2xl mx-auto px-4 flex itmes-center justify-between">
+      <div className="h-16 mx-auto px-4 flex itmes-center justify-between">
         <Link className="flex items-center" href="/">
           <Image
             src="/tokuly.png"
