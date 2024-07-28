@@ -1,3 +1,5 @@
+import { LiveList } from "./live";
+
 export type Channels = {
   channels: ListChannel[];
 };
@@ -18,8 +20,8 @@ export type Channel = {
   icon_url: string;
   self_introduction: string;
   game: string;
-  streams: Stream[];
-  waiting: Stream[];
+  streams: LiveList[];
+  waiting: LiveList[];
   thumbnail_url: string;
 };
 

@@ -1,7 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { getChannel } from "@/requests/channel";
-
+import Live from "@/components/ui/live";
 export const revalidate = 0;
 
 export async function generateMetadata({
@@ -64,35 +64,7 @@ export default async function LivePlayer({
             </p>
             <div className="overflow-scroll	w-[100%] flex py-3">
               {channel.streams.map((stream, index) => (
-                <Link
-                  key={index}
-                  href={"/live/" + stream.stream_name}
-                  className="block w-[250px] shrink-0 mr-2"
-                >
-                  <div className="relative">
-                    <img
-                      src={stream.thumbnail_url}
-                      className="w-[250px] rounded-lg aspect-video object-cover bg-gray-500"
-                    />
-                    <div className="absolute bg-red-600 w-[100px] h-[25px] top-[5px] left-[5px] rounded-md">
-                      <p className=" text-white text-center	font-semibold	">
-                        ライブ配信
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex m-1 mr-0">
-                    <img
-                      src={channel.icon_url}
-                      className="w-[40px] h-[40px] rounded-full aspect-square mr-1 object-cover bg-gray-500"
-                    />
-                    <div>
-                      <p className="font-bold mb-0 truncate w-[205px]">
-                        {stream.title}
-                      </p>
-                      <p className="mt-0 text-sm">{channel.name}</p>
-                    </div>
-                  </div>
-                </Link>
+              <Live key={index} live={stream} />
               ))}
             </div>
           </div>
