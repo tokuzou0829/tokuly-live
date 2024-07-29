@@ -34,10 +34,15 @@ export async function onlineCheck(param: OnlineCheckParams): Promise<any> {
   formData.append("name", param.id);
 
   try {
-    return await fetch.post<FormData, any>(`/live/online/check`, formData, {
+    const res = await fetch.post<FormData, any>(`/live/online/check`, formData, {
       headers: {},
     });
+    if(res.publishing_setting && res.publishing_setting == "friend"){
+      notFound();
+    }
+    return res;
   } catch (e) {
+    console.log(e);
     notFound();
   }
 }
