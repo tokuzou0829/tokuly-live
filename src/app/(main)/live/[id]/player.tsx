@@ -68,7 +68,7 @@ function Player(props: VideoProps) {
 
       cursorHideTimeoutRef.current = window.setTimeout(() => {
         if (playerRef.current && myRef.current!.played) {
-          console.log("hide");
+         // console.log("hide");
           playerRef.current.style.cursor = "none";
           setShowControls(false);
         }

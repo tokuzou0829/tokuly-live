@@ -7,7 +7,7 @@ import { utcToZonedTime } from "date-fns-tz";
 import type { Live } from "@/types/live";
 
 export default function LiveOverview({ live }: { live: Live }) {
-  console.log(live);
+  //console.log(live);
 
   const [status, setStatus] = useState<string>("offline");
   const [streamOverview, setStreamOverview] = useState<string>(

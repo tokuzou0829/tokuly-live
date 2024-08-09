@@ -41,7 +41,7 @@ import NextAuth, { type Session } from "next-auth";
       .then(responseData => {
           const res:ChatMessage[] = responseData;
           setHistory_messages(res);
-          console.log('API Response:', responseData);
+         // console.log('API Response:', responseData);
       })
       .catch(error => {
           console.error('API Request Error:', error);

@@ -36,7 +36,7 @@ export default function Videoflame(props: Flameprops) {
       });
       const newLivedata: Live = await res.json();
 
-      console.log(newLivedata.status);
+      //console.log(newLivedata.status);
       setStatus(newLivedata.status);
     }
   }

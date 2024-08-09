@@ -37,7 +37,7 @@ function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
     setIsLoading(false);
 
-    console.log(res);
+    //console.log(res);
     if (!res?.error) {
       router.push(callbackUrl) 
     } else {
