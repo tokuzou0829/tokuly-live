@@ -1,5 +1,5 @@
 import Live from "./Live";
-import { onlineCheck, getLive } from "@/requests/live";
+import { VideoCheck, getLive } from "@/requests/live";
 
 export const revalidate = 0;
 
@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: { params: { id: string } }) {
   };
 }
 export default async function LivePage({ params }: { params: { id: string } }) {
-  await getLive({ id: params.id });
+  await VideoCheck({ id: params.id });
 
   return <Live id={params.id} />;
 }

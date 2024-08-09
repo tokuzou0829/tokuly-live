@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from "react";
 import Video from "./player";
 import Live from "./Live";
+import { intervalToDuration, formatDuration } from 'date-fns';
+import Link from "next/link";
 
 type Flameprops = {
   live: Live;
@@ -19,26 +21,111 @@ type Live = {
 export default function Videoflame(props: Flameprops) {
   const { live } = props;
   const [status, setStatus] = useState<string>(live.status);
+  const [isArchive, setIsArchive] = useState<boolean>(false);
+  const [archivevideoTime, setArchivevideoTime] = useState<number>(0);
   useEffect(() => {
+    let archivecheckstatus = false;
+    async function ChecksStatus() {
+      if (status !== "online") {
+        const res = await fetch("https://api.tokuly.com/live/stream/data", {
+          cache: "no-store",
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: "name=" + live.stream_name,
+        });
+        const newLivedata: Live = await res.json();
+  
+        //console.log(newLivedata.status);
+        setStatus(newLivedata.status);
+        if(newLivedata.status === "end" && !archivecheckstatus){
+          const checkvideo = await fetch(`https://live-data.tokuly.com/videos/hls/${live.stream_name}/index.m3u8`, {
+            method:"GET",
+            headers: {},
+          });
+          if(checkvideo.ok){
+            const m3u8Content = await checkvideo.text();
+
+            // 正規表現で#EXTINFの値を全て取得
+            const extinfMatches = m3u8Content.match(/#EXTINF:([\d\.]+)/g);
+            
+            if (!extinfMatches) {
+              throw new Error('No EXTINF tags found in M3U8 file');
+            }
+            
+            let totalDuration = 0;
+            
+            // すべての#EXTINFタグの値を合計
+            extinfMatches.forEach(match => {
+              const duration = parseFloat(match.split(':')[1]);
+              totalDuration += duration;
+            });
+            
+            setArchivevideoTime(totalDuration);
+
+            setIsArchive(true);
+            archivecheckstatus = true;
+          }
+        }
+      }
+    }
+    async function archivecheck(){
+      if(!isArchive){
+        const checkvideo = await fetch(`https://live-data.tokuly.com/videos/hls/${live.stream_name}/index.m3u8`, {
+          method:"GET",
+          headers: {},
+        });
+        if(checkvideo.ok){
+          const m3u8Content = await checkvideo.text();
+
+          // 正規表現で#EXTINFの値を全て取得
+          const extinfMatches = m3u8Content.match(/#EXTINF:([\d\.]+)/g);
+          
+          if (!extinfMatches) {
+            throw new Error('No EXTINF tags found in M3U8 file');
+          }
+          let totalDuration = 0;
+          // すべての#EXTINFタグの値を合計
+          extinfMatches.forEach(match => {
+            const duration = parseFloat(match.split(':')[1]);
+            totalDuration += duration;
+          });
+          setArchivevideoTime(totalDuration);
+          setIsArchive(true);
+          archivecheckstatus = true;
+        }
+      }
+    }
+    archivecheck();
     const id = setInterval(ChecksStatus, 5000);
     return () => clearInterval(id);
   }, []);
-  async function ChecksStatus() {
-    if (status !== "online") {
-      const res = await fetch("https://api.tokuly.com/live/stream/data", {
-        cache: "no-store",
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: "name=" + live.stream_name,
-      });
-      const newLivedata: Live = await res.json();
 
-      console.log(newLivedata.status);
-      setStatus(newLivedata.status);
+
+  function secondsToTimeFormat(seconds:number) {
+    const totalSeconds = Math.floor(seconds);
+
+    // 時、分、秒を計算
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const remainingSeconds = totalSeconds % 60;
+  
+    // パディング関数
+    const pad = (num:number) => num.toString().padStart(2, '0');
+  
+    // 時間部分を条件に応じて形成
+    let timeString = '';
+    if (hours > 0) {
+      timeString += `${pad(hours)}:`;
     }
+  
+    // 分と秒を追加
+    timeString += `${pad(minutes)}:${pad(remainingSeconds)}`;
+  
+    return timeString;
   }
+
   return (
     <div className="w-[100%] h-[100%]">
       {status == "online" ? (
@@ -53,21 +140,40 @@ export default function Videoflame(props: Flameprops) {
             backgroundImage: "url(" + live.thumbnail_url + ")",
             backgroundSize: "cover",
             position: "relative",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              backgroundColor: "rgba(0,0,0,0.6)",
-              left: 0,
-              bottom: 0,
-              margin: 10,
-              padding: 10,
-              borderRadius: 10,
-            }}
-          >
-            <p className="text-white">ストリーマーを待っています</p>
-          </div>
+          {isArchive ? (
+            <Link href={`/video/${live.stream_name}`}>
+                <div
+                className="bg-black bg-opacity-50 p-4 rounded-lg cursor-pointer transition-all duration-300 flex flex-col items-center"
+              >
+                <p className="text-white text-xs mb-2">この配信にはアーカイブがあります</p>
+                <div className="relative">
+                  <img src={live.thumbnail_url} className="w-[200px] aspect-video object-cover rounded" />
+                  <div className="absolute bottom-0 right-0 flex justify-between items-center m-1 px-1.5 bg-black bg-opacity-50 rounded-sm">
+                    <span className="text-white">{secondsToTimeFormat(archivevideoTime)}</span>
+                  </div>
+                </div>
+              </div>
+            </Link>
+          ) : (
+            <div
+              style={{
+                position: "absolute",
+                backgroundColor: "rgba(0,0,0,0.6)",
+                left: 0,
+                bottom: 0,
+                margin: 10,
+                padding: 10,
+                borderRadius: 10,
+              }}
+            >
+              <p className="text-white">ストリーマーを待っています</p>
+            </div>
+          )}
         </div>
       )}
     </div>

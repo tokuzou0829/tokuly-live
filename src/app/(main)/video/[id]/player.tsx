@@ -1,0 +1,497 @@
+"use client";
+import React, { useRef, useEffect, useState } from "react";
+import { Copy } from "lucide-react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faPlay,
+  faPause,
+  faVolumeHigh,
+  faExpand,
+  faCompress,
+  faVolumeMute,
+  faShare,
+  faCopy,
+  faHandMiddleFinger,
+} from "@fortawesome/free-solid-svg-icons";
+import Hls from "hls.js";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+
+interface VideoProps {
+  id: string;
+  className?: string;
+  poster_url?: string;
+}
+
+function Player(props: VideoProps) {
+  const { id, className,poster_url } = props;
+  const playerRef = useRef<HTMLDivElement | null>(null);
+  const myRef = useRef<HTMLVideoElement | null>(null);
+  const overlayRef = useRef<HTMLDivElement | null>(null);
+  const LinkText = useRef<HTMLInputElement | null>(null);
+  const EmdedCode = useRef<HTMLTextAreaElement | null>(null);
+  const [showControls, setShowControls] = useState<boolean>(false);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [volume, setVolume] = useState<number>();
+  const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const cursorHideTimeoutRef = useRef<number | null>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  // コンポーネントがアンマウントされたときにクリーンアップ
+  useEffect(() => {
+    if (playerRef.current) {
+      playerRef.current.style.cursor = "auto"; // カーソルを表示
+    }
+
+    const resetCursorHideTimeout = () => {
+      if (cursorHideTimeoutRef.current) {
+        clearTimeout(cursorHideTimeoutRef.current);
+      }
+
+      cursorHideTimeoutRef.current = window.setTimeout(() => {
+        if (playerRef.current && myRef.current!.played) {
+          console.log("hide");
+          playerRef.current.style.cursor = "none";
+          setShowControls(false);
+        }
+      }, 3000);
+    };
+
+    const handleMouseMove = () => {
+      if (playerRef.current) {
+        if (playerRef.current.style.cursor == "none") {
+          setShowControls(true);
+        }
+        playerRef.current.style.cursor = "auto"; // オーバーレイ内でのみカーソルを表示
+        resetCursorHideTimeout();
+      }
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      if (cursorHideTimeoutRef.current) {
+        clearTimeout(cursorHideTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // Load volume from local storage on component mount
+  useEffect(() => {
+    const initialVolume = window?.localStorage?.getItem("volume") || "1"; // initialVolumeに型を追加
+    if (initialVolume !== null) {
+      setVolume(parseFloat(initialVolume));
+      myRef.current!.volume = parseFloat(initialVolume);
+    }
+  }, []);
+
+  // Save volume to local storage whenever it changes
+  useEffect(() => {
+    if (volume) {
+      window?.localStorage?.setItem("volume", volume.toString());
+    }
+  }, [volume]);
+
+  function copyLink() {
+    if (LinkText.current) {
+      const link = LinkText.current.value;
+      return navigator.clipboard.writeText(link);
+    }
+  }
+  function copyEmdedCode() {
+    if (EmdedCode.current) {
+      const link = EmdedCode.current.value;
+      return navigator.clipboard.writeText(link);
+    }
+  }
+
+  const toggleControls = () => {
+    const video = myRef.current!;
+    if (video.paused) {
+      video.play();
+    } else {
+      video.pause();
+    }
+  };
+  const toggleMute = () => {
+    const video = myRef.current!;
+    if (!video.muted) {
+      video.muted = true;
+      setIsMuted(true);
+    } else {
+      video.muted = false;
+      setIsMuted(false);
+    }
+  };
+  const handleVideoPlay = () => {
+    setIsPlaying(true);
+  };
+
+  const handleVideoPause = () => {
+    setIsPlaying(false);
+  };
+
+  const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newVolume = parseFloat(e.target.value);
+    setVolume(newVolume);
+    myRef.current!.volume = newVolume;
+  };
+
+  const handleVideoHoverEnter = () => {
+    setIsHovered(true);
+    if (playerRef.current && playerRef.current.style.cursor == "auto") {
+      setShowControls(true);
+    }
+  };
+
+  const handleVideoHoverLeave = () => {
+    setIsHovered(false);
+    if (!myRef.current!.paused) {
+      setShowControls(false);
+    }
+  };
+
+  const enterFullScreen = () => {
+    if (playerRef.current) {
+      if (playerRef.current.requestFullscreen) {
+        playerRef.current.requestFullscreen();
+      }
+    }
+  };
+  const exitFullScreen = () => {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    }
+  };
+
+  // フルスクリーンモードの切り替えを監視
+  useEffect(() => {
+    const handleFullScreenChange = () => {
+      if (document.fullscreenElement) {
+        setIsFullScreen(true);
+      } else {
+        setIsFullScreen(false);
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullScreenChange);
+    document.addEventListener("mozfullscreenchange", handleFullScreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullScreenChange);
+    document.addEventListener("msfullscreenchange", handleFullScreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullScreenChange);
+      document.removeEventListener(
+        "mozfullscreenchange",
+        handleFullScreenChange
+      );
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        handleFullScreenChange
+      );
+      document.removeEventListener(
+        "msfullscreenchange",
+        handleFullScreenChange
+      );
+    };
+  }, []);
+
+  useEffect(() => {
+    let hls: Hls; // HLS.js インスタンスを保持する変数を定義
+    const videoSrc = `https://live-data.tokuly.com/videos/hls/${id}/index.m3u8`;
+
+    // Function to check the m3u8 file status
+    const checkM3u8Status = () => {
+      fetch(videoSrc, { method: "HEAD" }).then((response) => {
+        if (response.status === 200) {
+          console.log("load_video");
+          if (Hls.isSupported()) {
+            hls = new Hls();
+            hls.loadSource(videoSrc);
+            hls.attachMedia(myRef.current!);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+              myRef.current!.currentTime = myRef.current!.duration;
+              myRef.current!.play();
+            });
+          } else {
+            const video = myRef.current!;
+            video.src = videoSrc;
+            video.load();
+            myRef.current!.currentTime = myRef.current!.duration;
+            video.oncanplay = () => {
+              myRef.current!.play();
+            };
+          }
+
+          myRef.current!.addEventListener("pause", handleVideoPause);
+        }
+      });
+    };
+    const setUp = setTimeout(checkM3u8Status, 0);
+    return () => {
+      clearTimeout(setUp);
+      if (hls) {
+        hls.destroy(); // HLS.js インスタンスを破棄
+      }
+    };
+  }, []);
+
+  useEffect(()=>{
+    if(myRef.current){
+      setDuration(myRef.current.duration);
+    }
+  },[myRef.current])
+
+  const handleTimeUpdate = () => {
+    if(myRef.current){
+      setCurrentTime(myRef.current.currentTime);
+    }
+  };
+
+  const handleSeek = (e:any) => {
+    if(myRef.current){
+      const newTime = e.target.value;
+      myRef.current.currentTime = newTime;
+      setCurrentTime(newTime);
+      }
+  };
+
+  const formatTime = (time:any) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+  };
+
+  return (
+    <div ref={playerRef} className={"w-full relative player " + className}>
+      <video
+        webkit-playsinline="true"
+        playsInline
+        ref={myRef}
+        className="w-full h-full bg-black aspect-w-16 aspect-h-9"
+        onMouseEnter={handleVideoHoverEnter}
+        onPlay={handleVideoPlay}
+        onPause={handleVideoPause}
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={(event) => {
+          const videoElement = event.target as HTMLVideoElement;
+          setDuration(videoElement.duration);
+        }}
+      ></video>
+      <ContextMenu>
+        <Dialog>
+          <div
+            ref={overlayRef}
+            className={`absolute bottom-0 left-0 ${
+              showControls ? "block" : "hidden"
+            } h-full w-full bg-black bg-opacity-50`}
+            onMouseLeave={handleVideoHoverLeave}
+            onClick={toggleControls}
+          >
+            {/* Overlay menu */}
+            <ContextMenuTrigger>
+              <div className="flex flex-col justify-end h-full p-4">
+                <div className="flex items-center mb-2">
+                    <span className="text-white mr-2">{formatTime(currentTime)}</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max={duration}
+                      value={currentTime}
+                      onChange={handleSeek}
+                      onClick={(e) => e.stopPropagation()}
+                      style={{width: "100%"}}
+                      className="h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                    />
+                    <span className="text-white ml-2">{formatTime(duration)}</span>
+                  </div>
+                <input
+                  ref={LinkText}
+                  className="hidden"
+                  readOnly
+                  value={"https://live.tokuly.com/video/" + id}
+                />
+                <div className="flex items-center">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleControls();
+                    }}
+                    className="text-white"
+                  >
+                    {isPlaying ? (
+                      <FontAwesomeIcon icon={faPause} />
+                    ) : (
+                      <FontAwesomeIcon icon={faPlay} />
+                    )}
+                  </button>
+                  <div className="flex ml-3 items-center">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleMute();
+                      }}
+                      className="text-white"
+                    >
+                      {isMuted ? (
+                        <FontAwesomeIcon
+                          className="text-white"
+                          icon={faVolumeMute}
+                        />
+                      ) : (
+                        <FontAwesomeIcon
+                          className="text-white"
+                          icon={faVolumeHigh}
+                        />
+                      )}
+                    </button>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={volume}
+                      onChange={handleVolumeChange}
+                      onClick={(e) => e.stopPropagation()}
+                      className="ml-[5px] h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer bg-gray-700"
+                    />
+                  </div>
+                  <div className="ml-[auto]">
+                    {isFullScreen ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          exitFullScreen();
+                        }}
+                        className="bottom-[0px] right-[0px] mt-[-10px] mr-[10px] text-white"
+                      >
+                        <FontAwesomeIcon icon={faCompress} />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          enterFullScreen();
+                        }}
+                        className="bottom-[0px] right-[0px] mt-[-10px] mr-[10px] text-white"
+                      >
+                        <FontAwesomeIcon icon={faExpand} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="absolute bg-white w-[100px] h-[25px] top-[20px] right-[10px] rounded-md">
+                  <p className=" text-black text-center font-semibold">
+                    アーカイブ
+                  </p>
+                </div>
+              </div>
+            </ContextMenuTrigger>
+            <ContextMenuContent>
+              <DialogTrigger asChild>
+                <ContextMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  <FontAwesomeIcon icon={faShare} className="mr-[10px]" />
+                  共有する
+                </ContextMenuItem>
+              </DialogTrigger>
+              <ContextMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyLink();
+                }}
+              >
+                <FontAwesomeIcon icon={faCopy} className="mr-[10px]" />
+                リンクをコピー
+              </ContextMenuItem>
+            </ContextMenuContent>
+          </div>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>シェアリンク</DialogTitle>
+              <DialogDescription>
+                このリンクを他の人にシェアしよう！
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex items-center space-x-2">
+              <div className="grid flex-1 gap-2">
+                <Label htmlFor="link" className="sr-only">
+                  Link
+                </Label>
+                <Input
+                  id="link"
+                  defaultValue={"https://live.tokuly.com/video/" + id}
+                  readOnly
+                />
+              </div>
+              <Button
+                type="submit"
+                size="sm"
+                className="px-3"
+                onClick={copyLink}
+              >
+                <span className="sr-only">Copy</span>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="grid flex-1 gap-2">
+                <Label htmlFor="emded_code" className="">
+                  埋め込みコード
+                </Label>
+                <Textarea
+                  id="emded_code"
+                  ref={EmdedCode}
+                  readOnly
+                  defaultValue={`<iframe src="https://live.tokuly.com/embed/${id}" title="Tokuly video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="tokuly-live"></iframe>`}
+                ></Textarea>
+              </div>
+              <Button
+                type="submit"
+                size="sm"
+                className="px-3"
+                onClick={copyEmdedCode}
+              >
+                <span className="sr-only">Copy</span>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <DialogFooter className="sm:justify-start">
+              <DialogClose asChild>
+                <Button type="button" variant="secondary">
+                  Close
+                </Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </ContextMenu>
+    </div>
+  );
+}
+
+export default Player;

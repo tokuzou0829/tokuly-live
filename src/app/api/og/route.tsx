@@ -29,7 +29,7 @@ export async function GET(req: NextRequest): Promise<Response | ImageResponse> {
         >
           <img
             style={{ height: "100%", width: "100%", objectFit: "cover" }}
-            src={live.thumbnail_url}
+            src={live.static_thumbnail_url}
           />
         </div>
       ),

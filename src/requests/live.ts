@@ -46,3 +46,27 @@ export async function onlineCheck(param: OnlineCheckParams): Promise<any> {
     notFound();
   }
 }
+
+export async function VideoCheck(param: OnlineCheckParams): Promise<any> {
+  const formData = new FormData();
+  formData.append("name", param.id);
+  try {
+    const res = await fetch.post<FormData, any>(`/live/stream/data`, formData, {
+      headers: {},
+    });
+    if(res.status == "online" || res.publishing_setting && res.publishing_setting == "friend"){
+      notFound();
+    }
+    const checkvideo = await globalThis.fetch(`https://live-data.tokuly.com/videos/hls/${param.id}/index.m3u8`, {
+      method:"GET",
+      headers: {},
+    });
+    if(!checkvideo.ok){
+      notFound();
+    }
+    return res;
+  } catch (e) {
+    console.log(e);
+    notFound();
+  }
+}
