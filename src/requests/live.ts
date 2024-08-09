@@ -9,9 +9,18 @@ type OnlineCheckParams = {
 type Lives = {
   lives: LiveList[];
 };
+type Archives = {
+  archives: LiveList[];
+};
 
 export async function getOnlineLiveList(): Promise<Lives> {
   return await fetch.post<null, Lives>(`/live/online/get`, null, {
+    headers: {},
+  });
+}
+
+export async function getArchivesList(): Promise<Archives> {
+  return await fetch.post<null, Archives>(`/live/archive/get`, null, {
     headers: {},
   });
 }

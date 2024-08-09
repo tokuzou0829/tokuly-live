@@ -2,16 +2,18 @@ import "./tokuly-livestyle.css";
 import TopLive from "./toplive";
 import Link from "next/link";
 import Live from "@/components/ui/live";
-import { getOnlineLiveList } from "@/requests/live";
+import Video from "@/components/ui/video";
+import { getOnlineLiveList,getArchivesList } from "@/requests/live";
 
 export const revalidate = 0;
 
 export default async function Home() {
   const lives = await getOnlineLiveList();
+  const archives = await getArchivesList();
 
   return (
     <div>
-      {lives.lives.length === 0 ? (
+      {(lives.lives.length === 0 && archives.archives.length === 0) ? (
         <>
           <p
             style={{
@@ -40,10 +42,13 @@ export default async function Home() {
       ) : (
         <>
           <TopLive lives={lives.lives}></TopLive>
-          <p className=" text-[20px] m-[10px] font-bold">オンラインの配信</p>
+          <p className=" text-[20px] m-[10px] font-bold">おすすめのコンテンツ</p>
           <div className="flex flex-wrap sm-center">
             {lives.lives.map((live, index) => (
               <Live key={index} live={live}></Live>
+            ))}
+            {archives.archives.map((live, index) => (
+              <Video key={index} live={live}></Video>
             ))}
           </div>
         </>
