@@ -230,10 +230,6 @@ function Player(props: VideoProps) {
             hls = new Hls();
             hls.loadSource(videoSrc);
             hls.attachMedia(myRef.current!);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => {
-              myRef.current!.currentTime = myRef.current!.duration;
-              myRef.current!.play();
-            });
           } else {
             const video = myRef.current!;
             video.src = videoSrc;
