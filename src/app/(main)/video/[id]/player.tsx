@@ -238,10 +238,6 @@ function Player(props: VideoProps) {
             const video = myRef.current!;
             video.src = videoSrc;
             video.load();
-            myRef.current!.currentTime = myRef.current!.duration;
-            video.oncanplay = () => {
-              myRef.current!.play();
-            };
           }
 
           myRef.current!.addEventListener("pause", handleVideoPause);

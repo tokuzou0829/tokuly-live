@@ -15,6 +15,9 @@ export const metadata: Metadata = {
   },
   metadataBase: new URL("htttps://live.tokuly.com"),
   description: "完璧で究極の配信プラットフォーム",
+  robots: {
+    index: false,
+  },
 };
 
 export default async function RootLayout({
