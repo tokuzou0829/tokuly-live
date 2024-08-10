@@ -57,6 +57,12 @@ function Player(props: VideoProps) {
   const cursorHideTimeoutRef = useRef<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+
+  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
+  const [showPreview, setShowPreview] = useState(false);
+  const [currentPreviewUrl, setCurrentPreviewUrl] = useState("");
+  const [hoverPosition, setHoverPosition] = useState(0);
+  const previewRef = useRef<HTMLDivElement>(null);
   // コンポーネントがアンマウントされたときにクリーンアップ
   useEffect(() => {
     if (playerRef.current) {
@@ -275,6 +281,54 @@ function Player(props: VideoProps) {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
+  const handleSeekHover = (e: React.MouseEvent<HTMLInputElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const percentage = x / rect.width;
+    const previewTime = percentage * duration;
+
+    // プレビュー画像の位置を計算
+    const tileSetNumber = Math.ceil(previewTime / 125);
+    if(tileSetNumber === 0){
+      setShowPreview(false);
+      return;
+    }
+    const tileSet = tileSetNumber === 0 ? '001' : tileSetNumber.toString().padStart(3, '0');
+    
+    // 5秒ごとに1フレームのインデックスを計算
+    const tileIndex = Math.round(previewTime / 5);
+    const tileX = tileIndex % 5;
+    const tileY = Math.floor(tileIndex / 5);
+
+    setPreviewPosition({
+        x: -(tileX * 160),  // 160はプレビュー画像の幅
+        y: -(tileY * 90)    // 90はプレビュー画像の高さ
+    });
+
+    // タイルセットの番号に基づいて適切な画像URLを生成
+    const baseUrl = `https://live-data.tokuly.com/videos/hls/${id}/video_preview/video_preview_`;
+    const imageUrl = `${baseUrl}${tileSet}.jpg`;
+
+    setCurrentPreviewUrl(imageUrl);
+    setShowPreview(true);
+    setHoverPosition(percentage);
+
+    // 秒数をhh:mm:ss形式にフォーマットする関数
+    const formatTime = (time: number) => {
+        const hours = Math.floor(time / 3600);
+        const minutes = Math.floor((time % 3600) / 60);
+        const seconds = Math.floor(time % 60);
+        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+    };
+
+    // ホバーした秒数をhh:mm:ss形式で表示
+    console.log(`Hovered Time: ${formatTime(previewTime)}`);
+};
+
+  const handleSeekLeave = () => {
+    setShowPreview(false);
+  };
+
   return (
     <div ref={playerRef} className={"w-full relative player " + className}>
       <video
@@ -304,18 +358,40 @@ function Player(props: VideoProps) {
             {/* Overlay menu */}
             <ContextMenuTrigger>
               <div className="flex flex-col justify-end h-full p-4">
-                <div className="flex items-center mb-2">
+                  <div className="flex items-center mb-2 relative">
                     <span className="text-white mr-2">{formatTime(currentTime)}</span>
-                    <input
-                      type="range"
-                      min="0"
-                      max={duration}
-                      value={currentTime}
-                      onChange={handleSeek}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{width: "100%"}}
-                      className="h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    />
+                    <div className="relative flex-grow">
+                      <input
+                        type="range"
+                        min="0"
+                        max={duration}
+                        value={currentTime}
+                        onChange={handleSeek}
+                        onMouseMove={handleSeekHover}
+                        onMouseLeave={handleSeekLeave}
+                        onClick={(e) => e.stopPropagation()}
+                        step={0.01}
+                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                        style={{ width: '100%' }}
+                      />
+                      {showPreview && currentPreviewUrl && (
+                        <div
+                          ref={previewRef}
+                          className="absolute bottom-8 w-40 h-[90px] overflow-hidden pointer-events-none rounded border-white border"
+                          style={{
+                            left: `calc(${hoverPosition * 100}% - 80px)`,
+                          }}
+                        >
+                          <div
+                            className="w-[800px] h-[450px]"  // 10x10タイルの全体サイズ
+                            style={{
+                              backgroundImage: `url(${currentPreviewUrl})`,
+                              backgroundPosition: `${previewPosition.x}px ${previewPosition.y}px`,
+                            }}
+                          />
+                        </div>
+                      )}
+                    </div>
                     <span className="text-white ml-2">{formatTime(duration)}</span>
                   </div>
                 <input
