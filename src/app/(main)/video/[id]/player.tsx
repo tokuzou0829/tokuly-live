@@ -34,6 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import SeekBar from "./player-seekbar";
 
 interface VideoProps {
   id: string;
@@ -57,12 +58,14 @@ function Player(props: VideoProps) {
   const cursorHideTimeoutRef = useRef<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [buffer, setBuffer] = useState(0);
 
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   const [showPreview, setShowPreview] = useState(false);
   const [currentPreviewUrl, setCurrentPreviewUrl] = useState("");
   const [hoverPosition, setHoverPosition] = useState(0);
   const previewRef = useRef<HTMLDivElement>(null);
+  const [previewTime, setPreviewTime] = useState(0);
   // コンポーネントがアンマウントされたときにクリーンアップ
   useEffect(() => {
     if (playerRef.current) {
@@ -236,6 +239,21 @@ function Player(props: VideoProps) {
             hls = new Hls();
             hls.loadSource(videoSrc);
             hls.attachMedia(myRef.current!);
+
+            hls.on(Hls.Events.FRAG_BUFFERED, () => {
+              const buffered = myRef.current!.buffered;
+              const currentTime = myRef.current!.currentTime;
+              let bufferedSeconds = 0;
+
+              for (let i = 0; i < buffered.length; i++) {
+                if (buffered.start(i) <= currentTime && buffered.end(i) >= currentTime) {
+                  bufferedSeconds = buffered.end(i) - currentTime;
+                  break;
+                }
+              }
+              console.log("bufferedSeconds", bufferedSeconds);
+              setBuffer(bufferedSeconds);
+            });
           } else {
             const video = myRef.current!;
             video.src = videoSrc;
@@ -269,7 +287,7 @@ function Player(props: VideoProps) {
 
   const handleSeek = (e:any) => {
     if(myRef.current){
-      const newTime = e.target.value;
+      const newTime = e;
       myRef.current.currentTime = newTime;
       setCurrentTime(newTime);
       }
@@ -281,12 +299,15 @@ function Player(props: VideoProps) {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
-  const handleSeekHover = (e: React.MouseEvent<HTMLInputElement>) => {
+  const handleSeekHover = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const percentage = x / rect.width;
     const previewTime = percentage * duration;
-
+    if(previewTime > duration){
+      setShowPreview(false);
+      return;
+    }
     // プレビュー画像の位置を計算
     const tileSetNumber = Math.ceil(previewTime / 125);
     if(tileSetNumber === 0){
@@ -312,17 +333,7 @@ function Player(props: VideoProps) {
     setCurrentPreviewUrl(imageUrl);
     setShowPreview(true);
     setHoverPosition(percentage);
-
-    // 秒数をhh:mm:ss形式にフォーマットする関数
-    const formatTime = (time: number) => {
-        const hours = Math.floor(time / 3600);
-        const minutes = Math.floor((time % 3600) / 60);
-        const seconds = Math.floor(time % 60);
-        return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-    };
-
-    // ホバーした秒数をhh:mm:ss形式で表示
-    console.log(`Hovered Time: ${formatTime(previewTime)}`);
+    setPreviewTime(previewTime);
 };
 
   const handleSeekLeave = () => {
@@ -361,34 +372,35 @@ function Player(props: VideoProps) {
                   <div className="flex items-center mb-2 relative">
                     <span className="text-white mr-2">{formatTime(currentTime)}</span>
                     <div className="relative flex-grow">
-                      <input
-                        type="range"
-                        min="0"
-                        max={duration}
-                        value={currentTime}
-                        onChange={handleSeek}
-                        onMouseMove={handleSeekHover}
-                        onMouseLeave={handleSeekLeave}
-                        onClick={(e) => e.stopPropagation()}
-                        step={0.01}
-                        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                        style={{ width: '100%' }}
-                      />
+                      <SeekBar 
+                          playervalue={currentTime}
+                          duration={duration}
+                          bufferValue={buffer} 
+                          onChange={handleSeek}
+                          onMouseMove={handleSeekHover}
+                          onMouseLeave={handleSeekLeave}
+                          onClick={(e) => e.stopPropagation()}         
+                        ></SeekBar>
                       {showPreview && currentPreviewUrl && (
-                        <div
-                          ref={previewRef}
-                          className="absolute bottom-8 w-40 h-[90px] overflow-hidden pointer-events-none rounded border-white border"
+                        <div 
+                          className="absolute bottom-4 w-40 flex flex-col justify-center" 
                           style={{
                             left: `calc(${hoverPosition * 100}% - 80px)`,
                           }}
                         >
                           <div
-                            className="w-[800px] h-[450px]"  // 10x10タイルの全体サイズ
-                            style={{
-                              backgroundImage: `url(${currentPreviewUrl})`,
-                              backgroundPosition: `${previewPosition.x}px ${previewPosition.y}px`,
-                            }}
-                          />
+                            ref={previewRef}
+                            className="h-[90px] overflow-hidden pointer-events-none rounded border-white border"
+                          >
+                            <div
+                              className="w-[800px] h-[450px]"  // 10x10タイルの全体サイズ
+                              style={{
+                                backgroundImage: `url(${currentPreviewUrl})`,
+                                backgroundPosition: `${previewPosition.x}px ${previewPosition.y}px`,
+                              }}
+                            />
+                          </div>
+                          <p className="mt-1 text-white mx-[auto]">{formatTime(previewTime)}</p>
                         </div>
                       )}
                     </div>
