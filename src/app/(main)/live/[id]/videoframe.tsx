@@ -44,29 +44,61 @@ export default function Videoflame(props: Flameprops) {
             method:"GET",
             headers: {},
           });
-          if(checkvideo.ok){
+          if (checkvideo.ok) {
             const m3u8Content = await checkvideo.text();
-
-            // 正規表現で#EXTINFの値を全て取得
-            const extinfMatches = m3u8Content.match(/#EXTINF:([\d\.]+)/g);
-            
-            if (!extinfMatches) {
-              throw new Error('No EXTINF tags found in M3U8 file');
-            }
-            
+          
+            // マスタープレイリストにビットレートがあるか確認
+            const playlistMatches = m3u8Content.match(/#EXT-X-STREAM-INF:[^\n]+\n([^\n]+)/g);
+          
             let totalDuration = 0;
-            
-            // すべての#EXTINFタグの値を合計
-            extinfMatches.forEach(match => {
-              const duration = parseFloat(match.split(':')[1]);
-              totalDuration += duration;
-            });
-            
+            if (playlistMatches) {
+              // マスタープレイリストに複数ビットレートがある場合
+              let longestDuration = 0;
+              const playlistUrl = playlistMatches[0].split('\n')[1].trim();
+        
+              // サブプレイリスト（ビットレート別M3U8ファイル）をフェッチ
+              const response = await fetch(`https://live-data.tokuly.com/videos/hls/${live.stream_name}/${playlistUrl}`);
+              if (!response.ok) {
+                throw new Error(`Failed to fetch playlist: ${playlistUrl}`);
+              }
+        
+              const subPlaylistContent = await response.text();
+        
+              // サブプレイリストのEXTINFの値を取得
+              const extinfMatches = subPlaylistContent.match(/#EXTINF:([\d\.]+)/g);
+              if (extinfMatches) {
+                let subPlaylistDuration = 0;
+                extinfMatches.forEach(match => {
+                  const duration = parseFloat(match.split(':')[1]);
+                  subPlaylistDuration += duration;
+                });
+        
+                // 最長のプレイリストを保存
+                if (subPlaylistDuration > longestDuration) {
+                  longestDuration = subPlaylistDuration;
+                }
+              }
+          
+              totalDuration = longestDuration;
+            } else {
+              // 単一ビットレートの場合、元の処理を実行
+              const extinfMatches = m3u8Content.match(/#EXTINF:([\d\.]+)/g);
+              
+              if (!extinfMatches) {
+                throw new Error('No EXTINF tags found in M3U8 file');
+              }
+          
+              // すべての#EXTINFタグの値を合計
+              extinfMatches.forEach(match => {
+                const duration = parseFloat(match.split(':')[1]);
+                totalDuration += duration;
+              });
+            }
+          
             setArchivevideoTime(totalDuration);
-
             setIsArchive(true);
             archivecheckstatus = true;
-          }
+          }          
         }
       }
     }
@@ -76,25 +108,61 @@ export default function Videoflame(props: Flameprops) {
           method:"GET",
           headers: {},
         });
-        if(checkvideo.ok){
+        if (checkvideo.ok) {
           const m3u8Content = await checkvideo.text();
-
-          // 正規表現で#EXTINFの値を全て取得
-          const extinfMatches = m3u8Content.match(/#EXTINF:([\d\.]+)/g);
-          
-          if (!extinfMatches) {
-            throw new Error('No EXTINF tags found in M3U8 file');
-          }
+        
+          // マスタープレイリストにビットレートがあるか確認
+          const playlistMatches = m3u8Content.match(/#EXT-X-STREAM-INF:[^\n]+\n([^\n]+)/g);
+        
           let totalDuration = 0;
-          // すべての#EXTINFタグの値を合計
-          extinfMatches.forEach(match => {
-            const duration = parseFloat(match.split(':')[1]);
-            totalDuration += duration;
-          });
+          if (playlistMatches) {
+            // マスタープレイリストに複数ビットレートがある場合
+            let longestDuration = 0;
+            const playlistUrl = playlistMatches[0].split('\n')[1].trim();
+      
+            // サブプレイリスト（ビットレート別M3U8ファイル）をフェッチ
+            const response = await fetch(`https://live-data.tokuly.com/videos/hls/${live.stream_name}/${playlistUrl}`);
+            if (!response.ok) {
+              throw new Error(`Failed to fetch playlist: ${playlistUrl}`);
+            }
+      
+            const subPlaylistContent = await response.text();
+      
+            // サブプレイリストのEXTINFの値を取得
+            const extinfMatches = subPlaylistContent.match(/#EXTINF:([\d\.]+)/g);
+            if (extinfMatches) {
+              let subPlaylistDuration = 0;
+              extinfMatches.forEach(match => {
+                const duration = parseFloat(match.split(':')[1]);
+                subPlaylistDuration += duration;
+              });
+      
+              // 最長のプレイリストを保存
+              if (subPlaylistDuration > longestDuration) {
+                longestDuration = subPlaylistDuration;
+              }
+            }
+        
+            totalDuration = longestDuration;
+          } else {
+            // 単一ビットレートの場合、元の処理を実行
+            const extinfMatches = m3u8Content.match(/#EXTINF:([\d\.]+)/g);
+            
+            if (!extinfMatches) {
+              throw new Error('No EXTINF tags found in M3U8 file');
+            }
+        
+            // すべての#EXTINFタグの値を合計
+            extinfMatches.forEach(match => {
+              const duration = parseFloat(match.split(':')[1]);
+              totalDuration += duration;
+            });
+          }
+        
           setArchivevideoTime(totalDuration);
           setIsArchive(true);
           archivecheckstatus = true;
-        }
+        }       
       }
     }
     archivecheck();
