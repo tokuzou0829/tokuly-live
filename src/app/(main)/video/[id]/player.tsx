@@ -141,6 +141,52 @@ function Player(props: VideoProps) {
     }
   }, [volume]);
 
+  useEffect(() => {
+    const handleKeyDown = (event:any) => {
+      if (!myRef.current) return;
+      
+      const video = myRef.current;
+
+      switch (event.key) {
+        case ' ': // スペースキーで再生/一時停止
+          event.preventDefault(); // ページのスクロール防止
+          if (video.paused) {
+            video.play();
+          } else {
+            video.pause();
+          }
+          break;
+        case 'ArrowLeft': // 左矢印キーで5秒巻き戻し
+          video.currentTime = Math.max(0, video.currentTime - 5);
+          break;
+        case 'ArrowRight': // 右矢印キーで5秒早送り
+          video.currentTime = Math.min(video.duration, video.currentTime + 5);
+          break;
+        case 'ArrowUp': // 上矢印キーで音量を上げる
+          video.volume = Math.min(1, video.volume + 0.1);
+          break;
+        case 'ArrowDown': // 下矢印キーで音量を下げる
+          video.volume = Math.max(0, video.volume - 0.1);
+          break;
+        case 'f': // "f"キーでフルスクリーンにする/解除
+          if (document.fullscreenElement) {
+            exitFullScreen();
+          } else {
+            enterFullScreen();
+          }
+          break;
+        default:
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   function copyLink() {
     if (LinkText.current) {
       const link = LinkText.current.value;
