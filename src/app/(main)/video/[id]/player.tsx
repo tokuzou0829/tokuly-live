@@ -12,6 +12,7 @@ import {
   faShare,
   faCopy,
   faHandMiddleFinger,
+  faGear
 } from "@fortawesome/free-solid-svg-icons";
 import Hls from "hls.js";
 import {
@@ -20,7 +21,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger,
 } from "@/components/ui/context-menu";
-import { Button } from "@/components/ui/button";
+
 import {
   Dialog,
   DialogClose,
@@ -35,13 +36,24 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import SeekBar from "./player-seekbar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu"
+import { DropdownMenuCheckboxItemProps } from "@radix-ui/react-dropdown-menu"
+import { set } from "date-fns";
+import { Button } from "@/components/ui/button"
 
 interface VideoProps {
   id: string;
   className?: string;
   poster_url?: string;
 }
-
 function Player(props: VideoProps) {
   const { id, className,poster_url } = props;
   const playerRef = useRef<HTMLDivElement | null>(null);
@@ -66,6 +78,13 @@ function Player(props: VideoProps) {
   const [hoverPosition, setHoverPosition] = useState(0);
   const previewRef = useRef<HTMLDivElement>(null);
   const [previewTime, setPreviewTime] = useState(0);
+
+  const [videoQuality, setVideoQuality] = useState("-1");
+  const [loadVideoQuality, setLoadVideoQuality] = useState(0);
+  const [videoQualityList, setVideoQualityList] = useState<string[]>([]);
+  const hlsRef = useRef<Hls | null>(null);
+  const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
+
   // コンポーネントがアンマウントされたときにクリーンアップ
   useEffect(() => {
     if (playerRef.current) {
@@ -78,7 +97,7 @@ function Player(props: VideoProps) {
       }
 
       cursorHideTimeoutRef.current = window.setTimeout(() => {
-        if (playerRef.current && myRef.current!.played) {
+        if (playerRef.current && !myRef.current?.paused) {
           console.log("hide");
           playerRef.current.style.cursor = "none";
           setShowControls(false);
@@ -176,7 +195,7 @@ function Player(props: VideoProps) {
 
   const handleVideoHoverLeave = () => {
     setIsHovered(false);
-    if (!myRef.current!.paused) {
+  if (!myRef.current?.paused && !qualityMenuOpen) {
       setShowControls(false);
     }
   };
@@ -237,6 +256,7 @@ function Player(props: VideoProps) {
           console.log("load_video");
           if (Hls.isSupported()) {
             hls = new Hls();
+            hlsRef.current = hls;
             hls.loadSource(videoSrc);
             hls.attachMedia(myRef.current!);
 
@@ -254,6 +274,12 @@ function Player(props: VideoProps) {
               console.log("bufferedSeconds", bufferedSeconds);
               setBuffer(bufferedSeconds);
             });
+            hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
+              var availableQualities = hls.levels.map(function(level) {
+                  return level.height + 'p';
+              });
+              setVideoQualityList(availableQualities);
+          });
           } else {
             const video = myRef.current!;
             video.src = videoSrc;
@@ -278,6 +304,12 @@ function Player(props: VideoProps) {
       setDuration(myRef.current.duration);
     }
   },[myRef.current])
+
+  useEffect(() => {
+    if(hlsRef.current){
+        hlsRef.current.currentLevel = Number(videoQuality);
+    }
+  }, [videoQuality]);
 
   const handleTimeUpdate = () => {
     if(myRef.current){
@@ -349,6 +381,9 @@ function Player(props: VideoProps) {
     setShowPreview(false);
   };
 
+  function testSetting(){
+    console.log("test");
+  }
   return (
     <div ref={playerRef} className={"w-full relative player " + className}>
       <video
@@ -467,15 +502,39 @@ function Player(props: VideoProps) {
                     />
                   </div>
                   <div className="ml-[auto]">
+                    <DropdownMenu open={qualityMenuOpen} onOpenChange={(open)=>{
+                      if(open){
+                        setQualityMenuOpen(true);
+                        setShowControls(true);
+                      }else{
+                        setQualityMenuOpen(false);
+                      }
+                    }}>
+                      <DropdownMenuTrigger onClick={(e)=>{e.stopPropagation()}}>
+                          <FontAwesomeIcon size="lg" icon={faGear} color="white" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuLabel>画質選択</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuRadioGroup value={videoQuality} onValueChange={setVideoQuality} onClick={(e)=>{e.stopPropagation(),setShowControls(false)}} >
+                          <DropdownMenuRadioItem value="-1">Auto {videoQuality === "-1" ? videoQualityList.length >= 2 ? `(${videoQualityList[hlsRef.current ? hlsRef.current.currentLevel : 0]})`: "(ソース)" : ""}</DropdownMenuRadioItem>
+                          {videoQualityList.length >= 2 && videoQualityList.slice().reverse().map((quality, index) => (
+                            <DropdownMenuRadioItem key={videoQualityList.length - 1 - index} value={(videoQualityList.length - 1 - index).toString()}>
+                              {quality}
+                            </DropdownMenuRadioItem>
+                          ))}
+                        </DropdownMenuRadioGroup>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     {isFullScreen ? (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           exitFullScreen();
                         }}
-                        className="bottom-[0px] right-[0px] mt-[-10px] mr-[10px] text-white"
+                        className="bottom-[0px] right-[0px] mt-[-10px] mr-[10px] ml-[20px] text-white"
                       >
-                        <FontAwesomeIcon icon={faCompress} />
+                        <FontAwesomeIcon size="lg" icon={faCompress} />
                       </button>
                     ) : (
                       <button
@@ -483,9 +542,9 @@ function Player(props: VideoProps) {
                           e.stopPropagation();
                           enterFullScreen();
                         }}
-                        className="bottom-[0px] right-[0px] mt-[-10px] mr-[10px] text-white"
+                        className="bottom-[0px] right-[0px] mt-[-10px] mr-[10px] ml-[20px] text-white"
                       >
-                        <FontAwesomeIcon icon={faExpand} />
+                        <FontAwesomeIcon size="lg" icon={faExpand} />
                       </button>
                     )}
                   </div>
