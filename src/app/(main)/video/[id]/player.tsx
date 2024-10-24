@@ -163,10 +163,12 @@ function Player(props: VideoProps) {
           video.currentTime = Math.min(video.duration, video.currentTime + 5);
           break;
         case 'ArrowUp': // 上矢印キーで音量を上げる
-          video.volume = Math.min(1, video.volume + 0.1);
+          setVolume(Math.min(1, video.volume + 0.05));
+          video.volume = Math.min(1, video.volume + 0.05);
           break;
         case 'ArrowDown': // 下矢印キーで音量を下げる
-          video.volume = Math.max(0, video.volume - 0.1);
+          setVolume(Math.max(0, video.volume - 0.05));
+          video.volume = Math.max(0, video.volume - 0.05);
           break;
         case 'f': // "f"キーでフルスクリーンにする/解除
           if (document.fullscreenElement) {
@@ -559,7 +561,7 @@ function Player(props: VideoProps) {
                       <DropdownMenuTrigger onClick={(e)=>{e.stopPropagation()}}>
                           <FontAwesomeIcon size="lg" icon={faGear} color="white" />
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent>
+                      <DropdownMenuContent side="top">
                         <DropdownMenuLabel>画質選択</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuRadioGroup value={videoQuality} onValueChange={setVideoQuality} onClick={(e)=>{e.stopPropagation(),setShowControls(false)}} >
