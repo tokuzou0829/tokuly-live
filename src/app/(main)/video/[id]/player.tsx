@@ -456,7 +456,7 @@ function Player(props: VideoProps) {
               showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
             }`}
             style={{
-              background: 'linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 15%)',
+              background: 'linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 30%)',
             }}
             onMouseLeave={handleVideoHoverLeave}
             onClick={toggleControls}
