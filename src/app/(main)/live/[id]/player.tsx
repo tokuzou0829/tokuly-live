@@ -282,9 +282,12 @@ function Player(props: VideoProps) {
         <Dialog>
           <div
             ref={overlayRef}
-            className={`absolute bottom-0 left-0 ${
-              showControls ? "block" : "hidden"
-            } h-full w-full bg-black bg-opacity-50`}
+            className={`absolute bottom-0 left-0 h-full w-full transition-opacity duration-300 ease-in-out ${
+              showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}
+            style={{
+              background: 'linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 10%)',
+            }}
             onMouseLeave={handleVideoHoverLeave}
             onClick={toggleControls}
           >

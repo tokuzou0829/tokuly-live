@@ -355,7 +355,7 @@ function Player(props: VideoProps) {
 
   useEffect(() => {
     if(hlsRef.current){
-        hlsRef.current.currentLevel = Number(videoQuality);
+        hlsRef.current.nextLevel = Number(videoQuality);
     }
   }, [videoQuality]);
 
@@ -452,17 +452,19 @@ function Player(props: VideoProps) {
         <Dialog>
           <div
             ref={overlayRef}
-            className={`absolute bottom-0 left-0 ${
-              showControls ? "block" : "hidden"
-            } h-full w-full bg-black bg-opacity-50`}
+            className={`absolute bottom-0 left-0 h-full w-full transition-opacity duration-300 ease-in-out ${
+              showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+            }`}
+            style={{
+              background: 'linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 15%)',
+            }}
             onMouseLeave={handleVideoHoverLeave}
             onClick={toggleControls}
           >
             {/* Overlay menu */}
             <ContextMenuTrigger>
               <div className="flex flex-col justify-end h-full p-4">
-                  <div className="flex items-center mb-2 relative">
-                    <span className="text-white mr-2">{formatTime(currentTime)}</span>
+                  <div className="flex items-center mb-4 relative">
                     <div className="relative flex-grow">
                       <SeekBar 
                           playervalue={currentTime}
@@ -473,30 +475,29 @@ function Player(props: VideoProps) {
                           onMouseLeave={handleSeekLeave}
                           onClick={(e) => e.stopPropagation()}         
                         ></SeekBar>
-                      {showPreview && currentPreviewUrl && (
-                        <div 
-                          className="absolute bottom-4 w-40 flex flex-col justify-center" 
-                          style={{
-                            left: `calc(${hoverPosition * 100}% - 80px)`,
-                          }}
-                        >
-                          <div
-                            ref={previewRef}
-                            className="h-[90px] overflow-hidden pointer-events-none rounded border-white border"
+                        {showPreview && currentPreviewUrl && (
+                          <div 
+                            className="absolute bottom-4 w-40 flex flex-col justify-center" 
+                            style={{
+                              left: `clamp(0px, calc(${hoverPosition * 100}% - 80px), calc(100% - 160px))`,
+                            }}
                           >
                             <div
-                              className="w-[800px] h-[450px]"  // 10x10タイルの全体サイズ
-                              style={{
-                                backgroundImage: `url(${currentPreviewUrl})`,
-                                backgroundPosition: `${previewPosition.x}px ${previewPosition.y}px`,
-                              }}
-                            />
+                              ref={previewRef}
+                              className="h-[90px] overflow-hidden pointer-events-none rounded border-white border"
+                            >
+                              <div
+                                className="w-[800px] h-[450px]"  // 10x10タイルの全体サイズ
+                                style={{
+                                  backgroundImage: `url(${currentPreviewUrl})`,
+                                  backgroundPosition: `${previewPosition.x}px ${previewPosition.y}px`,
+                                }}
+                              />
+                            </div>
+                            <p className="mt-1 text-white mx-[auto]">{formatTime(previewTime)}</p>
                           </div>
-                          <p className="mt-1 text-white mx-[auto]">{formatTime(previewTime)}</p>
-                        </div>
-                      )}
+                        )}
                     </div>
-                    <span className="text-white ml-2">{formatTime(duration)}</span>
                   </div>
                 <input
                   ref={LinkText}
@@ -513,9 +514,9 @@ function Player(props: VideoProps) {
                     className="text-white"
                   >
                     {isPlaying ? (
-                      <FontAwesomeIcon icon={faPause} />
+                      <FontAwesomeIcon size="lg" icon={faPause} />
                     ) : (
-                      <FontAwesomeIcon icon={faPlay} />
+                      <FontAwesomeIcon size="lg" icon={faPlay} />
                     )}
                   </button>
                   <div className="flex ml-3 items-center">
@@ -529,11 +530,13 @@ function Player(props: VideoProps) {
                       {isMuted ? (
                         <FontAwesomeIcon
                           className="text-white"
+                          size="lg"
                           icon={faVolumeMute}
                         />
                       ) : (
                         <FontAwesomeIcon
                           className="text-white"
+                          size="lg"
                           icon={faVolumeHigh}
                         />
                       )}
@@ -548,6 +551,11 @@ function Player(props: VideoProps) {
                       onClick={(e) => e.stopPropagation()}
                       className="ml-[5px] h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer bg-gray-700"
                     />
+                  </div>
+                  <div className="flex ml-3">
+                    <span className="text-white">{formatTime(currentTime)}</span>
+                    <span className="text-white mx-1">/</span>
+                    <span className="text-white">{formatTime(duration)}</span>
                   </div>
                   <div className="ml-[auto]">
                     <DropdownMenu open={qualityMenuOpen} onOpenChange={(open)=>{

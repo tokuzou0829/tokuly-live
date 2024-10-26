@@ -22,13 +22,13 @@ const SeekBar = ({
   const [value, setValue] = useState((playervalue / duration) * 100);
   const [isDragging, setIsDragging] = useState(false);
   const seekBarRef = useRef<HTMLDivElement>(null);
+  const [seek, setSeek] = useState(0);
 
   const updateValue = useCallback((clientX: number) => {
     if (seekBarRef.current) {
       const rect = seekBarRef.current.getBoundingClientRect();
       const x = clientX - rect.left;
       const newValue = Math.max(0, Math.min(100, (x / rect.width) * 100));
-      setValue(newValue);
       onChange((newValue / 100) * duration);
     }
   }, [onChange, duration]);
@@ -51,6 +51,9 @@ const SeekBar = ({
         clientY: 0,
         getBoundingClientRect: () => rect,
       } as unknown as React.MouseEvent<HTMLDivElement, MouseEvent>;
+      const x = clientX - rect.left;
+      const newSeekValue = Math.max(0, Math.min(100, (x / rect.width) * 100));
+      setSeek(newSeekValue);
       onMouseMove(syntheticEvent);
     }
   }, [isDragging, onMouseMove, updateValue]);
@@ -96,7 +99,7 @@ const SeekBar = ({
     <div className="w-full">
       <div
         ref={seekBarRef}
-        className="relative h-1 bg-white rounded-full cursor-pointer transition-all duration-300 ease-in-out hover:h-2"
+        className="relative h-1 bg-gray-100 bg-opacity-[0.6] rounded-full cursor-pointer transition-all duration-300 ease-in-out hover:h-2 group"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseLeave={onMouseLeave}
@@ -110,12 +113,16 @@ const SeekBar = ({
           className="absolute h-full bg-gray-400 rounded-full"
         />
         <div
+          style={{ width: `${seek}%` }}
+          className="absolute h-full bg-gray-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+        />
+        <div
           style={{ width: `${value}%` }}
-          className="absolute h-full bg-gray-500 rounded-full"
+          className="absolute h-full bg-white rounded-full"
         />
         <div
           style={{ left: `${value}%` }}
-          className="absolute w-4 h-4 bg-gray-600 rounded-full top-1/2 transform -translate-x-1/2 -translate-y-1/2 hover:scale-110 transition-transform duration-200 shadow-md"
+          className="absolute w-4 h-4 bg-white rounded-full top-1/2 transform -translate-x-1/2 -translate-y-1/2 hover:scale-110 transition-transform duration-200 shadow-md"
         />
       </div>
     </div>
