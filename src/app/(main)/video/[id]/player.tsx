@@ -54,6 +54,11 @@ interface VideoProps {
   className?: string;
   poster_url?: string;
 }
+declare global {
+  interface HTMLVideoElement {
+    webkitEnterFullScreen?(): void;
+  }
+}
 function Player(props: VideoProps) {
   const { id, className,poster_url } = props;
   const playerRef = useRef<HTMLDivElement | null>(null);
@@ -252,6 +257,10 @@ function Player(props: VideoProps) {
     if (playerRef.current) {
       if (playerRef.current.requestFullscreen) {
         playerRef.current.requestFullscreen();
+      }else{
+        if(myRef.current && myRef.current.webkitEnterFullScreen){
+          myRef.current.webkitEnterFullScreen();
+        }
       }
     }
   };
@@ -432,6 +441,12 @@ function Player(props: VideoProps) {
   function testSetting(){
     console.log("test");
   }
+
+  function isMobile() {
+    const userAgent = navigator.userAgent || navigator.vendor;
+        return /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+  }
+
   return (
     <div ref={playerRef} className={"w-full relative player " + className}>
       <video
@@ -477,7 +492,7 @@ function Player(props: VideoProps) {
                         ></SeekBar>
                         {showPreview && currentPreviewUrl && (
                           <div 
-                            className="absolute bottom-4 w-40 flex flex-col justify-center" 
+                            className="absolute bottom-4 w-40 flex flex-col justify-center z-50" 
                             style={{
                               left: `clamp(0px, calc(${hoverPosition * 100}% - 80px), calc(100% - 160px))`,
                             }}
@@ -541,16 +556,18 @@ function Player(props: VideoProps) {
                         />
                       )}
                     </button>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1"
-                      step="0.01"
-                      value={volume}
-                      onChange={handleVolumeChange}
-                      onClick={(e) => e.stopPropagation()}
-                      className="ml-[5px] h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer bg-gray-700"
-                    />
+                    {!isMobile() && (
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.01"
+                        value={volume}
+                        onChange={handleVolumeChange}
+                        onClick={(e) => e.stopPropagation()}
+                        className="ml-[5px] h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer bg-gray-700"
+                      />
+                    )}
                   </div>
                   <div className="flex ml-3">
                     <span className="text-white">{formatTime(currentTime)}</span>

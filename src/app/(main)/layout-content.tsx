@@ -21,19 +21,26 @@ export default function LayoutContent({
   children: React.ReactNode;
   channels: Channels;
 }) {
-  const firstLocation = window.location.pathname.startsWith('/video/') || window.location.pathname.startsWith('/live/');
-  const isPhone = window.innerWidth < 1150;
-  const [isCollapsed, setIsCollapsed] = useState(firstLocation || isPhone ? true : false);
+  const pathname = usePathname();
+  const firstLocation = pathname.startsWith('/video/') || pathname.startsWith('/live/');
+  const [isCollapsed, setIsCollapsed] = useState(firstLocation ? true : false);
   const panelRef = useRef<any>(null);
 
-  const pathname = usePathname();
+  useEffect(() => {
+    const isPhone = window.innerWidth < 1150;
+    if(isPhone) {
+      setIsCollapsed(true);
+      panelRef.current?.collapse();
+    }
+  }, []);
+
   useEffect(() => {
     const isLocation = pathname.startsWith('/video/') || pathname.startsWith('/live/');
     if (isLocation) {
       panelRef.current?.collapse();
       setIsCollapsed(true);
     }
-    if(pathname === '/') {
+    if(pathname === '/' && window.innerWidth > 1150) {
       panelRef.current?.expand();
       setIsCollapsed(false);
     }
@@ -51,7 +58,7 @@ export default function LayoutContent({
         className="items-stretch"
       >
         <ResizablePanel
-          defaultSize={firstLocation || isPhone ? 4 : 15}
+          defaultSize={firstLocation? 4 : 15}
           collapsedSize={4}
           ref={panelRef}
           collapsible={true}
