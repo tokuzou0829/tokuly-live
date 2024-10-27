@@ -22,8 +22,9 @@ function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     const { name, value } = event.target;
     setFormValues({ ...formValues, [name]: value });
   };
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  //const searchParams = useSearchParams();
+  //const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const callbackUrl = "/";
   async function onSubmit(event: React.SyntheticEvent) {
     event.preventDefault();
     setIsLoading(true);
@@ -71,8 +72,6 @@ function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 }
 
 export default function LoginForm() {
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
   return (
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
       <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">

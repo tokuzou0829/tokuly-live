@@ -1,6 +1,6 @@
 import React from "react";
 import Chat from "./chat";
-import { auth } from "@/app/api/auth/[...nextauth]/route";
+import { auth } from "@/auth";
 import { onlineCheck, getLive } from "@/requests/live";
 
 export const revalidate = 0;

@@ -1,6 +1,6 @@
 import Video from "./videoframe";
 import Chat from "./chat";
-import { auth } from "../../../api/auth/[...nextauth]/route";
+import { auth } from "@/auth";
 import LiveOverview from "./liveOverview";
 import { getLive } from "@/requests/live";
 import Link from "next/link";

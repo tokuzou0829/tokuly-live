@@ -1,7 +1,7 @@
 import "../globals.css";
 import type { Metadata } from "next";
 import "./tokuly-livestyle.css"; // スタイルシートをインポート
-import { auth } from "../api/auth/[...nextauth]/route";
+import { auth } from "@/auth";
 import LayoutContent from "./layout-content";
 import Header from "@/components/header";
 import { getRecommendChannel } from "@/requests/channel";
