@@ -7,11 +7,12 @@ import {
 } from "@/components/ui/resizable";
 import { ChList } from "./chList";
 import type { Channels } from "@/types/channel";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Nav } from "@/app/(main)/nav";
 import { Home, Radio } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { usePathname } from 'next/navigation';
 
 export default function LayoutContent({
   children,
@@ -20,10 +21,23 @@ export default function LayoutContent({
   children: React.ReactNode;
   channels: Channels;
 }) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  useEffect(()=>{
-    setIsCollapsed(window.innerWidth < 1150);
-  },[])
+  const firstLocation = window.location.pathname.startsWith('/video/') || window.location.pathname.startsWith('/live/');
+  const isPhone = window.innerWidth < 1150;
+  const [isCollapsed, setIsCollapsed] = useState(firstLocation || isPhone ? true : false);
+  const panelRef = useRef<any>(null);
+
+  const pathname = usePathname();
+  useEffect(() => {
+    const isLocation = pathname.startsWith('/video/') || pathname.startsWith('/live/');
+    if (isLocation) {
+      panelRef.current?.collapse();
+      setIsCollapsed(true);
+    }
+    if(pathname === '/') {
+      panelRef.current?.expand();
+      setIsCollapsed(false);
+    }
+  }, [pathname]);
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -37,8 +51,9 @@ export default function LayoutContent({
         className="items-stretch"
       >
         <ResizablePanel
-          defaultSize={15}
+          defaultSize={firstLocation || isPhone ? 4 : 15}
           collapsedSize={4}
+          ref={panelRef}
           collapsible={true}
           minSize={10}
           maxSize={15}

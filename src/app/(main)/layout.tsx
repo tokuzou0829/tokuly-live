@@ -30,8 +30,6 @@ export default async function RootLayout({
     getRecommendChannel(),
   ]);
 
-  //console.log(channels);
-
   return (
     <div>
       <Header session={session} />
