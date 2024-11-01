@@ -38,15 +38,13 @@ import { Label } from "@/components/ui/label";
 import SeekBar from "./player-seekbar";
 import {
   DropdownMenu,
-  DropdownMenuContent,
+  DropdownMenuContentNoPortal,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
-import { DropdownMenuCheckboxItemProps } from "@radix-ui/react-dropdown-menu"
-import { set } from "date-fns";
 import { Button } from "@/components/ui/button"
 
 interface VideoProps {
@@ -586,7 +584,7 @@ function Player(props: VideoProps) {
                       <DropdownMenuTrigger onClick={(e)=>{e.stopPropagation()}}>
                           <FontAwesomeIcon size="lg" icon={faGear} color="white" />
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent side="top">
+                      <DropdownMenuContentNoPortal side="top">
                         <DropdownMenuLabel>画質選択</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuRadioGroup value={videoQuality} onValueChange={setVideoQuality} onClick={(e)=>{e.stopPropagation(),setShowControls(false)}} >
@@ -597,7 +595,7 @@ function Player(props: VideoProps) {
                             </DropdownMenuRadioItem>
                           ))}
                         </DropdownMenuRadioGroup>
-                      </DropdownMenuContent>
+                      </DropdownMenuContentNoPortal>
                     </DropdownMenu>
                     {isFullScreen ? (
                       <button
