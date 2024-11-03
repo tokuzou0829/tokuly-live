@@ -47,7 +47,7 @@ export default function LivePage({ params }: { params: { id: string } }) {
       const newLivedata: Live = await res.json();
       setStatus(newLivedata.status);
       setLive(newLivedata);
-      if(newLivedata.status === "end" && !isArchive){
+      if((newLivedata.status === "end" || newLivedata.status === "video") && !isArchive){
         const checkvideo = await fetch(`https://live-data.tokuly.com/videos/hls/${params.id}/index.m3u8`, {
           method:"GET",
           headers: {},
