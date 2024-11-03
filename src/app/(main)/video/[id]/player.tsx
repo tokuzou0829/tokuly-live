@@ -51,6 +51,7 @@ interface VideoProps {
   id: string;
   className?: string;
   poster_url?: string;
+  isUploadVideo?: boolean;
 }
 declare global {
   interface HTMLVideoElement {
@@ -58,7 +59,7 @@ declare global {
   }
 }
 function Player(props: VideoProps) {
-  const { id, className,poster_url } = props;
+  const { id, className,poster_url,isUploadVideo } = props;
   const playerRef = useRef<HTMLDivElement | null>(null);
   const myRef = useRef<HTMLVideoElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
@@ -451,7 +452,7 @@ function Player(props: VideoProps) {
         webkit-playsinline="true"
         playsInline
         ref={myRef}
-        className="w-full h-full bg-black aspect-w-16 aspect-h-9"
+        className="w-full h-full bg-black aspect-w-16 aspect-video"
         onMouseEnter={handleVideoHoverEnter}
         onPlay={handleVideoPlay}
         onPause={handleVideoPause}
@@ -620,11 +621,13 @@ function Player(props: VideoProps) {
                     )}
                   </div>
                 </div>
-                <div className="absolute bg-white w-[100px] h-[25px] top-[20px] right-[10px] rounded-md">
-                  <p className=" text-black text-center font-semibold">
-                    アーカイブ
-                  </p>
-                </div>
+                {!isUploadVideo && (
+                  <div className="absolute bg-white w-[100px] h-[25px] top-[20px] right-[10px] rounded-md">
+                    <p className=" text-black text-center font-semibold">
+                      アーカイブ
+                    </p>
+                  </div>
+                )}
               </div>
             </ContextMenuTrigger>
             <ContextMenuContent>
