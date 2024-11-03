@@ -71,7 +71,7 @@ export default function LivePage({ params }: { params: { id: string } }) {
           ) : (
             <>
               {isArchive ? (
-                <VideoPlayer id={params.id} poster_url={live.static_thumbnail_url} />
+                <VideoPlayer id={params.id} poster_url={live.static_thumbnail_url} isUploadVideo={live.status === "video"} />
               ):(
                 <div
                   style={{
