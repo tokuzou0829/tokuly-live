@@ -88,6 +88,14 @@ function Player(props: VideoProps) {
   const [videoQualityList, setVideoQualityList] = useState<string[]>([]);
   const hlsRef = useRef<Hls | null>(null);
   const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(()=>{
+    if(globalThis.navigator){
+        const userAgent = navigator.userAgent || navigator.vendor;
+        setIsMobile(/android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent));
+    }
+  },[])
 
   // コンポーネントがアンマウントされたときにクリーンアップ
   useEffect(() => {
@@ -441,11 +449,6 @@ function Player(props: VideoProps) {
     console.log("test");
   }
 
-  function isMobile() {
-    const userAgent = navigator.userAgent || navigator.vendor;
-        return /android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
-  }
-
   return (
     <div ref={playerRef} className={"w-full relative player " + className}>
       <video
@@ -555,7 +558,7 @@ function Player(props: VideoProps) {
                         />
                       )}
                     </button>
-                    {!isMobile() && (
+                    {!isMobile && (
                       <input
                         type="range"
                         min="0"
