@@ -480,157 +480,159 @@ function Player(props: VideoProps) {
           >
             {/* Overlay menu */}
             <ContextMenuTrigger>
-              <div className="flex flex-col justify-end h-full p-4">
-                  <div className="flex items-center mb-4 relative">
-                    <div className="relative flex-grow">
-                      <SeekBar 
-                          playervalue={currentTime}
-                          duration={duration}
-                          bufferValue={buffer} 
-                          onChange={handleSeek}
-                          onMouseMove={handleSeekHover}
-                          onMouseLeave={handleSeekLeave}
-                          onClick={(e) => e.stopPropagation()}         
-                        ></SeekBar>
-                        {showPreview && currentPreviewUrl && (
-                          <div 
-                            className="absolute bottom-4 w-40 flex flex-col justify-center z-50" 
-                            style={{
-                              left: `clamp(0px, calc(${hoverPosition * 100}% - 80px), calc(100% - 160px))`,
-                            }}
-                          >
-                            <div
-                              ref={previewRef}
-                              className="h-[90px] overflow-hidden pointer-events-none rounded border-white border"
+              <div className="flex flex-col justify-end h-full">
+                <div className="p-4" onClick={(e)=>{e.stopPropagation();}}>
+                    <div className="flex items-center mb-4 relative">
+                      <div className="relative flex-grow">
+                        <SeekBar 
+                            playervalue={currentTime}
+                            duration={duration}
+                            bufferValue={buffer} 
+                            onChange={handleSeek}
+                            onMouseMove={handleSeekHover}
+                            onMouseLeave={handleSeekLeave}
+                            onClick={(e) => e.stopPropagation()}         
+                          ></SeekBar>
+                          {showPreview && currentPreviewUrl && (
+                            <div 
+                              className="absolute bottom-4 w-40 flex flex-col justify-center z-50" 
+                              style={{
+                                left: `clamp(0px, calc(${hoverPosition * 100}% - 80px), calc(100% - 160px))`,
+                              }}
                             >
                               <div
-                                className="w-[800px] h-[450px]"  // 10x10タイルの全体サイズ
-                                style={{
-                                  backgroundImage: `url(${currentPreviewUrl})`,
-                                  backgroundPosition: `${previewPosition.x}px ${previewPosition.y}px`,
-                                }}
-                              />
+                                ref={previewRef}
+                                className="h-[90px] overflow-hidden pointer-events-none rounded border-white border"
+                              >
+                                <div
+                                  className="w-[800px] h-[450px]"  // 10x10タイルの全体サイズ
+                                  style={{
+                                    backgroundImage: `url(${currentPreviewUrl})`,
+                                    backgroundPosition: `${previewPosition.x}px ${previewPosition.y}px`,
+                                  }}
+                                />
+                              </div>
+                              <p className="mt-1 text-white mx-[auto]">{formatTime(previewTime)}</p>
                             </div>
-                            <p className="mt-1 text-white mx-[auto]">{formatTime(previewTime)}</p>
-                          </div>
-                        )}
+                          )}
+                      </div>
                     </div>
-                  </div>
-                <input
-                  ref={LinkText}
-                  className="hidden"
-                  readOnly
-                  value={"https://live.tokuly.com/video/" + id}
-                />
-                <div className="flex items-center">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      toggleControls();
-                    }}
-                    className="text-white"
-                  >
-                    {isPlaying ? (
-                      <FontAwesomeIcon size="lg" icon={faPause} />
-                    ) : (
-                      <FontAwesomeIcon size="lg" icon={faPlay} />
-                    )}
-                  </button>
-                  <div className="flex ml-3 items-center">
+                  <input
+                    ref={LinkText}
+                    className="hidden"
+                    readOnly
+                    value={"https://live.tokuly.com/video/" + id}
+                  />
+                  <div className="flex items-center">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleMute();
+                        toggleControls();
                       }}
                       className="text-white"
                     >
-                      {isMuted ? (
-                        <FontAwesomeIcon
-                          className="text-white"
-                          size="lg"
-                          icon={faVolumeMute}
-                        />
+                      {isPlaying ? (
+                        <FontAwesomeIcon size="lg" icon={faPause} />
                       ) : (
-                        <FontAwesomeIcon
-                          className="text-white"
-                          size="lg"
-                          icon={faVolumeHigh}
-                        />
+                        <FontAwesomeIcon size="lg" icon={faPlay} />
                       )}
                     </button>
-                    {!isMobile && (
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.01"
-                        value={volume}
-                        onChange={handleVolumeChange}
-                        onClick={(e) => e.stopPropagation()}
-                        className="ml-[5px] h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer bg-gray-700"
-                      />
-                    )}
-                  </div>
-                  <div className="flex ml-3">
-                    <span className="text-white">{formatTime(currentTime)}</span>
-                    <span className="text-white mx-1">/</span>
-                    <span className="text-white">{formatTime(duration)}</span>
-                  </div>
-                  <div className="ml-[auto]">
-                    <DropdownMenu open={qualityMenuOpen} onOpenChange={(open)=>{
-                      if(open){
-                        setQualityMenuOpen(true);
-                        setShowControls(true);
-                      }else{
-                        setQualityMenuOpen(false);
-                      }
-                    }}>
-                      <DropdownMenuTrigger onClick={(e)=>{e.stopPropagation()}}>
-                          <FontAwesomeIcon size="lg" icon={faGear} color="white" />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContentNoPortal side="top">
-                        <DropdownMenuLabel>画質選択</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuRadioGroup value={videoQuality} onValueChange={setVideoQuality} onClick={(e)=>{e.stopPropagation(),setShowControls(false)}} >
-                          <DropdownMenuRadioItem value="-1">Auto {videoQuality === "-1" ? videoQualityList.length >= 2 ? `(${videoQualityList[hlsRef.current ? hlsRef.current.currentLevel : 0]})`: "(ソース)" : ""}</DropdownMenuRadioItem>
-                          {videoQualityList.length >= 2 && videoQualityList.slice().reverse().map((quality, index) => (
-                            <DropdownMenuRadioItem key={videoQualityList.length - 1 - index} value={(videoQualityList.length - 1 - index).toString()}>
-                              {quality}
-                            </DropdownMenuRadioItem>
-                          ))}
-                        </DropdownMenuRadioGroup>
-                      </DropdownMenuContentNoPortal>
-                    </DropdownMenu>
-                    {isFullScreen ? (
+                    <div className="flex ml-3 items-center">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          exitFullScreen();
+                          toggleMute();
                         }}
-                        className="bottom-[0px] right-[0px] mt-[-10px] mr-[10px] ml-[20px] text-white"
+                        className="text-white"
                       >
-                        <FontAwesomeIcon size="lg" icon={faCompress} />
+                        {isMuted ? (
+                          <FontAwesomeIcon
+                            className="text-white"
+                            size="lg"
+                            icon={faVolumeMute}
+                          />
+                        ) : (
+                          <FontAwesomeIcon
+                            className="text-white"
+                            size="lg"
+                            icon={faVolumeHigh}
+                          />
+                        )}
                       </button>
-                    ) : (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          enterFullScreen();
-                        }}
-                        className="bottom-[0px] right-[0px] mt-[-10px] mr-[10px] ml-[20px] text-white"
-                      >
-                        <FontAwesomeIcon size="lg" icon={faExpand} />
-                      </button>
-                    )}
+                      {!isMobile && (
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.01"
+                          value={volume}
+                          onChange={handleVolumeChange}
+                          onClick={(e) => e.stopPropagation()}
+                          className="ml-[5px] h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer bg-gray-700"
+                        />
+                      )}
+                    </div>
+                    <div className="flex ml-3">
+                      <span className="text-white">{formatTime(currentTime)}</span>
+                      <span className="text-white mx-1">/</span>
+                      <span className="text-white">{formatTime(duration)}</span>
+                    </div>
+                    <div className="ml-[auto]">
+                      <DropdownMenu open={qualityMenuOpen} onOpenChange={(open)=>{
+                        if(open){
+                          setQualityMenuOpen(true);
+                          setShowControls(true);
+                        }else{
+                          setQualityMenuOpen(false);
+                        }
+                      }}>
+                        <DropdownMenuTrigger onClick={(e)=>{e.stopPropagation()}}>
+                            <FontAwesomeIcon size="lg" icon={faGear} color="white" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContentNoPortal side="top">
+                          <DropdownMenuLabel>画質選択</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuRadioGroup value={videoQuality} onValueChange={setVideoQuality} onClick={(e)=>{e.stopPropagation(),setShowControls(false)}} >
+                            <DropdownMenuRadioItem value="-1">Auto {videoQuality === "-1" ? videoQualityList.length >= 2 ? `(${videoQualityList[hlsRef.current ? hlsRef.current.currentLevel : 0]})`: "(ソース)" : ""}</DropdownMenuRadioItem>
+                            {videoQualityList.length >= 2 && videoQualityList.slice().reverse().map((quality, index) => (
+                              <DropdownMenuRadioItem key={videoQualityList.length - 1 - index} value={(videoQualityList.length - 1 - index).toString()}>
+                                {quality}
+                              </DropdownMenuRadioItem>
+                            ))}
+                          </DropdownMenuRadioGroup>
+                        </DropdownMenuContentNoPortal>
+                      </DropdownMenu>
+                      {isFullScreen ? (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            exitFullScreen();
+                          }}
+                          className="bottom-[0px] right-[0px] mt-[-10px] mr-[10px] ml-[20px] text-white"
+                        >
+                          <FontAwesomeIcon size="lg" icon={faCompress} />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            enterFullScreen();
+                          }}
+                          className="bottom-[0px] right-[0px] mt-[-10px] mr-[10px] ml-[20px] text-white"
+                        >
+                          <FontAwesomeIcon size="lg" icon={faExpand} />
+                        </button>
+                      )}
+                    </div>
                   </div>
+                  {!isUploadVideo && (
+                    <div className="absolute bg-white w-[100px] h-[25px] top-[20px] right-[10px] rounded-md">
+                      <p className=" text-black text-center font-semibold">
+                        アーカイブ
+                      </p>
+                    </div>
+                  )}
                 </div>
-                {!isUploadVideo && (
-                  <div className="absolute bg-white w-[100px] h-[25px] top-[20px] right-[10px] rounded-md">
-                    <p className=" text-black text-center font-semibold">
-                      アーカイブ
-                    </p>
-                  </div>
-                )}
               </div>
             </ContextMenuTrigger>
             <ContextMenuContent>
