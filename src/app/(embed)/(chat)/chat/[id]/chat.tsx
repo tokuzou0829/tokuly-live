@@ -41,44 +41,47 @@ export default function Chat(props: ChatProps) {
       .then((responseData) => {
         const res: ChatMessage[] = responseData;
         setHistory_messages(res);
-        console.log("API Response:", responseData);
+        //console.log("API Response:", responseData);
       })
       .catch((error) => {
-        console.error("API Request Error:", error);
+        //console.error("API Request Error:", error);
       });
   }, []);
   useEffect(() => {
-    const socket = io("https://live-data.tokuly.com", {
-      path: "/chat/socket.io/",
+    const socket = io('https://live-data.tokuly.com', {
+      path: '/chat/socket.io/',
     });
     setSocket(socket);
-
-    const url = new URL(window.location.href);
-    const params = url.searchParams;
-
-    const roomId = id;
-    setUrlRoomId(roomId);
-    if (session?.user) {
-      const name = session.user.name;
-      const token = session.user.token;
-      setUrlName(name);
-      setToken(token);
-      socket.on("connect", () => {
+    async function connectChat(){
+      const roomId = id;
+      if (session?.user) {
+        const req = await fetch('https://live-data.tokuly.com/chat-auth/',
+          {
+            method: 'POST',
+            body: `{"token":"${session?.user?.access_token}"}`,
+            headers: {"Content-Type": "application/json"}
+          }
+        );
+        const chatKey = await req.json();
+        const name = session.user.name;
+        const token = chatKey.authKey;
+        setUrlName(name);
+        setToken(token);
         socket.emit("join", { roomId: roomId, name: name, token: token });
         setIs_connection(true);
-      });
-    } else {
-      setUrlName("guest");
-      socket.on("connect", () => {
-        socket.emit("join", { roomId: roomId, name: "guest", token: "guest" });
-        setIs_connection(true);
+      } else {
+        setUrlName("guest");
+        socket.on("connect", () => {
+          socket.emit("join", { roomId: roomId, name: "guest", token: "guest" });
+          setIs_connection(true);
+        });
+      }
+      socket.on("message", (msg) => {
+        setMessages((prevMessages) => [msg, ...prevMessages]);
       });
     }
-
-    socket.on("message", (msg) => {
-      setMessages((prevMessages) => [msg, ...prevMessages]);
-    });
-
+    connectChat();
+    
     return () => {
       socket.disconnect();
     };

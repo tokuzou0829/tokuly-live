@@ -14,12 +14,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
 type Props = {
   session: Session | null;
 };
 export default function AccountDropdownMenu(props: Props) {
   const { session } = props;
   const pathname = usePathname();
+
   return (
     <>
       {session?.user ? (
@@ -77,7 +79,7 @@ export default function AccountDropdownMenu(props: Props) {
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
-        <Button onClick={() => signIn("Tokuly", { callbackUrl: pathname })}>
+        <Button onClick={() => signIn("tokuly", { callbackUrl: pathname })}>
           ログイン
         </Button>
       )}
