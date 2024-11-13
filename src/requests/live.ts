@@ -1,6 +1,6 @@
 import * as fetch from "@/utils/fetch";
 import { notFound } from "next/navigation";
-import type { Live, LiveList } from "@/types/live";
+import type { Live, LiveList,MoreVideoList } from "@/types/live";
 
 type OnlineCheckParams = {
   id: string;
@@ -12,6 +12,7 @@ type Lives = {
 type Archives = {
   archives: LiveList[];
 };
+
 
 export async function getOnlineLiveList(): Promise<Lives> {
   return await fetch.post<null, Lives>(`/live/online/get`, null, {
@@ -55,22 +56,29 @@ export async function onlineCheck(param: OnlineCheckParams): Promise<any> {
     notFound();
   }
 }
+export async function getMoreVideo(param: OnlineCheckParams): Promise<MoreVideoList[] | null> {
+  const formData = new FormData();
+  formData.append("name", param.id);
 
+  try {
+    return await fetch.post<FormData, MoreVideoList[]>(`/live/video/more`, formData, {
+      headers: {},
+    });
+  } catch (e) {
+    return null;
+  }
+}
 export async function VideoCheck(param: OnlineCheckParams): Promise<any> {
   const formData = new FormData();
   formData.append("name", param.id);
   try {
-    const res = await fetch.post<FormData, any>(`/live/stream/data`, formData, {
+    const res = await fetch.post<FormData, Live>(`/live/stream/data`, formData, {
       headers: {},
     });
-    if(res.status == "online" || res.publishing_setting && res.publishing_setting == "friend"){
+    if((res.status !== "end" && res.status !== "video") || res.publishing_setting == "friend"){
       notFound();
     }
-    const checkvideo = await globalThis.fetch(`https://live-data.tokuly.com/videos/hls/${param.id}/index.m3u8`, {
-      method:"GET",
-      headers: {},
-    });
-    if(!checkvideo.ok){
+    if(res.status == "end" && !res.archive){
       notFound();
     }
     return res;

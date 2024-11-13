@@ -195,7 +195,7 @@ export default function Videoflame(props: Flameprops) {
   }
 
   return (
-    <div className="w-[100%] h-[100%]">
+    <div className="w-[100%]">
       {status == "online" ? (
         <Video id={live.stream_name} />
       ) : (
