@@ -25,9 +25,11 @@ export default function LayoutContent({
   const firstLocation = pathname.startsWith('/video/') || pathname.startsWith('/live/');
   const [isCollapsed, setIsCollapsed] = useState(firstLocation ? true : false);
   const panelRef = useRef<any>(null);
+  const [isPhone, setIsPhone] = useState(false);
 
   useEffect(() => {
     const isPhone = window.innerWidth < 1150;
+    setIsPhone(isPhone);
     if(isPhone) {
       setIsCollapsed(true);
       panelRef.current?.collapse();
@@ -62,8 +64,8 @@ export default function LayoutContent({
           collapsedSize={4}
           ref={panelRef}
           collapsible={true}
-          minSize={10}
-          maxSize={15}
+          minSize={!isPhone ? 15 : 4}
+          maxSize={!isPhone ? 15 : 4}
           onCollapse={() => {
             setIsCollapsed(true);
             document.cookie = `react-resizable-panels:collapsed=${JSON.stringify(
@@ -103,7 +105,7 @@ export default function LayoutContent({
           />
           <ChList isCollapsed={isCollapsed} channels={channels} />
         </ResizablePanel>
-        <ResizableHandle withHandle />
+        <ResizableHandle withHandle={!isPhone ? true : false} />
         <ResizablePanel defaultSize={85}>{children}</ResizablePanel>
       </ResizablePanelGroup>
     </TooltipProvider>
