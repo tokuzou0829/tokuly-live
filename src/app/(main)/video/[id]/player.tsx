@@ -46,6 +46,7 @@ import {
   DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
+import { useSearchParams } from "next/navigation";
 
 interface VideoProps {
   id: string;
@@ -89,6 +90,7 @@ function Player(props: VideoProps) {
   const hlsRef = useRef<Hls | null>(null);
   const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const searchParams = useSearchParams();
 
   useEffect(()=>{
     if(globalThis.navigator){
@@ -207,6 +209,12 @@ function Player(props: VideoProps) {
       return navigator.clipboard.writeText(link);
     }
   }
+  function copyLinkTimeShare() {
+    if (LinkText.current) {
+      const link = LinkText.current.value + "?t=" + Math.floor(currentTime);
+      return navigator.clipboard.writeText(link);
+    }
+  }
   function copyEmdedCode() {
     if (EmdedCode.current) {
       const link = EmdedCode.current.value;
@@ -312,7 +320,7 @@ function Player(props: VideoProps) {
   useEffect(() => {
     let hls: Hls; // HLS.js インスタンスを保持する変数を定義
     const videoSrc = `https://live-data.tokuly.com/videos/hls/${id}/index.m3u8`;
-
+    const share_time = searchParams.get("t");
     // Function to check the m3u8 file status
     const checkM3u8Status = () => {
       fetch(videoSrc, { method: "HEAD" }).then((response) => {
@@ -343,7 +351,10 @@ function Player(props: VideoProps) {
                   return level.height + 'p';
               });
               setVideoQualityList(availableQualities);
-          });
+              if (share_time) {
+                myRef.current!.currentTime = parseFloat(share_time);
+              }
+            });
           } else {
             const video = myRef.current!;
             video.src = videoSrc;
@@ -654,6 +665,15 @@ function Player(props: VideoProps) {
               >
                 <FontAwesomeIcon icon={faCopy} className="mr-[10px]" />
                 リンクをコピー
+              </ContextMenuItem>
+              <ContextMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  copyLinkTimeShare();
+                }}
+              >
+                <FontAwesomeIcon icon={faCopy} className="mr-[10px]" />
+                時間付きリンクをコピー
               </ContextMenuItem>
             </ContextMenuContent>
           </div>
