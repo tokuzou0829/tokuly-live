@@ -1,4 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useAtom } from 'jotai';
+import { IsWatchWithFriend, IsPartyHost } from '@/atoms/watchWithFriendAtom';
 
 type SeekBarProps = {
   playervalue: number;
@@ -23,9 +25,15 @@ const SeekBar = ({
   const [isDragging, setIsDragging] = useState(false);
   const seekBarRef = useRef<HTMLDivElement>(null);
   const [seek, setSeek] = useState(0);
+  const [isWatchWithFriend,] = useAtom(IsWatchWithFriend);
+  const [isHost,] = useAtom(IsPartyHost);
+
+  useEffect(() => {
+    console.log(isHost);
+  },[isHost]);
 
   const updateValue = useCallback((clientX: number) => {
-    if (seekBarRef.current) {
+    if (seekBarRef.current && (!isWatchWithFriend || isHost)) {
       const rect = seekBarRef.current.getBoundingClientRect();
       const x = clientX - rect.left;
       const newValue = Math.max(0, Math.min(100, (x / rect.width) * 100));
@@ -112,18 +120,22 @@ const SeekBar = ({
           style={{ width: `${(bufferValue / duration) * 100}%` }}
           className="absolute h-full bg-gray-400 rounded-full"
         />
-        <div
-          style={{ width: `${seek}%` }}
-          className="absolute h-full bg-gray-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-        />
+        {(!isWatchWithFriend || isHost) && (
+          <div
+            style={{ width: `${seek}%` }}
+            className="absolute h-full bg-gray-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+          />
+        )}
         <div
           style={{ width: `${value}%` }}
           className="absolute h-full bg-white rounded-full"
         />
-        <div
-          style={{ left: `${value}%` }}
-          className="absolute w-4 h-4 bg-white rounded-full top-1/2 transform -translate-x-1/2 -translate-y-1/2 hover:scale-110 transition-transform duration-200 shadow-md"
-        />
+        {(!isWatchWithFriend || isHost) && (
+          <div
+            style={{ left: `${value}%` }}
+            className="absolute w-4 h-4 bg-white rounded-full top-1/2 transform -translate-x-1/2 -translate-y-1/2 hover:scale-110 transition-transform duration-200 shadow-md"
+          />
+        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 import React, { useRef, useEffect, useState } from "react";
-import { Copy } from "lucide-react";
+import { Copy, PartyPopper } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlay,
@@ -44,9 +44,12 @@ import {
   DropdownMenuTrigger,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { useSearchParams } from "next/navigation";
+import { useAtom } from "jotai";
+import { IsWatchWithFriend ,VideoPlayerRef, IsPartyHost} from "@/atoms/watchWithFriendAtom";
 
 interface VideoProps {
   id: string;
@@ -91,6 +94,17 @@ function Player(props: VideoProps) {
   const [qualityMenuOpen, setQualityMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const searchParams = useSearchParams();
+
+  const [isWWF,] = useAtom(IsWatchWithFriend);
+  const [,setVideoPlayerRef] = useAtom(VideoPlayerRef);
+  const [isHost,] = useAtom(IsPartyHost);
+
+  useEffect(()=>{
+    if(isWWF && myRef.current){
+      setVideoPlayerRef(myRef.current);
+    }
+  },[isWWF, setVideoPlayerRef, myRef])
+
 
   useEffect(()=>{
     if(globalThis.navigator){
@@ -164,17 +178,23 @@ function Player(props: VideoProps) {
       switch (event.key) {
         case ' ': // スペースキーで再生/一時停止
           event.preventDefault(); // ページのスクロール防止
-          if (video.paused) {
-            video.play();
-          } else {
-            video.pause();
+          if(!isWWF || isHost) {
+            if (video.paused) {
+              video.play();
+            } else {
+              video.pause();
+            }
           }
           break;
         case 'ArrowLeft': // 左矢印キーで5秒巻き戻し
-          video.currentTime = Math.max(0, video.currentTime - 5);
+          if(!isWWF || isHost) {
+            video.currentTime = Math.max(0, video.currentTime - 5);
+          }
           break;
         case 'ArrowRight': // 右矢印キーで5秒早送り
-          video.currentTime = Math.min(video.duration, video.currentTime + 5);
+          if(!isWWF || isHost) {
+            video.currentTime = Math.min(video.duration, video.currentTime + 5);
+          }
           break;
         case 'ArrowUp': // 上矢印キーで音量を上げる
           setVolume(Math.min(1, video.volume + 0.05));
@@ -201,7 +221,7 @@ function Player(props: VideoProps) {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [isWWF, isHost ,myRef.current]);
 
   function copyLink() {
     if (LinkText.current) {
@@ -487,7 +507,7 @@ function Player(props: VideoProps) {
               background: 'linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 30%)',
             }}
             onMouseLeave={handleVideoHoverLeave}
-            onClick={toggleControls}
+            onClick={(!isWWF || isHost) ? toggleControls : void(0)}
           >
             {/* Overlay menu */}
             <ContextMenuTrigger>
@@ -537,8 +557,13 @@ function Player(props: VideoProps) {
                   <div className="flex items-center">
                     <button
                       onClick={(e) => {
-                        e.stopPropagation();
-                        toggleControls();
+                        //e.stopPropagation();
+                        console.log(IsWatchWithFriend);
+                        console.log(isHost);
+                        if(!isWWF || isHost) {
+                          console.log("test");
+                          toggleControls();
+                        }
                       }}
                       className="text-white"
                     >

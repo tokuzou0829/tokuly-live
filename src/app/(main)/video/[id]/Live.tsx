@@ -1,5 +1,6 @@
 import Video from "./videoframe";
 import Chat from "./chat";
+import WatchWithFriendView from "./watchWithFriendView";
 import { auth } from "@/auth";
 import LiveOverview from "./liveOverview";
 import { getLive } from "@/requests/live";
@@ -40,6 +41,9 @@ export default async function LivePlayer({ id }: LiveProps) {
           <div>
             {live.status !== "video" && (
               <Chat id={live.id} session={session}></Chat>
+            )}
+            {live.status == "video" && (
+              <WatchWithFriendView id={live.id} session={session}></WatchWithFriendView>
             )}
             <MoreVideo stream={live}></MoreVideo>
           </div>
