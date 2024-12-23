@@ -39,12 +39,11 @@ export default function Chat(props: ChatProps) {
   const [isHost, setIsHost] = useAtom<boolean>(IsPartyHost);
   const [me , setMe] = useState<User | null>(null);
   const VideoTimeInterval = useRef<NodeJS.Timeout>();
-
   const [VideoRef, ] = useAtom<HTMLVideoElement | null>(VideoPlayerRef);
 
   useEffect(() => {
-    console.log("WFRoomID:",WFRoomID);
     let me_data:User;
+    console.log("WFRoomID:",WFRoomID);
     const socket = io('https://live-data.tokuly.com', {
       path: '/wwf/socket.io/',
     });
@@ -110,7 +109,7 @@ export default function Chat(props: ChatProps) {
   }, [WFRoomID]);
 
   useEffect(() => {
-    if(VideoRef && isHost){
+    if (VideoRef && isHost) {
       VideoRef.addEventListener('play', () => {
         socket?.emit('play');
       });
@@ -121,41 +120,43 @@ export default function Chat(props: ChatProps) {
         socket?.emit('video_time', {time:VideoRef.currentTime,playing: !VideoRef.paused});
       });
       VideoTimeInterval.current = setInterval(() => {
-        console.log("post:",VideoRef.currentTime);
         socket?.emit('video_time', {time:VideoRef.currentTime,playing: !VideoRef.paused});
       }, 1000);
-    }else{
-      if(VideoTimeInterval.current){
+      return () => {
+        if (VideoTimeInterval.current) {
+          clearInterval(VideoTimeInterval.current);
+        }
+      };
+    } else {
+      if (VideoTimeInterval.current) {
         clearInterval(VideoTimeInterval.current);
       }
     }
-    return () => {
-      if(VideoTimeInterval.current){
-        clearInterval(VideoTimeInterval.current);
-      }
-    };
-  },[VideoRef, isHost, socket]);
+  }, [VideoRef, isHost, socket]);
 
   useEffect(() => {
-    if(VideoRef){
+    if (VideoRef && !isHost) {
       socket?.on('play', () => {
-        console.log("play");
         VideoRef.play();
       });
       socket?.on('pause', () => {
-        console.log("pause");
         VideoRef.pause();
       });
       socket?.on('video_time', (time) => {
-          if (Math.abs(VideoRef.currentTime - time.time) > 1.5) {
-            VideoRef.currentTime = time.time;
-          }
-          if(time.playing){
-            VideoRef.play();
-          }
+        if (Math.abs(VideoRef.currentTime - time.time) > 1.5) {
+          VideoRef.currentTime = time.time;
+        }
+        if (time.playing) {
+          VideoRef.play();
+        }
       });
+      return () => {
+        socket?.off('play');
+        socket?.off('pause');
+        socket?.off('video_time');
+      };
     }
-  },[VideoRef, socket]);
+  }, [VideoRef, isHost, socket]);
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     if (socket) {
