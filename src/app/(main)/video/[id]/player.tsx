@@ -367,10 +367,24 @@ function Player(props: VideoProps) {
               setBuffer(bufferedSeconds);
             });
             hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
-              var availableQualities = hls.levels.map(function(level) {
-                  return level.height + 'p';
-              });
-              setVideoQualityList(availableQualities);
+                const qualityMap = new Map();
+                hls.levels.forEach(level => {
+                  const quality = level.height + 'p';
+                  if (!qualityMap.has(quality)) {
+                  qualityMap.set(quality, level.bitrate);
+                  } else {
+                  if (level.bitrate > qualityMap.get(quality)) {
+                    qualityMap.set(quality, level.bitrate);
+                  }
+                  }
+                });
+                const availableQualities = hls.levels.map(level => {
+                  const quality = level.height + 'p';
+                  const isHighQuality = qualityMap.get(quality) === level.bitrate;
+                  const qualityCount = hls.levels.filter(l => l.height === level.height).length;
+                  return isHighQuality && qualityCount > 1 ? quality + ' (hq)' : quality;
+                });
+                setVideoQualityList(availableQualities);
               if (share_time) {
                 myRef.current!.currentTime = parseFloat(share_time);
               }
