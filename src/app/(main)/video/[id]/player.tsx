@@ -371,11 +371,11 @@ function Player(props: VideoProps) {
                 hls.levels.forEach(level => {
                   const quality = level.height + 'p';
                   if (!qualityMap.has(quality)) {
-                  qualityMap.set(quality, level.bitrate);
-                  } else {
-                  if (level.bitrate > qualityMap.get(quality)) {
                     qualityMap.set(quality, level.bitrate);
-                  }
+                  } else {
+                    if (level.bitrate > qualityMap.get(quality)) {
+                      qualityMap.set(quality, level.bitrate);
+                    }
                   }
                 });
                 const availableQualities = hls.levels.map(level => {
