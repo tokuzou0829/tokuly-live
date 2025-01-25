@@ -228,12 +228,13 @@ function Player(props: VideoProps) {
           if (Hls.isSupported()) {
             hls = new Hls({
               enableWorker: true,
-              maxBufferLength: 1,
-              liveBackBufferLength: 0,
-              liveSyncDuration: 0,
-              liveMaxLatencyDuration: 5,
+              maxBufferLength: 10,
+              liveBackBufferLength: 5,
+              liveSyncDuration: 3,
+              liveMaxLatencyDuration: 10,
               liveDurationInfinity: true,
-              highBufferWatchdogPeriod: 1,
+              highBufferWatchdogPeriod: 3,
+              maxLiveSyncPlaybackRate: 1,
             });
             hls.loadSource(videoSrc);
             hls.attachMedia(myRef.current!);
