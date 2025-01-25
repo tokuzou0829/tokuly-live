@@ -101,7 +101,7 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
     };
 
     recorder.onerror = (event) => {
-      console.error('MediaRecorder Error:', event.error);
+      //console.error('MediaRecorder Error:', event.error);
       if (activeRecorderRef.current === recorder) {
         stopStreaming();
         alert('Recording error occurred. Stream stopped.');
