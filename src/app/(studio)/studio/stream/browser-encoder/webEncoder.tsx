@@ -9,6 +9,8 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuPortal } from "@/components/ui/dropdown-menu";
 import { Plus, Video, Mic, Monitor, Image as ImageIcon, Music, Scissors } from "lucide-react"; // Lucideアイコンを使用
 import { useSearchParams } from "next/navigation";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"; // 追加
+import { Label } from "@/components/ui/label"; // 追加
 
 interface VideoSource {
   id: string;
@@ -46,6 +48,8 @@ interface AudioSource {
   audioElement?: HTMLAudioElement;  // 音声ファイル用のエレメント
   name: string;  // 名前を追加
   type: 'mic' | 'audio' | 'screen';  // ソースタイプを追加
+  analyser?: AnalyserNode;  // 追加: 音声解析用
+  level?: number;  // 追加: 現在の音声レベル
 }
 
 export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | null,streamTitle: string | null}) {
@@ -57,11 +61,12 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
     audioInputs: MediaDeviceInfo[];
     videoInputs: MediaDeviceInfo[];
   }>({ audioInputs: [], videoInputs: [] });
-  const [audioSources, setAudioSources] = useState<{[key: string]: { volume: number, muted: boolean, loop?: boolean, name: string, type: 'mic' | 'audio' | 'screen' }}>({});
+  const [audioSources, setAudioSources] = useState<{[key: string]: { volume: number, muted: boolean, loop?: boolean, name: string, type: 'mic' | 'audio' | 'screen', level?: number }}>({});
   const [selectedSourceId, setSelectedSourceId] = useState<string | null>(null);
   const [isCanvasActive, setIsCanvasActive] = useState(true);
   const [videoSources, setVideoSources] = useState<VideoSource[]>([]);
   const [editingName, setEditingName] = useState<string | null>(null);
+  const [resolution, setResolution] = useState<'720p' | '1080p'>('1080p'); // 解像度の状態を追加
 
   const currentStreamRef = useRef<MediaStream | null>(null);
   const wsConnectionRef = useRef<WebSocket | null>(null);
@@ -74,7 +79,7 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
   const videoSourcesRef = useRef<VideoSource[]>([]);
   const dragSourceRef = useRef<{id: string, startX: number, startY: number} | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const audioMixerRef = useRef<{[key: string]: { gain: GainNode, volume: number, muted: boolean, loop?: boolean, audioElement?: HTMLAudioElement }}>({});
+  const audioMixerRef = useRef<{[key: string]: { gain: GainNode, volume: number, muted: boolean, loop?: boolean, audioElement?: HTMLAudioElement, analyser?: AnalyserNode }}>({});
   const mainGainNodeRef = useRef<GainNode | null>(null);
   const [resizeInfo, setResizeInfo] = useState<{
     sourceId: string;
@@ -150,49 +155,96 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
     return { destination, mainGain: mainGainNodeRef.current };
   };
 
-  const addAudioSource = (sourceId: string, stream: MediaStream | null, options: { name: string, type: 'mic' | 'audio' | 'screen' }) => {
-    if (!audioContextRef.current) {
-      audioContextRef.current = new AudioContext();
+  // addAudioSource 関数を修正
+const addAudioSource = (sourceId: string, stream: MediaStream | null, options: { name: string, type: 'mic' | 'audio' | 'screen' }) => {
+  if (!audioContextRef.current) {
+    audioContextRef.current = new AudioContext();
+  }
+
+  if (stream && stream.getAudioTracks().length === 0) return;
+
+  const gainNode = audioContextRef.current.createGain();
+  const analyser = audioContextRef.current.createAnalyser();
+  analyser.fftSize = 1024; // より詳細な解析のために増やす
+  analyser.smoothingTimeConstant = 0.8; // スムージングを追加
+  
+  if (stream) {
+    const source = audioContextRef.current.createMediaStreamSource(stream);
+    source.connect(gainNode);
+  }
+  
+  gainNode.connect(analyser);
+  gainNode.gain.value = 1.0; // 初期音量を設定
+  
+  if (!mainGainNodeRef.current) {
+    const { mainGain } = initAudioMixer();
+    mainGainNodeRef.current = mainGain;
+  }
+  
+  gainNode.connect(mainGainNodeRef.current);
+
+  audioMixerRef.current[sourceId] = {
+    gain: gainNode,
+    volume: 1.0,
+    muted: false,
+    analyser
+  };
+
+  setAudioSources(prev => ({
+    ...prev,
+    [sourceId]: { 
+      volume: 1.0, 
+      muted: false,
+      name: options.name,
+      type: options.type,
+      level: 0
     }
+  }));
 
-    if (stream && stream.getAudioTracks().length === 0) return;
+  startLevelMeter(sourceId, analyser);
+};
 
-    const gainNode = audioContextRef.current.createGain();
-    if (stream) {
-      const source = audioContextRef.current.createMediaStreamSource(stream);
-      source.connect(gainNode);
+// 音声レベル測定用の関数を修正
+const startLevelMeter = (sourceId: string, analyser: AnalyserNode) => {
+  const dataArray = new Uint8Array(analyser.frequencyBinCount);
+  
+  const updateLevel = () => {
+    if (!audioMixerRef.current[sourceId]) return;
+
+    analyser.getByteFrequencyData(dataArray);
+    
+    // より正確なレベル計算
+    let sum = 0;
+    const numFrequencies = dataArray.length;
+    
+    for (let i = 0; i < numFrequencies; i++) {
+      sum += dataArray[i];
     }
     
-    if (!mainGainNodeRef.current) {
-      const { mainGain } = initAudioMixer();
-      mainGainNodeRef.current = mainGain;
-    }
-    
-    gainNode.connect(mainGainNodeRef.current);
+    const average = sum / numFrequencies;
+    const normalizedLevel = Math.min(average / 128, 1.0); // 0-1の範囲に正規化
 
-    audioMixerRef.current[sourceId] = {
-      gain: gainNode,
-      volume: 1.0,
-      muted: false
-    };
-
-    // 状態を更新して再レンダリングをトリガー
     setAudioSources(prev => ({
       ...prev,
-      [sourceId]: { 
-        volume: 1.0, 
-        muted: false,
-        name: options.name,
-        type: options.type
+      [sourceId]: {
+        ...prev[sourceId],
+        level: normalizedLevel
       }
     }));
+
+    requestAnimationFrame(updateLevel);
   };
+
+  updateLevel();
+};
 
   const updateAudioVolume = (sourceId: string, volume: number) => {
     const mixer = audioMixerRef.current[sourceId];
     if (mixer) {
       mixer.volume = volume;
-      mixer.gain.gain.value = volume;
+      if (!mixer.muted) {
+        mixer.gain.gain.setValueAtTime(volume, audioContextRef.current!.currentTime);
+      }
       
       // 状態を更新して再レンダリングをトリガー
       setAudioSources(prev => ({
@@ -1261,6 +1313,32 @@ const toggleCropping = (sourceId: string) => {
   );
 };
 
+  // キャンバスサイズを取得する関数
+  const getCanvasSize = (res: '720p' | '1080p') => {
+    return res === '720p' ? { width: 1280, height: 720 } : { width: 1920, height: 1080 };
+  };
+
+  // 解像度変更時の処理
+  const handleResolutionChange = (newResolution: '720p' | '1080p') => {
+    setResolution(newResolution);
+    const { width, height } = getCanvasSize(newResolution);
+    
+    if (canvasRef.current) {
+      canvasRef.current.width = width;
+      canvasRef.current.height = height;
+    }
+    if (overlayCanvasRef.current) {
+      overlayCanvasRef.current.width = width;
+      overlayCanvasRef.current.height = height;
+    }
+    
+    // ストリーミング中の場合は再起動
+    if (isStreaming) {
+      stopStreaming();
+      startStreaming();
+    }
+  };
+
   useEffect(() => {
     drawCanvas();
     loadDevices();
@@ -1305,22 +1383,55 @@ const toggleCropping = (sourceId: string) => {
           <CardTitle>TokulyLive Web Encoder</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex gap-4">
+          <div className="flex gap-4 items-center">
             <h1 className='flex-1 text-xl'>配信：{streamTitle}</h1>
-              {!isStreaming ? (
-                <Button onClick={startStreaming} disabled={isStreaming}>
-                  配信開始
-                </Button>
-              ):(
-                <Button 
-                  onClick={stopStreaming} 
-                  disabled={!isStreaming}
-                  variant="destructive"
+            <RadioGroup
+              defaultValue={resolution}
+              onValueChange={(value) => handleResolutionChange(value as '720p' | '1080p')}
+              className="flex items-center space-x-4"
+              disabled={isStreaming} // RadioGroup全体を無効化
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem 
+                  value="720p" 
+                  id="720p"
+                  disabled={isStreaming} // 個別のアイテムも無効化
+                />
+                <Label 
+                  htmlFor="720p" 
+                  className={isStreaming ? "text-muted-foreground" : ""} // 配信中は文字色を薄くする
                 >
-                  配信停止
-                </Button>
-              )}
-            </div>
+                  720p
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem 
+                  value="1080p" 
+                  id="1080p"
+                  disabled={isStreaming}
+                />
+                <Label 
+                  htmlFor="1080p"
+                  className={isStreaming ? "text-muted-foreground" : ""}
+                >
+                  1080p
+                </Label>
+              </div>
+            </RadioGroup>
+            {!isStreaming ? (
+              <Button onClick={startStreaming} disabled={isStreaming}>
+                配信開始
+              </Button>
+            ) : (
+              <Button 
+                onClick={stopStreaming} 
+                disabled={!isStreaming}
+                variant="destructive"
+              >
+                配信停止
+              </Button>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -1538,7 +1649,7 @@ const toggleCropping = (sourceId: string) => {
             </CardHeader>
             <CardContent>
               <ScrollArea className="h-[200px]">
-                {Object.entries(audioSources).map(([sourceId, { volume, muted, loop }]) => (
+                {Object.entries(audioSources).map(([sourceId, { volume, muted, loop, level }]) => (
                   <div key={sourceId} className="space-y-2 mb-4">
                     <div className="flex items-center justify-between">
                       <span className="text-sm">
@@ -1579,14 +1690,48 @@ const toggleCropping = (sourceId: string) => {
                         </Button>
                       </div>
                     </div>
-                    <Slider
-                      value={[volume]}
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      disabled={muted}
-                      onValueChange={(values: number[]) => updateAudioVolume(sourceId, values[0])}
-                    />
+                    <div className="space-y-1">
+                      {/* 音量スライダー */}
+                      <div className="relative">
+                        <Slider
+                          value={[volume]}
+                          min={0}
+                          max={1}
+                          step={0.01}
+                          disabled={muted}
+                          onValueChange={(values: number[]) => updateAudioVolume(sourceId, values[0])}
+                          className="z-10 relative"
+                        />
+                      </div>
+                      
+                      {/* レベルメーター */}
+                      <div className="h-2 bg-accent rounded-full overflow-hidden">
+                        <div className="relative w-full h-full">
+                          {/* バックグラウンドメーター（ピークホールド） */}
+                          <div 
+                            className="absolute inset-0 transition-all duration-0"
+                            style={{
+                              width: `${(level || 0) * 100}%`,
+                              backgroundColor: `hsl(${120 - (level || 0) * 120}, 100%, 50%)`
+                            }}
+                          />
+                          {/* dBスケール表示 */}
+                          <div className="absolute inset-0 flex justify-between px-1 text-[8px] text-white/50">
+                            <span>-inf</span>
+                            <span>-40</span>
+                            <span>-20</span>
+                            <span>-10</span>
+                            <span>0dB</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* 数値表示 */}
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>Level: {Math.round((level || 0) * 100)}%</span>
+                        <span>Volume: {Math.round(volume * 100)}%</span>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </ScrollArea>
@@ -1598,14 +1743,14 @@ const toggleCropping = (sourceId: string) => {
               <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
                 <canvas
                   ref={canvasRef}
-                  width={1920}
-                  height={1080}
+                  width={getCanvasSize(resolution).width}
+                  height={getCanvasSize(resolution).height}
                   className="absolute top-0 left-0 w-full h-full"
                 />
                 <canvas
                   ref={overlayCanvasRef}
-                  width={1920}
-                  height={1080}
+                  width={getCanvasSize(resolution).width}
+                  height={getCanvasSize(resolution).height}
                   className="absolute top-0 left-0 w-full h-full cursor-move"
                   onMouseDown={handleCanvasMouseDown}
                   onMouseMove={(e) => {
