@@ -473,7 +473,48 @@ const startLevelMeter = (sourceId: string, analyser: AnalyserNode) => {
 
   const addVideoSource = async (type: 'camera' | 'screen' | 'image' | 'video', deviceId?: string) => {
     try {
-      if (type === 'screen') {
+      if (type === 'camera') {
+        // カメラの処理を追加
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: deviceId ? {
+            deviceId: { exact: deviceId },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          } : {
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
+        });
+  
+        const videoElement = await createVideoElement(stream, type);
+        const track = stream.getVideoTracks()[0];
+        const settings = track.getSettings();
+  
+        // オリジナルのサイズを保存
+        const originalDimensions = {
+          width: settings.width || videoElement.videoWidth,
+          height: settings.height || videoElement.videoHeight
+        };
+  
+        const sourceId = `camera-${Date.now()}`;
+        const aspectRatio = originalDimensions.width / originalDimensions.height;
+  
+        const newSource: VideoSource = {
+          id: sourceId,
+          name: sourceId,
+          stream,
+          videoElement,
+          x: Math.random() * 100,
+          y: Math.random() * 100,
+          width: 480,
+          height: 480 / aspectRatio,
+          originalDimensions,
+          originalAspectRatio: aspectRatio
+        };
+  
+        setVideoSources(prev => [newSource, ...prev]);
+        return;
+      } else if (type === 'screen') {
         const resolution = screenShareSettings.resolution;
         const displaySize = resolution === '720p' 
           ? { width: 1280, height: 720 } 
@@ -1203,54 +1244,6 @@ const updateCursor = (e: React.MouseEvent<HTMLCanvasElement>) => {
     }
 
     setIsStreaming(false);
-  };
-
-  const toggleScreenShare = async () => {
-    try {
-      if (!isScreenSharing) {
-        await addVideoSource('screen');
-      } else {
-        const source = videoSourcesRef.current.find(s => s.id === 'screen');
-        if (source) {
-          source.stream.getTracks().forEach(track => track.stop());
-          source.videoElement.srcObject = null;
-          source.videoElement.remove();
-          videoSourcesRef.current = videoSourcesRef.current.filter(s => s.id !== 'screen');
-          delete audioMixerRef.current['screen'];
-        }
-      }
-
-      setIsScreenSharing(!isScreenSharing);
-    } catch (err) {
-      console.error('Error toggling screen share:', err);
-      alert('Failed to switch video source');
-    }
-  };
-
-  const switchStream = async (newStream: MediaStream) => {
-    if (!wsConnectionRef.current || wsConnectionRef.current.readyState !== WebSocket.OPEN) return;
-
-    try {
-      if (activeRecorderRef.current) {
-        activeRecorderRef.current.stop();
-      }
-
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = newStream;
-      }
-      
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      const newRecorder = createMediaRecorder(newStream);
-      if (newRecorder) {
-        newRecorder.start(500);
-        activeRecorderRef.current = newRecorder;
-        currentStreamRef.current = newStream;
-      }
-    } catch (error) {
-      console.error('Error switching stream:', error);
-      alert('Failed to switch video source');
-    }
   };
 
   const loadDevices = async () => {
