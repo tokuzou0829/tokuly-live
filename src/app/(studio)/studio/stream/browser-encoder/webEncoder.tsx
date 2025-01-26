@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuPortal } from "@/components/ui/dropdown-menu";
-import { Plus, Video, Mic, Monitor, Image as ImageIcon, Music } from "lucide-react"; // Lucideアイコンを使用
+import { Plus, Video, Mic, Monitor, Image as ImageIcon, Music, Scissors } from "lucide-react"; // Lucideアイコンを使用
 import { useSearchParams } from "next/navigation";
 
 interface VideoSource {
@@ -22,6 +22,20 @@ interface VideoSource {
   loop?: boolean;  // ループ再生フラグを追加
   isAnimated?: boolean;  // アニメーション有無フラグ
   isEditing?: boolean; // 編集状態を追加
+  crop?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+  originalAspectRatio?: number;
+  isCropping?: boolean;
+  cropStartPoint?: { x: number; y: number };
+  cropAspectRatio?: number;
+  originalDimensions?: {
+    width: number;
+    height: number;
+  };
 }
 
 interface AudioSource {
@@ -64,11 +78,14 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
   const mainGainNodeRef = useRef<GainNode | null>(null);
   const [resizeInfo, setResizeInfo] = useState<{
     sourceId: string;
-    type: 'move' | 'resize';
+    type: 'move' | 'resize' | 'crop';
+    edge?: 'left' | 'right' | 'top' | 'bottom' | 'corner';
     startX: number;
     startY: number;
     startWidth: number;
     startHeight: number;
+    originalX?: number;
+    originalY?: number;
   } | null>(null);
 
   const createMediaRecorder = (stream: MediaStream) => {
@@ -217,7 +234,21 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
     sourcesToDraw.forEach(source => {
       if (source.videoElement.readyState === 4) {
         try {
-          ctx.drawImage(source.videoElement, source.x, source.y, source.width, source.height);
+          if (source.crop) {
+            ctx.drawImage(
+              source.videoElement,
+              source.crop.x,
+              source.crop.y,
+              source.crop.width,
+              source.crop.height,
+              source.x,
+              source.y,
+              source.width,
+              source.height
+            );
+          } else {
+            ctx.drawImage(source.videoElement, source.x, source.y, source.width, source.height);
+          }
         } catch (error) {
           console.error('Error drawing video:', error);
         }
@@ -231,38 +262,74 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
       overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
       videoSourcesRef.current.forEach(source => {
-        if (source.id === selectedSourceId) {
-          // 選択枠の描画
-          overlayCtx.strokeStyle = '#00ff00';
-          overlayCtx.lineWidth = 2;
-          overlayCtx.strokeRect(source.x, source.y, source.width, source.height);
-
-          // リサイズハンドルの描画
-          overlayCtx.fillStyle = 'white';
-          overlayCtx.strokeStyle = 'black';
-          overlayCtx.lineWidth = 1;
-          
-          const handleSize = 15;
-          overlayCtx.fillRect(
-            source.x + source.width - handleSize,
-            source.y + source.height - handleSize,
-            handleSize,
-            handleSize
-          );
-          overlayCtx.strokeRect(
-            source.x + source.width - handleSize,
-            source.y + source.height - handleSize,
-            handleSize,
-            handleSize
-          );
-        }
+        drawOverlay(overlayCtx, source);
       });
     }
 
     requestAnimationFrame(drawCanvas);
   };
 
-  const createVideoElement = async (stream: MediaStream): Promise<HTMLVideoElement> => {
+  const drawOverlay = (overlayCtx: CanvasRenderingContext2D, source: VideoSource) => {
+    if (source.id === selectedSourceId) {
+      const handleSize = 10;
+
+      // クロップモード時の背景をオーバーレイ
+      if (source.isCropping) {
+        overlayCtx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        overlayCtx.fillRect(0, 0, overlayCanvasRef.current!.width, overlayCanvasRef.current!.height);
+        
+        // クロップ領域は透明に
+        overlayCtx.clearRect(source.x, source.y, source.width, source.height);
+      }
+  
+      // 選択枠の描画
+      overlayCtx.strokeStyle = source.isCropping ? '#ffffff' : '#00ff00';
+      overlayCtx.lineWidth = 2;
+      overlayCtx.strokeRect(source.x, source.y, source.width, source.height);
+  
+      if (source.isCropping) {
+        // クロップガイドラインの描画
+        overlayCtx.setLineDash([5, 5]);
+        overlayCtx.beginPath();
+        // 縦線
+        overlayCtx.moveTo(source.x + source.width / 3, source.y);
+        overlayCtx.lineTo(source.x + source.width / 3, source.y + source.height);
+        overlayCtx.moveTo(source.x + (source.width * 2) / 3, source.y);
+        overlayCtx.lineTo(source.x + (source.width * 2) / 3, source.y + source.height);
+        // 横線
+        overlayCtx.moveTo(source.x, source.y + source.height / 3);
+        overlayCtx.lineTo(source.x + source.width, source.y + source.height / 3);
+        overlayCtx.moveTo(source.x, source.y + (source.height * 2) / 3);
+        overlayCtx.lineTo(source.x + source.width, source.y + (source.height * 2) / 3);
+        overlayCtx.stroke();
+        overlayCtx.setLineDash([]);
+  
+        // ハンドルの描画
+        const corners = [
+          { x: source.x, y: source.y }, // 左上
+          { x: source.x + source.width, y: source.y }, // 右上
+          { x: source.x, y: source.y + source.height }, // 左下
+          { x: source.x + source.width, y: source.y + source.height } // 右下
+        ];
+  
+        overlayCtx.fillStyle = 'white';
+        corners.forEach(corner => {
+          overlayCtx.fillRect(corner.x - handleSize/2, corner.y - handleSize/2, handleSize, handleSize);
+          overlayCtx.strokeRect(corner.x - handleSize/2, corner.y - handleSize/2, handleSize, handleSize);
+        });
+      }
+  
+      // 通常のリサイズハンドル（右下）
+      overlayCtx.fillRect(
+        source.x + source.width - 15,
+        source.y + source.height - 15,
+        15,
+        15
+      );
+    }
+  };
+
+  const createVideoElement = async (stream: MediaStream, type: 'camera' | 'screen' | 'image' | 'video'): Promise<HTMLVideoElement> => {
     const video = document.createElement('video');
     video.autoplay = true;
     video.playsInline = true;
@@ -275,6 +342,17 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
         video.play().then(resolve);
       };
     });
+
+    // オリジナルのアスペクト比を保存
+    let aspectRatio = video.videoWidth / video.videoHeight;
+    
+    if (type === 'camera' || type === 'screen') {
+      const track = stream.getVideoTracks()[0];
+      const settings = track.getSettings();
+      if (settings.width && settings.height) {
+        aspectRatio = settings.width / settings.height;
+      }
+    }
     
     return video;
   };
@@ -326,22 +404,25 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
   const addVideoSource = async (type: 'camera' | 'screen' | 'image', deviceId?: string) => {
     try {
       let stream: MediaStream;
+      let aspectRatio = 16/9; // デフォルトのアスペクト比
+
       if (type === 'camera') {
         // カメラはビデオのみを取得
         stream = await navigator.mediaDevices.getUserMedia({
           video: deviceId ? {
-            deviceId,
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            frameRate: 30
-          } : true
+            deviceId: { exact: deviceId }, // exactを使用して厳密に指定
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          } : {
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
+          }
         });
       } else {
         stream = await navigator.mediaDevices.getDisplayMedia({
           video: {
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-            frameRate: 30
+            width: { ideal: 1920 },
+            height: { ideal: 1080 }
           },
           audio: {
             echoCancellation: false,
@@ -352,14 +433,25 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
         });
       }
 
-      const videoElement = await createVideoElement(stream);
+      const videoElement = await createVideoElement(stream, type);
       const uniqueId = Date.now();
       const sourceId = deviceId ? `${type}-${deviceId}-${uniqueId}` : `${type}-${uniqueId}`;
-      const position = {
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        width: 480,
-        height: 270
+
+      // ソースのアスペクト比を計算
+      const track = stream.getVideoTracks()[0];
+      const settings = track.getSettings();
+      if (settings.width && settings.height) {
+        aspectRatio = settings.width / settings.height;
+      }
+
+      // 初期サイズをアスペクト比に合わせて設定
+      const initialWidth = 480;
+      const initialHeight = initialWidth / aspectRatio;
+
+      // 実際のデバイス設定を保存
+      const originalDimensions = {
+        width: settings.width || videoElement.videoWidth,
+        height: settings.height || videoElement.videoHeight
       };
 
       const newSource = {
@@ -371,8 +463,17 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
         videoElement,
         x: Math.random() * 100,
         y: Math.random() * 100,
-        width: 480,
-        height: 270
+        width: initialWidth,
+        height: initialHeight,
+        originalAspectRatio: aspectRatio,
+        cropAspectRatio: aspectRatio, // クロップ時のアスペクト比を初期化
+        crop: {
+          x: 0,
+          y: 0,
+          width: originalDimensions.width,
+          height: originalDimensions.height
+        },
+        originalDimensions
       };
 
       // 新しいソースを先頭に追加
@@ -421,7 +522,7 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
         ctx.drawImage(img, 0, 0);
 
         const stream = canvas.captureStream();
-        const videoElement = await createVideoElement(stream);
+        const videoElement = await createVideoElement(stream, 'image');
         const sourceId = `image-${Date.now()}`;
 
         const newSource = {
@@ -432,7 +533,19 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
           x: Math.random() * 100,
           y: Math.random() * 100,
           width: 480,
-          height: (480 * img.height) / img.width
+          height: (480 * img.height) / img.width,
+          originalDimensions: {
+            width: img.width,
+            height: img.height
+          },
+          originalAspectRatio: img.width / img.height,
+          // クロップ情報を追加
+          crop: {
+            x: 0,
+            y: 0,
+            width: img.width,
+            height: img.height
+          }
         };
 
         setVideoSources(prev => [newSource, ...prev]);
@@ -568,7 +681,19 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
           y: Math.random() * 100,
           width: 480,
           height: 270,
-          loop: false
+          loop: false,
+          originalDimensions: {
+            width: video.videoWidth,
+            height: video.videoHeight
+          },
+          originalAspectRatio: video.videoWidth / video.videoHeight,
+          // クロップ情報を追加
+          crop: {
+            x: 0,
+            y: 0,
+            width: video.videoWidth,
+            height: video.videoHeight
+          }
         };
 
         video.play();
@@ -680,24 +805,97 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
     const x = (e.clientX - rect.left) * scaleX;
     const y = (e.clientY - rect.top) * scaleY;
 
-    // 重ね順を考慮して後ろから検索（表示上は上の要素から検索）
     const sources = [...videoSourcesRef.current]
       .sort((a, b) => getSourceIndex(b.id) - getSourceIndex(a.id));
 
     let found = false;
     for (const source of sources) {
-      // リサイズハンドルの判定
-      const isOnResizeHandle = 
-        source.id === selectedSourceId &&
+      const handleSize = 10;
+      
+      // エッジ検出の範囲を定義
+      const isNearLeftEdge = Math.abs(x - source.x) <= handleSize;
+      const isNearRightEdge = Math.abs(x - (source.x + source.width)) <= handleSize;
+      const isNearTopEdge = Math.abs(y - source.y) <= handleSize;
+      const isNearBottomEdge = Math.abs(y - (source.y + source.height)) <= handleSize;
+      const isWithinVerticalBounds = y >= source.y && y <= source.y + source.height;
+      const isWithinHorizontalBounds = x >= source.x && x <= source.x + source.width;
+
+      // 通常のリサイズハンドル（右下）
+      const isOnCornerHandle = 
         x >= source.x + source.width - 15 &&
         x <= source.x + source.width &&
         y >= source.y + source.height - 15 &&
         y <= source.y + source.height;
 
-      if (isOnResizeHandle) {
+      if (source.id === selectedSourceId) {
+        // エッジでのリサイズ
+        if (source.isCropping) {
+          if (isNearLeftEdge && isWithinVerticalBounds) {
+            setResizeInfo({
+              sourceId: source.id,
+              type: 'crop',
+              edge: 'left',
+              startX: x,
+              startY: y,
+              startWidth: source.crop?.width || source.width,
+              startHeight: source.crop?.height || source.height,
+              originalX: source.crop?.x || 0,
+              originalY: source.crop?.y || 0
+            });
+            found = true;
+            break;
+          } else if (isNearRightEdge && isWithinVerticalBounds) {
+            setResizeInfo({
+              sourceId: source.id,
+              type: 'crop',
+              edge: 'right',
+              startX: x,
+              startY: y,
+              startWidth: source.crop?.width || source.width,
+              startHeight: source.crop?.height || source.height,
+              originalX: source.crop?.x || 0,
+              originalY: source.crop?.y || 0
+            });
+            found = true;
+            break;
+          } else if (isNearTopEdge && isWithinHorizontalBounds) {
+            setResizeInfo({
+              sourceId: source.id,
+              type: 'crop',
+              edge: 'top',
+              startX: x,
+              startY: y,
+              startWidth: source.crop?.width || source.width,
+              startHeight: source.crop?.height || source.height,
+              originalX: source.crop?.x || 0,
+              originalY: source.crop?.y || 0
+            });
+            found = true;
+            break;
+          } else if (isNearBottomEdge && isWithinHorizontalBounds) {
+            setResizeInfo({
+              sourceId: source.id,
+              type: 'crop',
+              edge: 'bottom',
+              startX: x,
+              startY: y,
+              startWidth: source.crop?.width || source.width,
+              startHeight: source.crop?.height || source.height,
+              originalX: source.crop?.x || 0,
+              originalY: source.crop?.y || 0
+            });
+            found = true;
+            break;
+          }
+        }
+      }
+
+      // 通常の移動とリサイズの処理
+      if (isOnCornerHandle) {
         setResizeInfo({
           sourceId: source.id,
           type: 'resize',
+          edge: 'corner',
           startX: x,
           startY: y,
           startWidth: source.width,
@@ -707,20 +905,17 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
         break;
       }
 
-      // 要素の選択判定
       if (x >= source.x && x <= source.x + source.width &&
           y >= source.y && y <= source.y + source.height) {
         setSelectedSourceId(source.id);
-        if (source.id === selectedSourceId) {
-          setResizeInfo({
-            sourceId: source.id,
-            type: 'move',
-            startX: x - source.x,
-            startY: y - source.y,
-            startWidth: source.width,
-            startHeight: source.height
-          });
-        }
+        setResizeInfo({
+          sourceId: source.id,
+          type: 'move',
+          startX: x - source.x,
+          startY: y - source.y,
+          startWidth: source.width,
+          startHeight: source.height
+        });
         found = true;
         break;
       }
@@ -731,34 +926,130 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
     }
   };
 
-  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!resizeInfo) return;
+const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  if (!resizeInfo) return;
 
-    const rect = overlayCanvasRef.current!.getBoundingClientRect();
-    const scaleX = overlayCanvasRef.current!.width / rect.width;
-    const scaleY = overlayCanvasRef.current!.height / rect.height;
-    
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
+  const rect = overlayCanvasRef.current!.getBoundingClientRect();
+  const scaleX = overlayCanvasRef.current!.width / rect.width;
+  const scaleY = overlayCanvasRef.current!.height / rect.height;
+  
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
 
-    const source = videoSourcesRef.current.find(s => s.id === resizeInfo.sourceId);
-    if (!source) return;
+  const source = videoSourcesRef.current.find(s => s.id === resizeInfo.sourceId);
+  if (!source) return;
 
-    if (resizeInfo.type === 'resize') {
-      // リサイズ処理
-      const newWidth = Math.max(100, resizeInfo.startWidth + (x - resizeInfo.startX));
-      const newHeight = Math.max(100, resizeInfo.startHeight + (y - resizeInfo.startY));
-      
-      // アスペクト比を維持
-      const aspect = resizeInfo.startWidth / resizeInfo.startHeight;
-      source.width = newWidth;
-      source.height = newWidth / aspect;
-    } else {
-      // 移動処理
-      source.x = Math.max(0, Math.min(x - resizeInfo.startX, canvasRef.current!.width - source.width));
-      source.y = Math.max(0, Math.min(y - resizeInfo.startY, canvasRef.current!.height - source.height));
+  if (resizeInfo.type === 'crop' && source.originalDimensions) {
+    // クロップの処理は変更なし
+    const maxWidth = source.originalDimensions.width;
+    const maxHeight = source.originalDimensions.height;
+
+    // 現在のマウス位置と元の位置との差分を計算
+    const deltaX = x - resizeInfo.startX;
+    const deltaY = y - resizeInfo.startY;
+
+    let newCrop = { ...source.crop! };
+
+    switch (resizeInfo.edge) {
+      case 'left':
+        const newLeftX = Math.max(0, Math.min(resizeInfo.originalX! + deltaX, maxWidth));
+        newCrop = {
+          ...newCrop,
+          x: newLeftX,
+          width: resizeInfo.startWidth - (newLeftX - source.crop!.x)
+        };
+        // アスペクト比を維持
+        newCrop.height = newCrop.width / source.cropAspectRatio!;
+        break;
+      case 'right':
+        newCrop = {
+          ...newCrop,
+          width: Math.min(maxWidth - source.crop!.x, Math.max(100, resizeInfo.startWidth + deltaX))
+        };
+        // アスペクト比を維持
+        newCrop.height = newCrop.width / source.cropAspectRatio!;
+        break;
+      case 'top':
+        const newTopY = Math.max(0, Math.min(resizeInfo.originalY! + deltaY, maxHeight));
+        newCrop = {
+          ...newCrop,
+          y: newTopY,
+          height: resizeInfo.startHeight - (newTopY - source.crop!.y)
+        };
+        // アスペクト比を維持
+        newCrop.width = newCrop.height * source.cropAspectRatio!;
+        break;
+      case 'bottom':
+        newCrop = {
+          ...newCrop,
+          height: Math.min(maxHeight - source.crop!.y, Math.max(100, resizeInfo.startHeight + deltaY))
+        };
+        // アスペクト比を維持
+        newCrop.width = newCrop.height * source.cropAspectRatio!;
+        break;
     }
-  };
+
+    // クロップ範囲が有効かチェック
+    if (newCrop.x >= 0 && newCrop.y >= 0 &&
+        newCrop.x + newCrop.width <= maxWidth &&
+        newCrop.y + newCrop.height <= maxHeight &&
+        newCrop.width >= 100 && newCrop.height >= 100) {
+      source.crop = newCrop;
+    }
+  } else if (resizeInfo.type === 'resize') {
+    // リサイズ処理を修正
+    const newWidth = Math.max(100, resizeInfo.startWidth + (x - resizeInfo.startX));
+    if (source.originalAspectRatio) {
+      source.width = newWidth;
+      source.height = newWidth / source.originalAspectRatio;
+    } else {
+      source.width = newWidth;
+      source.height = Math.max(100, resizeInfo.startHeight + (y - resizeInfo.startY));
+    }
+  } else if (resizeInfo.type === 'move') {
+    // 移動処理を修正（制限を削除）
+    source.x = x - resizeInfo.startX;
+    source.y = y - resizeInfo.startY;
+  }
+
+  requestAnimationFrame(drawCanvas);
+};
+
+// マウスカーソルの見た目を更新する関数を追加
+const updateCursor = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const rect = overlayCanvasRef.current!.getBoundingClientRect();
+  const scaleX = overlayCanvasRef.current!.width / rect.width;
+  const scaleY = overlayCanvasRef.current!.height / rect.height;
+  
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+
+  const source = videoSourcesRef.current.find(s => s.id === selectedSourceId);
+  if (!source) {
+    e.currentTarget.style.cursor = 'default';
+    return;
+  }
+
+  const handleSize = 10;
+  const isNearLeftEdge = Math.abs(x - source.x) <= handleSize;
+  const isNearRightEdge = Math.abs(x - (source.x + source.width)) <= handleSize;
+  const isNearTopEdge = Math.abs(y - source.y) <= handleSize;
+  const isNearBottomEdge = Math.abs(y - (source.y + source.height)) <= handleSize;
+  const isWithinVerticalBounds = y >= source.y && y <= source.y + source.height;
+  const isWithinHorizontalBounds = x >= source.x && x <= source.x + source.width;
+
+  if (source.isCropping) {
+    if ((isNearLeftEdge && isWithinVerticalBounds) || (isNearRightEdge && isWithinVerticalBounds)) {
+      e.currentTarget.style.cursor = 'ew-resize';
+    } else if ((isNearTopEdge && isWithinHorizontalBounds) || (isNearBottomEdge && isWithinHorizontalBounds)) {
+      e.currentTarget.style.cursor = 'ns-resize';
+    } else {
+      e.currentTarget.style.cursor = 'move';
+    }
+  } else {
+    // ... existing cursor logic ...
+  }
+};
 
   const handleCanvasMouseUp = () => {
     setResizeInfo(null);
@@ -849,27 +1140,6 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
     }
   };
 
-  const switchToCamera = async () => {
-    try {
-      const cameraStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          frameRate: { ideal: 30 }
-        },
-        audio: true
-      });
-
-      const videoTrack = cameraStream.getVideoTracks()[0];
-      const nextStream = new MediaStream([videoTrack, audioTrackRef.current!]);
-
-      await switchStream(nextStream);
-      setIsScreenSharing(false);
-    } catch (err) {
-      console.error('Error switching to camera:', err);
-    }
-  };
-
   const switchStream = async (newStream: MediaStream) => {
     if (!wsConnectionRef.current || wsConnectionRef.current.readyState !== WebSocket.OPEN) return;
 
@@ -954,6 +1224,42 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
       );
     }
   };
+
+  // toggleCropping関数を修正して、cropプロパティを確実に初期化
+const toggleCropping = (sourceId: string) => {
+  setVideoSources(prev => 
+    prev.map(source => {
+      if (source.id === sourceId) {
+        const newCropping = !source.isCropping;
+        if (newCropping) {
+          // クロップモード開始時
+          if (!source.crop) {
+            // cropプロパティが未初期化の場合は初期化
+            source.crop = {
+              x: 0,
+              y: 0,
+              width: source.originalDimensions?.width || source.videoElement.videoWidth,
+              height: source.originalDimensions?.height || source.videoElement.videoHeight
+            };
+          }
+          return {
+            ...source,
+            isCropping: true,
+            cropAspectRatio: source.width / source.height,
+            crop: source.crop
+          };
+        } else {
+          // クロップモード終了時
+          return {
+            ...source,
+            isCropping: false
+          };
+        }
+      }
+      return source;
+    })
+  );
+};
 
   useEffect(() => {
     drawCanvas();
@@ -1142,6 +1448,13 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
                           </Button>
                         )}
                         <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => toggleCropping(source.id)}
+                        >
+                          <Scissors className="h-4 w-4" />
+                        </Button>
+                        <Button
                           size="icon"
                           variant="ghost"
                           onClick={() => moveSourceLayer(source.id, 'up')}
@@ -1285,17 +1598,20 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
               <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
                 <canvas
                   ref={canvasRef}
-                  width={1280}
-                  height={720}
+                  width={1920}
+                  height={1080}
                   className="absolute top-0 left-0 w-full h-full"
                 />
                 <canvas
                   ref={overlayCanvasRef}
-                  width={1280}
-                  height={720}
+                  width={1920}
+                  height={1080}
                   className="absolute top-0 left-0 w-full h-full cursor-move"
                   onMouseDown={handleCanvasMouseDown}
-                  onMouseMove={handleCanvasMouseMove}
+                  onMouseMove={(e) => {
+                    handleCanvasMouseMove(e);
+                    updateCursor(e);
+                  }}
                   onMouseUp={handleCanvasMouseUp}
                   onMouseLeave={handleCanvasMouseUp}
                 />
