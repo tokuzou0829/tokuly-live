@@ -11,6 +11,15 @@ import { Plus, Video, Mic, Monitor, Image as ImageIcon, Music, Scissors } from "
 import { useSearchParams } from "next/navigation";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"; // 追加
 import { Label } from "@/components/ui/label"; // 追加
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 
 interface VideoSource {
   id: string;
@@ -52,6 +61,11 @@ interface AudioSource {
   level?: number;  // 追加: 現在の音声レベル
 }
 
+interface ScreenShareSettings {
+  maintainAspectRatio: boolean;
+  resolution: '720p' | '1080p';
+}
+
 export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | null,streamTitle: string | null}) {
   const searchParams = useSearchParams();
   const [isStreaming, setIsStreaming] = useState(false);
@@ -66,7 +80,11 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
   const [isCanvasActive, setIsCanvasActive] = useState(true);
   const [videoSources, setVideoSources] = useState<VideoSource[]>([]);
   const [editingName, setEditingName] = useState<string | null>(null);
-  const [resolution, setResolution] = useState<'720p' | '1080p'>('1080p'); // 解像度の状態を追加
+  const [resolution, setResolution] = useState<'720p' | '1080p'>('720p'); // 解像度の状態を追加
+  const [screenShareSettings, setScreenShareSettings] = useState<ScreenShareSettings>({
+    maintainAspectRatio: true,
+    resolution: '720p'
+  });
 
   const currentStreamRef = useRef<MediaStream | null>(null);
   const wsConnectionRef = useRef<WebSocket | null>(null);
@@ -453,98 +471,111 @@ const startLevelMeter = (sourceId: string, analyser: AnalyserNode) => {
     }
   };
 
-  const addVideoSource = async (type: 'camera' | 'screen' | 'image', deviceId?: string) => {
+  const addVideoSource = async (type: 'camera' | 'screen' | 'image' | 'video', deviceId?: string) => {
     try {
-      let stream: MediaStream;
-      let aspectRatio = 16/9; // デフォルトのアスペクト比
+      if (type === 'screen') {
+        const resolution = screenShareSettings.resolution;
+        const displaySize = resolution === '720p' 
+          ? { width: 1280, height: 720 } 
+          : { width: 1920, height: 1080 };
 
-      if (type === 'camera') {
-        // カメラはビデオのみを取得
-        stream = await navigator.mediaDevices.getUserMedia({
-          video: deviceId ? {
-            deviceId: { exact: deviceId }, // exactを使用して厳密に指定
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          } : {
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          }
-        });
-      } else {
-        stream = await navigator.mediaDevices.getDisplayMedia({
-          video: {
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          },
+        // ストリームを取得
+        const stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,  // 制約を緩和して、元のサイズを取得できるようにする
           audio: {
             echoCancellation: false,
             noiseSuppression: false,
-            autoGainControl: false, 
+            autoGainControl: false,
             channelCount: 2
           }
         });
-      }
 
-      const videoElement = await createVideoElement(stream, type);
-      const uniqueId = Date.now();
-      const sourceId = deviceId ? `${type}-${deviceId}-${uniqueId}` : `${type}-${uniqueId}`;
+        const videoElement = await createVideoElement(stream, type);
+        const track = stream.getVideoTracks()[0];
+        const settings = track.getSettings();
+        
+        const uniqueId = Date.now();
+        const sourceId = `${type}-${uniqueId}`;
 
-      // ソースのアスペクト比を計算
-      const track = stream.getVideoTracks()[0];
-      const settings = track.getSettings();
-      if (settings.width && settings.height) {
-        aspectRatio = settings.width / settings.height;
-      }
+        // オリジナルのサイズを保存
+        const originalDimensions = {
+          width: settings.width || videoElement.videoWidth,
+          height: settings.height || videoElement.videoHeight
+        };
 
-      // 初期サイズをアスペクト比に合わせて設定
-      const initialWidth = 480;
-      const initialHeight = initialWidth / aspectRatio;
+        let initialWidth, initialHeight;
+        
+        if (screenShareSettings.maintainAspectRatio) {
+          // アスペクト比維持モード: 元のアスペクト比を保持したまま画面の1/3のサイズに
+          const aspectRatio = originalDimensions.width / originalDimensions.height;
+          initialWidth = displaySize.width / 3;
+          initialHeight = initialWidth / aspectRatio;
+        } else {
+          // 引き伸ばしモード: 強制的に16:9にする
+          initialWidth = displaySize.width / 3;
+          initialHeight = (initialWidth * 9) / 16;
+        }
 
-      // 実際のデバイス設定を保存
-      const originalDimensions = {
-        width: settings.width || videoElement.videoWidth,
-        height: settings.height || videoElement.videoHeight
-      };
+        // 画面の中央に配置
+        const centerX = (displaySize.width - initialWidth) / 2;
+        const centerY = (displaySize.height - initialHeight) / 2;
 
-      const newSource = {
-        id: sourceId,
-        name: type === 'camera' ? `Camera ${deviceId || uniqueId}` :
-              type === 'screen' ? 'Screen Share' :
-              type === 'image' ? `Image ${uniqueId}` : sourceId,
-        stream,
-        videoElement,
-        x: Math.random() * 100,
-        y: Math.random() * 100,
-        width: initialWidth,
-        height: initialHeight,
-        originalAspectRatio: aspectRatio,
-        cropAspectRatio: aspectRatio, // クロップ時のアスペクト比を初期化
-        crop: {
-          x: 0,
-          y: 0,
-          width: originalDimensions.width,
-          height: originalDimensions.height
-        },
-        originalDimensions
-      };
-
-      // 新しいソースを先頭に追加
-      setVideoSources(prev => [newSource, ...prev]);
-      
-      if (type === 'screen' && stream.getAudioTracks().length > 0) {
-        addAudioSource(sourceId, stream, {
+        const newSource: VideoSource = {
+          id: sourceId,
           name: 'Screen Share',
-          type: 'screen'
-        });
-      }
+          stream,
+          videoElement,
+          x: centerX,
+          y: centerY,
+          width: initialWidth,
+          height: initialHeight,
+          originalDimensions,
+          originalAspectRatio: screenShareSettings.maintainAspectRatio 
+            ? originalDimensions.width / originalDimensions.height 
+            : 16/9
+        };
 
-      if (type === 'screen') {
+        // サイズ変更監視
+        track.addEventListener('settings', () => {
+          const newSettings = track.getSettings();
+          if (newSettings.width && newSettings.height) {
+            if (screenShareSettings.maintainAspectRatio) {
+              // アスペクト比維持モード: 新しいアスペクト比を計算して適用
+              const newAspectRatio = newSettings.width / newSettings.height;
+              const source = videoSourcesRef.current.find(s => s.id === sourceId);
+              if (source) {
+                source.height = source.width / newAspectRatio;
+                source.originalAspectRatio = newAspectRatio;
+                source.originalDimensions = {
+                  width: newSettings.width,
+                  height: newSettings.height
+                };
+              }
+            }
+            // 引き伸ばしモードの場合は何もしない（16:9を維持）
+          }
+        });
+
+        setVideoSources(prev => [newSource, ...prev]);
+        
+        if (stream.getAudioTracks().length > 0) {
+          addAudioSource(sourceId, stream, {
+            name: 'Screen Share Audio',
+            type: 'screen'
+          });
+        }
+
         stream.getVideoTracks()[0].onended = () => {
           removeSource(sourceId);
           setIsScreenSharing(false);
         };
+        
         setIsScreenSharing(true);
+        return;
       }
+
+      // ...existing code for other types...
+
     } catch (err) {
       console.error(`Error adding ${type}:`, err);
       alert(`Failed to add ${type}`);
@@ -1484,9 +1515,68 @@ const toggleCropping = (sourceId: string) => {
                     </DropdownMenuPortal>
                   </DropdownMenuSub>
 
-                  <DropdownMenuItem onSelect={() => addVideoSource('screen')}>
-                    <Monitor className="h-4 w-4 mr-2" />
-                    <span>画面を追加</span>
+                  <DropdownMenuItem asChild>
+                    <Dialog>
+                      <DialogTrigger asChild>
+                        <div className="flex items-center px-2 py-1.5 text-sm">
+                          <Monitor className="h-4 w-4 mr-2" />
+                          <span>画面を追加</span>
+                        </div>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>画面共有の設定</DialogTitle>
+                        </DialogHeader>
+                        <div className="space-y-4 py-4">
+                            <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium">
+                              元のアスペクト比を維持
+                            </label>
+                            <Switch
+                              checked={screenShareSettings.maintainAspectRatio}
+                              onCheckedChange={(checked: boolean) => 
+                              setScreenShareSettings((prev: ScreenShareSettings) => ({
+                                ...prev,
+                                maintainAspectRatio: checked
+                              }))
+                              }
+                            />
+                            </div>
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">解像度</label>
+                            <RadioGroup
+                              value={screenShareSettings.resolution}
+                              onValueChange={(value: '720p' | '1080p') =>
+                                setScreenShareSettings(prev => ({
+                                  ...prev,
+                                  resolution: value
+                                }))
+                              }
+                              className="flex items-center space-x-4"
+                            >
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="720p" id="screenshare-720p" />
+                                <Label htmlFor="screenshare-720p">720p</Label>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <RadioGroupItem value="1080p" id="screenshare-1080p" />
+                                <Label htmlFor="screenshare-1080p">1080p</Label>
+                              </div>
+                            </RadioGroup>
+                          </div>
+                          <DialogClose asChild>
+                            <Button 
+                              className="w-full" 
+                              onClick={() => {
+                                addVideoSource('screen');
+                              }}
+                            >
+                              画面共有を開始
+                            </Button>
+                          </DialogClose>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
                   </DropdownMenuItem>
 
                   <DropdownMenuItem onSelect={addImageSource}>
