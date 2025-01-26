@@ -481,7 +481,7 @@ const startLevelMeter = (sourceId: string, analyser: AnalyserNode) => {
 
         // ストリームを取得
         const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: true,  // 制約を緩和して、元のサイズを取得できるようにする
+          video: displaySize,  // 制約を緩和して、元のサイズを取得できるようにする
           audio: {
             echoCancellation: false,
             noiseSuppression: false,
