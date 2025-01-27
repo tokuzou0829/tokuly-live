@@ -526,12 +526,12 @@ const startLevelMeter = (sourceId: string, analyser: AnalyserNode) => {
             width: { ideal: displaySize.width },
             height: { ideal: displaySize.height },
             frameRate: 30
-          },  // 制約を緩和して、元のサイズを取得できるようにする
+          },
           audio: {
             echoCancellation: false,
             noiseSuppression: false,
             autoGainControl: false,
-            channelCount: 2
+            channelCount: {min :1},
           }
         });
 
