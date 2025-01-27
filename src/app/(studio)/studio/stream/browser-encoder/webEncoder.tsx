@@ -124,7 +124,7 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
 
     const options = {
       mimeType,
-      videoBitsPerSecond: 5000000,
+      videoBitsPerSecond: 4000000,
       audioBitsPerSecond: 96000,
     };
     
@@ -293,14 +293,21 @@ const startLevelMeter = (sourceId: string, analyser: AnalyserNode) => {
 
   const drawCanvas = () => {
     const canvas = canvasRef.current;
-    const ctx = canvas?.getContext('2d');
+    const ctx = canvas?.getContext('2d', { alpha: false });  // アルファチャンネルを無効化
     if (!canvas || !ctx) return;
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // 描画の最適化
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'medium';  // 画質とパフォーマンスのバランス
+
+    // クリアの最適化
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     // 重ね順を考慮して描画
     const sourcesToDraw = [...videoSourcesRef.current].reverse();
   
+    // バッチ処理による描画の最適化
     sourcesToDraw.forEach(source => {
       if (source.videoElement.readyState === 4) {
         try {
@@ -325,18 +332,23 @@ const startLevelMeter = (sourceId: string, analyser: AnalyserNode) => {
       }
     });
 
-    // オーバーレイキャンバスに選択枠とリサイズハンドルを描画
+    // オーバーレイキャンバスの最適化
     const overlayCanvas = overlayCanvasRef.current;
     const overlayCtx = overlayCanvas?.getContext('2d');
     if (overlayCanvas && overlayCtx) {
       overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-
-      videoSourcesRef.current.forEach(source => {
-        drawOverlay(overlayCtx, source);
-      });
+      if (selectedSourceId) {  // 選択されているソースがある場合のみオーバーレイを描画
+        const selectedSource = videoSourcesRef.current.find(s => s.id === selectedSourceId);
+        if (selectedSource) {
+          drawOverlay(overlayCtx, selectedSource);
+        }
+      }
     }
 
-    requestAnimationFrame(drawCanvas);
+    // フレームレートの最適化
+    if (isCanvasActive) {
+      requestAnimationFrame(drawCanvas);
+    }
   };
 
   const drawOverlay = (overlayCtx: CanvasRenderingContext2D, source: VideoSource) => {
@@ -474,18 +486,32 @@ const startLevelMeter = (sourceId: string, analyser: AnalyserNode) => {
   const addVideoSource = async (type: 'camera' | 'screen' | 'image' | 'video', deviceId?: string) => {
     try {
       if (type === 'camera') {
-        // カメラの処理を追加
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: deviceId ? {
-            deviceId: { exact: deviceId },
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          } : {
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
+        // カメラの制約を最適化
+        const constraints = {
+          video: {
+            deviceId: deviceId ? { exact: deviceId } : undefined,
+            width: { ideal: 1280 },  // 1280x720 を理想値に設定
+            height: { ideal: 720 },
+            frameRate: { ideal: 30, max: 30 }  // フレームレートを制限
+          }
+        };
+
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        // トラックの設定を最適化
+        stream.getVideoTracks().forEach(track => {
+          track.contentHint = 'motion';  // モーション最適化
+          // エンコーディングの設定
+          const settings = track.getSettings();
+          if ('applyConstraints' in track) {
+            track.applyConstraints({
+              width: settings.width,
+              height: settings.height,
+              frameRate: 30
+            });
           }
         });
-  
+
         const videoElement = await createVideoElement(stream, type);
         const track = stream.getVideoTracks()[0];
         const settings = track.getSettings();
@@ -520,18 +546,34 @@ const startLevelMeter = (sourceId: string, analyser: AnalyserNode) => {
           ? { width: 1280, height: 720 } 
           : { width: 1920, height: 1080 };
 
-        // ストリームを取得
-        const stream = await navigator.mediaDevices.getDisplayMedia({
+        const displayMediaOptions = {
           video: {
             width: displaySize.width,
             height: displaySize.height,
-            frameRate: 30
+            frameRate: { ideal: 30 },
+            encodingMode: 'performance'  // パフォーマンス優先
           },
           audio: {
             echoCancellation: false,
             noiseSuppression: false,
             autoGainControl: false,
-            channelCount: {ideal :2},
+            channelCount: {ideal: 2},
+            sampleRate: 48000
+          }
+        };
+
+        const stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+        
+        // スクリーンキャプチャのトラック設定を最適化
+        stream.getVideoTracks().forEach(track => {
+          track.contentHint = 'detail';  // 画質優先
+          // エンコーディング設定の最適化
+          if ('applyConstraints' in track) {
+            track.applyConstraints({
+              width: displaySize.width,
+              height: displaySize.height,
+              frameRate: 30
+            });
           }
         });
 
