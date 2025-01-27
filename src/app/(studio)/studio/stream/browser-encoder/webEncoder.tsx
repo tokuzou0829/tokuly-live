@@ -531,7 +531,7 @@ const startLevelMeter = (sourceId: string, analyser: AnalyserNode) => {
             echoCancellation: false,
             noiseSuppression: false,
             autoGainControl: false,
-            channelCount: {min :1},
+            channelCount: {ideal :2},
           }
         });
 
