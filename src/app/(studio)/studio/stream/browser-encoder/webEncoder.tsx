@@ -111,6 +111,9 @@ export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | nul
     originalY?: number;
   } | null>(null);
 
+  // 追加: 最後の描画時刻を保持するref
+  const lastDrawTimeRef = useRef<number>(0);
+
   const createMediaRecorder = (stream: MediaStream) => {
     let mimeType = 'video/webm;codecs=h264,opus';
     if (!MediaRecorder.isTypeSupported(mimeType)) {
@@ -292,13 +295,21 @@ const startLevelMeter = (sourceId: string, analyser: AnalyserNode) => {
   };
 
   const drawCanvas = () => {
+    const now = performance.now();
+    // 33ms未満の場合はスキップして30FPSに調整
+    if(now - lastDrawTimeRef.current < 33) {
+      requestAnimationFrame(drawCanvas);
+      return;
+    }
+    lastDrawTimeRef.current = now;
+    
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d', { alpha: false });  // アルファチャンネルを無効化
     if (!canvas || !ctx) return;
 
     // 描画の最適化
     ctx.imageSmoothingEnabled = true;
-    ctx.imageSmoothingQuality = 'medium';  // 画質とパフォーマンスのバランス
+    ctx.imageSmoothingQuality = 'high';  // 画質とパフォーマンスのバランス
 
     // クリアの最適化
     ctx.fillStyle = '#000';
@@ -331,19 +342,6 @@ const startLevelMeter = (sourceId: string, analyser: AnalyserNode) => {
         }
       }
     });
-
-    // オーバーレイキャンバスの最適化
-    const overlayCanvas = overlayCanvasRef.current;
-    const overlayCtx = overlayCanvas?.getContext('2d');
-    if (overlayCanvas && overlayCtx) {
-      overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
-      if (selectedSourceId) {  // 選択されているソースがある場合のみオーバーレイを描画
-        const selectedSource = videoSourcesRef.current.find(s => s.id === selectedSourceId);
-        if (selectedSource) {
-          drawOverlay(overlayCtx, selectedSource);
-        }
-      }
-    }
 
     // フレームレートの最適化
     if (isCanvasActive) {
@@ -933,168 +931,177 @@ const startLevelMeter = (sourceId: string, analyser: AnalyserNode) => {
   };
 
   // removeSource 関数を更新
-  const removeSource = (sourceId: string) => {
-    setVideoSources(prev => {
-      const source = prev.find(s => s.id === sourceId);
-      if (source) {
-        source.stream.getTracks().forEach(track => track.stop());
-        source.videoElement.pause();
-        source.videoElement.src = '';
-        source.videoElement.srcObject = null;
-        source.videoElement.remove();
-      }
-      return prev.filter(s => s.id !== sourceId);
+const removeSource = (sourceId: string) => {
+  setVideoSources(prev => {
+    const source = prev.find(s => s.id === sourceId);
+    if (source) {
+      source.stream.getTracks().forEach(track => track.stop());
+      source.videoElement.pause();
+      source.videoElement.src = '';
+      source.videoElement.srcObject = null;
+      source.videoElement.remove();
+    }
+    return prev.filter(s => s.id !== sourceId);
+  });
+
+  // 音声ミキサーからの削除
+  if (audioMixerRef.current[sourceId]) {
+    if (audioMixerRef.current[sourceId].audioElement) {
+      audioMixerRef.current[sourceId].audioElement.pause();
+      audioMixerRef.current[sourceId].audioElement.src = '';
+    }
+    audioMixerRef.current[sourceId].gain.disconnect();
+    delete audioMixerRef.current[sourceId];
+    setAudioSources(prev => {
+      const newSources = { ...prev };
+      delete newSources[sourceId];
+      return newSources;
     });
+  }
 
-    // 音声ミキサーからも削除
-    if (audioMixerRef.current[sourceId]) {
-      // 音声ファイルの場合、再生を停止して解放
-      if (audioMixerRef.current[sourceId].audioElement) {
-        audioMixerRef.current[sourceId].audioElement.pause();
-        audioMixerRef.current[sourceId].audioElement.src = '';
-      }
-      audioMixerRef.current[sourceId].gain.disconnect();
-      delete audioMixerRef.current[sourceId];
-      setAudioSources(prev => {
-        const newSources = { ...prev };
-        delete newSources[sourceId];
-        return newSources;
-      });
-    }
+  // 選択中のソースが削除された場合はクリアする
+  if (selectedSourceId === sourceId) {
+    setSelectedSourceId(null);
+  }
 
-    if (sourceId.startsWith('screen')) {
-      setIsScreenSharing(false);
-    }
-  };
+  if (sourceId.startsWith('screen')) {
+    setIsScreenSharing(false);
+  }
 
-  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = overlayCanvasRef.current!.getBoundingClientRect();
-    const scaleX = overlayCanvasRef.current!.width / rect.width;
-    const scaleY = overlayCanvasRef.current!.height / rect.height;
+  // オーバーレイの再描画
+  drawOverlayCanvas();
+};
+
+const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const rect = overlayCanvasRef.current!.getBoundingClientRect();
+  const scaleX = overlayCanvasRef.current!.width / rect.width;
+  const scaleY = overlayCanvasRef.current!.height / rect.height;
+  
+  const x = (e.clientX - rect.left) * scaleX;
+  const y = (e.clientY - rect.top) * scaleY;
+
+  const sources = [...videoSourcesRef.current]
+    .sort((a, b) => getSourceIndex(b.id) - getSourceIndex(a.id));
+
+  let found = false;
+  for (const source of sources) {
+    const handleSize = 10;
     
-    const x = (e.clientX - rect.left) * scaleX;
-    const y = (e.clientY - rect.top) * scaleY;
+    // エッジ検出の範囲を定義
+    const isNearLeftEdge = Math.abs(x - source.x) <= handleSize;
+    const isNearRightEdge = Math.abs(x - (source.x + source.width)) <= handleSize;
+    const isNearTopEdge = Math.abs(y - source.y) <= handleSize;
+    const isNearBottomEdge = Math.abs(y - (source.y + source.height)) <= handleSize;
+    const isWithinVerticalBounds = y >= source.y && y <= source.y + source.height;
+    const isWithinHorizontalBounds = x >= source.x && x <= source.x + source.width;
 
-    const sources = [...videoSourcesRef.current]
-      .sort((a, b) => getSourceIndex(b.id) - getSourceIndex(a.id));
+    // 通常のリサイズハンドル（右下）
+    const isOnCornerHandle = 
+      x >= source.x + source.width - 15 &&
+      x <= source.x + source.width &&
+      y >= source.y + source.height - 15 &&
+      y <= source.y + source.height;
 
-    let found = false;
-    for (const source of sources) {
-      const handleSize = 10;
-      
-      // エッジ検出の範囲を定義
-      const isNearLeftEdge = Math.abs(x - source.x) <= handleSize;
-      const isNearRightEdge = Math.abs(x - (source.x + source.width)) <= handleSize;
-      const isNearTopEdge = Math.abs(y - source.y) <= handleSize;
-      const isNearBottomEdge = Math.abs(y - (source.y + source.height)) <= handleSize;
-      const isWithinVerticalBounds = y >= source.y && y <= source.y + source.height;
-      const isWithinHorizontalBounds = x >= source.x && x <= source.x + source.width;
-
-      // 通常のリサイズハンドル（右下）
-      const isOnCornerHandle = 
-        x >= source.x + source.width - 15 &&
-        x <= source.x + source.width &&
-        y >= source.y + source.height - 15 &&
-        y <= source.y + source.height;
-
-      if (source.id === selectedSourceId) {
-        // エッジでのリサイズ
-        if (source.isCropping) {
-          if (isNearLeftEdge && isWithinVerticalBounds) {
-            setResizeInfo({
-              sourceId: source.id,
-              type: 'crop',
-              edge: 'left',
-              startX: x,
-              startY: y,
-              startWidth: source.crop?.width || source.width,
-              startHeight: source.crop?.height || source.height,
-              originalX: source.crop?.x || 0,
-              originalY: source.crop?.y || 0
-            });
-            found = true;
-            break;
-          } else if (isNearRightEdge && isWithinVerticalBounds) {
-            setResizeInfo({
-              sourceId: source.id,
-              type: 'crop',
-              edge: 'right',
-              startX: x,
-              startY: y,
-              startWidth: source.crop?.width || source.width,
-              startHeight: source.crop?.height || source.height,
-              originalX: source.crop?.x || 0,
-              originalY: source.crop?.y || 0
-            });
-            found = true;
-            break;
-          } else if (isNearTopEdge && isWithinHorizontalBounds) {
-            setResizeInfo({
-              sourceId: source.id,
-              type: 'crop',
-              edge: 'top',
-              startX: x,
-              startY: y,
-              startWidth: source.crop?.width || source.width,
-              startHeight: source.crop?.height || source.height,
-              originalX: source.crop?.x || 0,
-              originalY: source.crop?.y || 0
-            });
-            found = true;
-            break;
-          } else if (isNearBottomEdge && isWithinHorizontalBounds) {
-            setResizeInfo({
-              sourceId: source.id,
-              type: 'crop',
-              edge: 'bottom',
-              startX: x,
-              startY: y,
-              startWidth: source.crop?.width || source.width,
-              startHeight: source.crop?.height || source.height,
-              originalX: source.crop?.x || 0,
-              originalY: source.crop?.y || 0
-            });
-            found = true;
-            break;
-          }
+    if (source.id === selectedSourceId) {
+      // エッジでのリサイズ
+      if (source.isCropping) {
+        if (isNearLeftEdge && isWithinVerticalBounds) {
+          setResizeInfo({
+            sourceId: source.id,
+            type: 'crop',
+            edge: 'left',
+            startX: x,
+            startY: y,
+            startWidth: source.crop?.width || source.width,
+            startHeight: source.crop?.height || source.height,
+            originalX: source.crop?.x || 0,
+            originalY: source.crop?.y || 0
+          });
+          found = true;
+          break;
+        } else if (isNearRightEdge && isWithinVerticalBounds) {
+          setResizeInfo({
+            sourceId: source.id,
+            type: 'crop',
+            edge: 'right',
+            startX: x,
+            startY: y,
+            startWidth: source.crop?.width || source.width,
+            startHeight: source.crop?.height || source.height,
+            originalX: source.crop?.x || 0,
+            originalY: source.crop?.y || 0
+          });
+          found = true;
+          break;
+        } else if (isNearTopEdge && isWithinHorizontalBounds) {
+          setResizeInfo({
+            sourceId: source.id,
+            type: 'crop',
+            edge: 'top',
+            startX: x,
+            startY: y,
+            startWidth: source.crop?.width || source.width,
+            startHeight: source.crop?.height || source.height,
+            originalX: source.crop?.x || 0,
+            originalY: source.crop?.y || 0
+          });
+          found = true;
+          break;
+        } else if (isNearBottomEdge && isWithinHorizontalBounds) {
+          setResizeInfo({
+            sourceId: source.id,
+            type: 'crop',
+            edge: 'bottom',
+            startX: x,
+            startY: y,
+            startWidth: source.crop?.width || source.width,
+            startHeight: source.crop?.height || source.height,
+            originalX: source.crop?.x || 0,
+            originalY: source.crop?.y || 0
+          });
+          found = true;
+          break;
         }
       }
-
-      // 通常の移動とリサイズの処理
-      if (isOnCornerHandle) {
-        setResizeInfo({
-          sourceId: source.id,
-          type: 'resize',
-          edge: 'corner',
-          startX: x,
-          startY: y,
-          startWidth: source.width,
-          startHeight: source.height
-        });
-        found = true;
-        break;
-      }
-
-      if (x >= source.x && x <= source.x + source.width &&
-          y >= source.y && y <= source.y + source.height) {
-        setSelectedSourceId(source.id);
-        setResizeInfo({
-          sourceId: source.id,
-          type: 'move',
-          startX: x - source.x,
-          startY: y - source.y,
-          startWidth: source.width,
-          startHeight: source.height
-        });
-        found = true;
-        break;
-      }
     }
 
-    if (!found) {
-      setSelectedSourceId(null);
+    // 通常の移動とリサイズの処理
+    if (isOnCornerHandle) {
+      setResizeInfo({
+        sourceId: source.id,
+        type: 'resize',
+        edge: 'corner',
+        startX: x,
+        startY: y,
+        startWidth: source.width,
+        startHeight: source.height
+      });
+      found = true;
+      break;
     }
-  };
+
+    if (x >= source.x && x <= source.x + source.width &&
+        y >= source.y && y <= source.y + source.height) {
+      setSelectedSourceId(source.id);
+      setResizeInfo({
+        sourceId: source.id,
+        type: 'move',
+        startX: x - source.x,
+        startY: y - source.y,
+        startWidth: source.width,
+        startHeight: source.height
+      });
+      found = true;
+      break;
+    }
+  }
+
+  if (!found) {
+    setSelectedSourceId(null);
+  }
+  // オーバーレイ更新を即座に反映
+  drawOverlayCanvas();
+};
 
 const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
   if (!resizeInfo) return;
@@ -1183,6 +1190,7 @@ const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
   }
 
   requestAnimationFrame(drawCanvas);
+  drawOverlayCanvas();
 };
 
 // マウスカーソルの見た目を更新する関数を追加
@@ -1223,6 +1231,7 @@ const updateCursor = (e: React.MouseEvent<HTMLCanvasElement>) => {
 
   const handleCanvasMouseUp = () => {
     setResizeInfo(null);
+    drawOverlayCanvas();
   };
 
   const startStreaming = async () => {
@@ -1438,13 +1447,28 @@ const toggleCropping = (sourceId: string) => {
   }, []);
 
   useEffect(() => {
-    drawCanvas();
-  }, [selectedSourceId]);
+    drawOverlayCanvas();
+  }, [selectedSourceId, videoSources]);
 
   useEffect(() => {
     videoSourcesRef.current = videoSources;
     requestAnimationFrame(drawCanvas); // 強制的に再描画
   }, [videoSources]);
+
+  const drawOverlayCanvas = () => {
+    const overlayCanvas = overlayCanvasRef.current;
+    if (!overlayCanvas) return;
+    const overlayCtx = overlayCanvas.getContext('2d');
+    if (!overlayCtx) return;
+  
+    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+    if (selectedSourceId) {
+      const selectedSource = videoSourcesRef.current.find(s => s.id === selectedSourceId);
+      if (selectedSource) {
+        drawOverlay(overlayCtx, selectedSource);
+      }
+    }
+  };
 
   return (
     <div className="container mx-auto p-4 space-y-4">
