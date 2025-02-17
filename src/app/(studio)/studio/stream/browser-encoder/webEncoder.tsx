@@ -20,6 +20,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
+import Chat from "@/app/(main)/live/[id]/chat";
+import { Session } from 'next-auth';
 
 interface VideoSource {
   id: string;
@@ -66,7 +68,7 @@ interface ScreenShareSettings {
   resolution: '720p' | '1080p';
 }
 
-export default function WebEncoder({ch_pass, streamTitle}:{ch_pass: string | null,streamTitle: string | null}) {
+export default function WebEncoder({ch_pass, streamTitle, id, session}:{ch_pass: string | null,streamTitle: string | null, id: number, session: Session | null}) {
   const searchParams = useSearchParams();
   const [isStreaming, setIsStreaming] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
@@ -1472,9 +1474,9 @@ const toggleCropping = (sourceId: string) => {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="grid grid-cols-1 md:grid-cols-[30%_1fr] flex-1">
+      <div className="grid grid-cols-0 md:grid-cols-[minmax(0,400px)_1fr_350px] flex-1">
         <div className="flex flex-col h-full">
-          <Card >
+          <Card>
             <CardHeader>
               <CardTitle>{streamTitle}</CardTitle>
             </CardHeader>
@@ -1910,6 +1912,7 @@ const toggleCropping = (sourceId: string) => {
             </div>
           </CardContent>
         </Card>
+        <Chat session={session} id={id} />
       </div>
       <Card className='p-1'>
         <div className='flex px-2 items-center'>

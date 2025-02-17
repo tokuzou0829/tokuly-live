@@ -19,7 +19,7 @@ export default async function EncoderLayout({ searchParams }: { searchParams: { 
 
     return (
       <>
-        <WebEncoder ch_pass={ch_pass.channel_password} streamTitle={stream.title} />
+        <WebEncoder ch_pass={ch_pass.channel_password} streamTitle={stream.title} session={session} id={stream.id} />
       </>
     );
   }
