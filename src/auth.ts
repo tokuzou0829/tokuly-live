@@ -74,8 +74,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           const response = await fetch("https://tokuly.com/oauth/token", {
             method: "POST",
             body: new URLSearchParams({
-              client_id: process.env.AUTH_GOOGLE_ID!,
-              client_secret: process.env.AUTH_GOOGLE_SECRET!,
+              client_id: process.env.AUTH_TOKULY_ID!,
+              client_secret: process.env.AUTH_TOKULY_SECRET!,
               grant_type: "refresh_token",
               refresh_token: token.refresh_token!,
             }),
