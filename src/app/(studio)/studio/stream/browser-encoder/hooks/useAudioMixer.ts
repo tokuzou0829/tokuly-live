@@ -6,6 +6,7 @@ export const useAudioMixer = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioMixerRef = useRef<{[key: string]: AudioSource}>({});
   const mainGainNodeRef = useRef<GainNode | null>(null);
+  const streamTracksRef = useRef<{[key: string]: MediaStreamTrack[]}>({});
 
   const initAudioMixer = () => {
     if (!audioContextRef.current) {
@@ -64,6 +65,14 @@ export const useAudioMixer = () => {
   const addAudioSource = (sourceId: string, stream: MediaStream | null, options: { name: string, type: 'mic' | 'audio' | 'screen' }) => {
     if (!audioContextRef.current) {
       audioContextRef.current = new AudioContext();
+    }
+
+    // If we're adding a mic source, store the tracks for later cleanup
+    if (stream && options.type === 'mic') {
+      const tracks = stream.getAudioTracks();
+      if (tracks.length > 0) {
+        streamTracksRef.current[sourceId] = tracks;
+      }
     }
 
     if (stream && stream.getAudioTracks().length === 0) return;
@@ -178,12 +187,29 @@ export const useAudioMixer = () => {
   const removeAudioSource = (sourceId: string) => {
     if (audioMixerRef.current[sourceId]) {
       console.log(`Removing audio source: ${sourceId}`);
+      
+      // Handle audio element if it exists
       if (audioMixerRef.current[sourceId].audioElement) {
         audioMixerRef.current[sourceId].audioElement.pause();
         audioMixerRef.current[sourceId].audioElement.src = '';
       }
+      
+      // Properly disconnect the gain node
       audioMixerRef.current[sourceId].gain.disconnect();
+      
+      // If this is a microphone source, stop all tracks
+      if (sourceId.startsWith('mic-') && streamTracksRef.current[sourceId]) {
+        streamTracksRef.current[sourceId].forEach(track => {
+          track.stop();
+          console.log(`Stopped track for source: ${sourceId}`);
+        });
+        delete streamTracksRef.current[sourceId];
+      }
+      
+      // Remove from the mixer reference
       delete audioMixerRef.current[sourceId];
+      
+      // Update state
       setAudioSources(prev => {
         const newSources = { ...prev };
         delete newSources[sourceId];

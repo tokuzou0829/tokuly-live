@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from "next/navigation";
 import { Session } from 'next-auth';
 import { Card } from '@/components/ui/card';
@@ -48,6 +48,21 @@ export default function WebEncoder({
     originalX?: number;
     originalY?: number;
   } | null>(null);
+  
+  // Debug information state
+  const [debugInfo, setDebugInfo] = useState({
+    fps: 0,
+    connectionStatus: 'disconnected',
+    bitrate: 0,
+    droppedFrames: 0,
+    encodingTime: 0
+  });
+  const fpsCounterRef = useRef({ frames: 0, lastTime: 0 });
+  const bitrateRef = useRef({ bytes: 0, lastTime: 0, value: 0 });
+  const connectionStatusRef = useRef<string>('disconnected');
+  const errorTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const droppedFramesRef = useRef(0);
+  const encodingTimeRef = useRef(0);
 
   const {
     videoSources,
@@ -81,7 +96,9 @@ export default function WebEncoder({
   const {
     isStreaming,
     startStreaming,
-    stopStreaming
+    stopStreaming,
+    wsConnectionRef,
+    activeRecorderRef
   } = useStreamControl({
     streamKey,
     ch_pass,
@@ -221,6 +238,79 @@ export default function WebEncoder({
     }
   };
 
+  // Update debug information
+  const updateDebugInfo = () => {
+    // Update FPS counter
+    const now = performance.now();
+    fpsCounterRef.current.frames++;
+    
+    if (now - fpsCounterRef.current.lastTime >= 1000) {
+      const fps = Math.round(fpsCounterRef.current.frames * 1000 / (now - fpsCounterRef.current.lastTime));
+      fpsCounterRef.current.frames = 0;
+      fpsCounterRef.current.lastTime = now;
+      
+      // Update connection status
+      let connectionStatus = 'disconnected';
+      if (isStreaming) {
+        if (wsConnectionRef.current?.readyState === WebSocket.OPEN) {
+          connectionStatus = 'connected';
+          
+          // Clear any existing error timer if we're now connected
+          if (errorTimerRef.current) {
+            clearTimeout(errorTimerRef.current);
+            errorTimerRef.current = null;
+          }
+        } else if (wsConnectionRef.current?.readyState === WebSocket.CONNECTING) {
+          connectionStatus = 'connecting';
+        } else {
+          connectionStatus = 'error 再接続中...';
+          
+          // If status changed to error, set a timer to check if it persists
+          if (connectionStatusRef.current !== 'error') {
+            console.log('Connection status changed to error, setting 5s timer for auto-reconnect');
+            
+            // Clear any existing timer
+            if (errorTimerRef.current) {
+              clearTimeout(errorTimerRef.current);
+            }
+            
+            // Set new timer for auto-reconnect after 5 seconds
+            errorTimerRef.current = setTimeout(() => {
+              if (debugInfo.connectionStatus === 'error' && isStreaming) {
+                console.log('Connection still in error after 5s, attempting to reconnect');
+                
+                // Stop and restart streaming to reconnect
+                stopStreaming();
+                if (audioContextRef.current) {
+                  setTimeout(() => {
+                    startStreaming(audioContextRef.current!);
+                  }, 1000); // Wait 1 second before reconnecting
+                }
+              }
+              errorTimerRef.current = null;
+            }, 5000);
+          }
+        }
+      }
+      
+      // Store current status for comparison in next update
+      connectionStatusRef.current = connectionStatus;
+      
+      // Update debug info state
+      setDebugInfo({
+        fps,
+        connectionStatus,
+        bitrate: bitrateRef.current.value,
+        droppedFrames: droppedFramesRef.current,
+        encodingTime: encodingTimeRef.current
+      });
+    }
+    
+    if (isStreaming) {
+      requestAnimationFrame(updateDebugInfo);
+    }
+  };
+
   useEffect(() => {
     drawCanvas();
     loadDevices();
@@ -247,6 +337,44 @@ export default function WebEncoder({
     drawCanvas();
   }, [videoSources]);
 
+  // Start debug info monitoring when streaming starts
+  useEffect(() => {
+    if (isStreaming) {
+      // Reset counters
+      fpsCounterRef.current = { frames: 0, lastTime: performance.now() };
+      bitrateRef.current = { bytes: 0, lastTime: performance.now(), value: 0 };
+      droppedFramesRef.current = 0;
+      
+      // Start monitoring
+      updateDebugInfo();
+      
+      // Monitor MediaRecorder events if available
+      if (activeRecorderRef.current) {
+        const recorder = activeRecorderRef.current;
+        const originalDataAvailable = recorder.ondataavailable;
+        
+        recorder.ondataavailable = (event: BlobEvent) => {
+          // Call the original handler
+          if (originalDataAvailable) {
+            originalDataAvailable.call(recorder, event);
+          }
+          
+          // Update bitrate calculation
+          const now = performance.now();
+          bitrateRef.current.bytes += event.data.size;
+          
+          if (now - bitrateRef.current.lastTime >= 1000) {
+            const seconds = (now - bitrateRef.current.lastTime) / 1000;
+            const bits = bitrateRef.current.bytes * 8;
+            bitrateRef.current.value = Math.round(bits / seconds / 1000); // kbps
+            bitrateRef.current.bytes = 0;
+            bitrateRef.current.lastTime = now;
+          }
+        };
+      }
+    }
+  }, [isStreaming]);
+
   // Add beforeunload event listener when streaming is active
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -265,6 +393,12 @@ export default function WebEncoder({
 
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      
+      // Clear any error timers when component unmounts
+      if (errorTimerRef.current) {
+        clearTimeout(errorTimerRef.current);
+        errorTimerRef.current = null;
+      }
     };
   }, [isStreaming]);
 
@@ -535,8 +669,25 @@ export default function WebEncoder({
       </div>
       <Card className='p-1'>
         <div className='flex px-2 items-center'>
-          <p className='text-gray-500 font-semibold'></p>
-          <p className='ml-auto text-sm'>StreamKey:{streamKey}</p>
+          <div className='flex space-x-4'>
+            <div className={`flex items-center ${isStreaming ? 'text-green-500' : 'text-gray-500'}`}>
+              <span className='font-medium'>Status:</span>
+              <span className='ml-1'>{isStreaming ? debugInfo.connectionStatus : 'offline'}</span>
+            </div>
+            {isStreaming && (
+              <>
+                <div className='flex items-center text-blue-500'>
+                  <span className='font-medium'>FPS:</span>
+                  <span className='ml-1'>{debugInfo.fps}</span>
+                </div>
+                <div className='flex items-center text-purple-500'>
+                  <span className='font-medium'>Bitrate:</span>
+                  <span className='ml-1'>{debugInfo.bitrate} kbps</span>
+                </div>
+              </>
+            )}
+          </div>
+          <p className='ml-auto text-sm'>StreamKey: {streamKey}</p>
         </div>
       </Card>  
     </div>

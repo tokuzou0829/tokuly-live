@@ -256,6 +256,8 @@ export const useStreamControl = ({
   return {
     isStreaming,
     startStreaming,
-    stopStreaming
+    stopStreaming,
+    wsConnectionRef,
+    activeRecorderRef
   };
 };
