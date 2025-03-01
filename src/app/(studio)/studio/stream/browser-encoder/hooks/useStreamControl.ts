@@ -50,8 +50,8 @@ export const useStreamControl = ({
     // Optimize encoder settings for stability
     const options = {
       mimeType: selectedMimeType,
-      videoBitsPerSecond: 3000000, // Slightly lower bitrate for stability
-      audioBitsPerSecond: 128000,  // Higher audio quality
+      videoBitsPerSecond: 8000000, // Slightly lower bitrate for stability
+      audioBitsPerSecond: 192000,  // Higher audio quality
     };
     
     const recorder = new MediaRecorder(stream, options);
