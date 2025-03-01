@@ -50,7 +50,7 @@ export const useStreamControl = ({
     // Optimize encoder settings for stability
     const options = {
       mimeType: selectedMimeType,
-      videoBitsPerSecond: 8000000, // Slightly lower bitrate for stability
+      videoBitsPerSecond: 15000000, // Slightly lower bitrate for stability
       audioBitsPerSecond: 192000,  // Higher audio quality
     };
     
