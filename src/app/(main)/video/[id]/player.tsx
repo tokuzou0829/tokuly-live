@@ -95,6 +95,10 @@ function Player(props: VideoProps) {
   const [isMobile, setIsMobile] = useState(false);
   const searchParams = useSearchParams();
 
+  // 音声トラック管理のための状態変数を追加
+  const [audioTracks, setAudioTracks] = useState<{ id: number, name: string, lang: string, default: boolean }[]>([]);
+  const [currentAudioTrack, setCurrentAudioTrack] = useState<number | null>(null);
+
   const [isWWF,] = useAtom(IsWatchWithFriend);
   const [,setVideoPlayerRef] = useAtom(VideoPlayerRef);
   const [isHost,] = useAtom(IsPartyHost);
@@ -385,9 +389,38 @@ function Player(props: VideoProps) {
                   return isHighQuality && qualityCount > 1 ? quality + ' (hq)' : quality;
                 });
                 setVideoQualityList(availableQualities);
+                
               if (share_time) {
                 myRef.current!.currentTime = parseFloat(share_time);
               }
+            });
+
+            // オーディオトラック情報を更新されたタイミングで取得
+            hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, function(event, data) {
+              if (hls.audioTracks && hls.audioTracks.length > 1) {
+                const tracks = hls.audioTracks.map(track => ({
+                  id: track.id,
+                  name: track.name || `音声 ${track.id + 1}`,
+                  lang: track.lang || 'unknown',
+                  default: track.default || false
+                }));
+                setAudioTracks(tracks);
+                
+                // デフォルトのオーディオトラックを設定
+                const defaultTrack = tracks.find(track => track.default);
+                if (defaultTrack) {
+                  setCurrentAudioTrack(defaultTrack.id);
+                  hls.audioTrack = defaultTrack.id;
+                } else if (tracks.length > 0) {
+                  setCurrentAudioTrack(tracks[0].id);
+                  hls.audioTrack = tracks[0].id;
+                }
+              }
+            });
+
+            // オーディオトラックの変更を監視（AUDIO_TRACK_SWITCHINGからAUDIO_TRACK_SWITCHEDへ変更）
+            hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, function(event, data) {
+              setCurrentAudioTrack(data.id);
             });
           } else {
             const video = myRef.current!;
@@ -493,6 +526,14 @@ function Player(props: VideoProps) {
   function testSetting(){
     console.log("test");
   }
+
+  // 音声トラック切り替え関数
+  const handleAudioTrackChange = (trackId: number) => {
+    if (hlsRef.current) {
+      hlsRef.current.audioTrack = trackId;
+      setCurrentAudioTrack(trackId);
+    }
+  };
 
   return (
     <div ref={playerRef} className={"w-full relative player " + className}>
@@ -650,6 +691,30 @@ function Player(props: VideoProps) {
                               </DropdownMenuRadioItem>
                             ))}
                           </DropdownMenuRadioGroup>
+                          
+                          {/* 音声トラック選択メニューを追加 */}
+                          {audioTracks.length > 1 && (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuLabel>音声トラック</DropdownMenuLabel>
+                              {audioTracks.map((track) => (
+                                <DropdownMenuItem 
+                                  key={track.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAudioTrackChange(track.id);
+                                    setShowControls(false);
+                                  }}
+                                >
+                                  <div className="flex items-center">
+                                    <div className={`mr-2 h-2 w-2 rounded-full ${currentAudioTrack === track.id ? 'bg-primary' : 'bg-transparent'}`} />
+                                    {track.name} {track.lang !== 'unknown' ? `(${track.lang})` : ''}
+                                    {track.default && ' (デフォルト)'}
+                                  </div>
+                                </DropdownMenuItem>
+                              ))}
+                            </>
+                          )}
                         </DropdownMenuContentNoPortal>
                       </DropdownMenu>
                       {isFullScreen ? (
