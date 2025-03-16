@@ -45,6 +45,9 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { useSearchParams } from "next/navigation";
@@ -692,39 +695,66 @@ function Player(props: VideoProps) {
                             <FontAwesomeIcon size="lg" icon={faGear} color="white" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContentNoPortal side="top">
-                          <DropdownMenuLabel>画質選択</DropdownMenuLabel>
+                          <DropdownMenuLabel>再生設定</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuRadioGroup value={videoQuality} onValueChange={setVideoQuality} onClick={(e)=>{e.stopPropagation(),setShowControls(false)}} >
-                            <DropdownMenuRadioItem value="-1">Auto {videoQuality === "-1" ? videoQualityList.length >= 2 ? `(${videoQualityList[hlsRef.current ? hlsRef.current.currentLevel : 0]})`: "(ソース)" : ""}</DropdownMenuRadioItem>
-                            {videoQualityList.length >= 2 && videoQualityList.slice().reverse().map((quality, index) => (
-                              <DropdownMenuRadioItem key={videoQualityList.length - 1 - index} value={(videoQualityList.length - 1 - index).toString()}>
-                                {quality}
-                              </DropdownMenuRadioItem>
-                            ))}
-                          </DropdownMenuRadioGroup>
+                          {/* 画質選択をサブメニューに変更 */}
+                          <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                              <span>画質</span>
+                              <span className="ml-2 text-xs text-muted-foreground">
+                                {videoQuality === "-1" 
+                                  ? "自動" 
+                                  : videoQualityList[Number(videoQuality)] || ""}
+                              </span>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuSubContent>
+                              <DropdownMenuRadioGroup 
+                                value={videoQuality} 
+                                onValueChange={setVideoQuality} 
+                                onClick={(e)=>{e.stopPropagation(),setShowControls(false)}}
+                              >
+                                <DropdownMenuRadioItem value="-1">
+                                  Auto {videoQuality === "-1" ? videoQualityList.length >= 2 ? `(${videoQualityList[hlsRef.current ? hlsRef.current.currentLevel : 0]})`: "(ソース)" : ""}
+                                </DropdownMenuRadioItem>
+                                {videoQualityList.length >= 2 && videoQualityList.slice().reverse().map((quality, index) => (
+                                  <DropdownMenuRadioItem key={videoQualityList.length - 1 - index} value={(videoQualityList.length - 1 - index).toString()}>
+                                    {quality}
+                                  </DropdownMenuRadioItem>
+                                ))}
+                              </DropdownMenuRadioGroup>
+                            </DropdownMenuSubContent>
+                          </DropdownMenuSub>
                           
-                          {/* 音声トラック選択メニューを追加 */}
+                          {/* 音声トラック選択をサブメニューに変更 */}
                           {audioTracks.length > 1 && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuLabel>音声トラック</DropdownMenuLabel>
-                              {audioTracks.map((track) => (
-                                <DropdownMenuItem 
-                                  key={track.id}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleAudioTrackChange(track.id);
-                                    setShowControls(false);
-                                  }}
-                                >
-                                  <div className="flex items-center">
-                                    <div className={`mr-2 h-2 w-2 rounded-full ${currentAudioTrack === track.id ? 'bg-primary' : 'bg-transparent'}`} />
-                                    {track.name} {track.lang !== 'unknown' ? `(${track.lang})` : ''}
-                                    {track.default && ' (デフォルト)'}
-                                  </div>
-                                </DropdownMenuItem>
-                              ))}
-                            </>
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <span>音声トラック</span>
+                                <span className="ml-2 text-xs text-muted-foreground">
+                                  {currentAudioTrack !== null 
+                                    ? audioTracks.find(t => t.id === currentAudioTrack)?.name || "" 
+                                    : ""}
+                                </span>
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent>
+                                {audioTracks.map((track) => (
+                                  <DropdownMenuItem 
+                                    key={track.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAudioTrackChange(track.id);
+                                      setShowControls(false);
+                                    }}
+                                  >
+                                    <div className="flex items-center">
+                                      <div className={`mr-2 h-2 w-2 rounded-full ${currentAudioTrack === track.id ? 'bg-primary' : 'bg-transparent'}`} />
+                                      {track.name} {track.lang !== 'unknown' ? `(${track.lang})` : ''}
+                                      {track.default && ' (デフォルト)'}
+                                    </div>
+                                  </DropdownMenuItem>
+                                ))}
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
                           )}
                         </DropdownMenuContentNoPortal>
                       </DropdownMenu>
