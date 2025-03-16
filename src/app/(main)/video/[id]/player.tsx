@@ -175,6 +175,17 @@ function Player(props: VideoProps) {
 
   useEffect(() => {
     const handleKeyDown = (event:any) => {
+      // フォーカスされている要素をチェック
+      const activeElement = document.activeElement;
+      const isInputElement = 
+        activeElement instanceof HTMLInputElement ||
+        activeElement instanceof HTMLTextAreaElement ||
+        activeElement instanceof HTMLSelectElement ||
+        activeElement?.getAttribute('contenteditable') === 'true';
+      
+      // 入力要素にフォーカスがある場合は、ショートカットを無視
+      if (isInputElement) return;
+      
       if (!myRef.current) return;
       
       const video = myRef.current;
