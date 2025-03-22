@@ -101,6 +101,43 @@ function Player(props: VideoProps) {
   // 自動的にライブモードに戻るための閾値（秒）
   const liveThresholdSeconds = 5;
 
+  // iOS Safari判定用の状態
+  const [isIOS, setIsIOS] = useState<boolean>(false);
+  // 自動再生のミュート状態追跡用
+  const [attemptedAutoplay, setAttemptedAutoplay] = useState<boolean>(false);
+  // ユーザーインタラクションがあったかどうか
+  const userInteractedRef = useRef<boolean>(false);
+  
+  // 再生リクエストの状態を追跡
+  const playRequestRef = useRef<Promise<void> | null>(null);
+  // シークバーの自動更新用
+  const seekbarUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  // 配信の実際の経過時間
+  const liveElapsedTimeRef = useRef<number>(0);
+  // 配信開始時間の推定値
+  const estimatedStreamStartTimeRef = useRef<number>(Date.now());
+  
+  // デバイス・ブラウザの検出（初期化時に一度だけ実行）
+  useEffect(() => {
+    const ua = navigator.userAgent;
+    const isIOSDevice = /iPad|iPhone|iPod/.test(ua) || 
+                        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    setIsIOS(isIOSDevice);
+    
+    // タッチ/クリックでユーザーインタラクションフラグを設定
+    const markUserInteracted = () => {
+      userInteractedRef.current = true;
+    };
+    
+    document.addEventListener('touchstart', markUserInteracted, { once: true });
+    document.addEventListener('mousedown', markUserInteracted, { once: true });
+    
+    return () => {
+      document.removeEventListener('touchstart', markUserInteracted);
+      document.removeEventListener('mousedown', markUserInteracted);
+    };
+  }, []);
+
   // コンポーネントがアンマウントされたときにクリーンアップ
   useEffect(() => {
     if (playerRef.current) {
@@ -219,7 +256,15 @@ function Player(props: VideoProps) {
           console.log('Near live position, switching back to live mode');
           switchToLiveMode();
         }
-      } 
+      } else if (isLive) {
+        // ライブモードでは常に最新位置に設定
+        setCurrentTime(maxSeekableDuration);
+        
+        // バッファー状態の更新（ライブモード）
+        if (video.buffered.length > 0) {
+          setBufferValue(maxSeekableDuration);
+        }
+      }
     };
 
     video.addEventListener("timeupdate", updateCurrentTime);
@@ -290,7 +335,7 @@ function Player(props: VideoProps) {
         clearTimeout(seekTimeoutRef.current);
       }
     };
-  }, [isRewindMode, actualHlsDuration, maxSeekableDuration, playbackStarted, isSeeking, isLoadingRewindStream, liveThresholdSeconds]);
+  }, [isRewindMode, actualHlsDuration, maxSeekableDuration, playbackStarted, isSeeking, isLoadingRewindStream, liveThresholdSeconds, isLive]);
 
   function copyLink() {
     if (LinkText.current) {
@@ -307,8 +352,11 @@ function Player(props: VideoProps) {
 
   const toggleControls = () => {
     const video = myRef.current!;
+    userInteractedRef.current = true;
+    
     if (video.paused) {
-      video.play();
+      // 明示的な再生
+      handleUserInitiatedPlay();
     } else {
       video.pause();
     }
@@ -596,6 +644,42 @@ function Player(props: VideoProps) {
     };
   }, [id]);
 
+  // 安全にビデオを再生する関数（play request interrupted エラー対応）
+  const safePlayVideo = (video: HTMLVideoElement): Promise<void> => {
+    // 既存の再生リクエストがあれば待機
+    if (playRequestRef.current) {
+      return playRequestRef.current.then(() => {
+        // 再生リクエストをリセット
+        playRequestRef.current = null;
+        // 新しい再生リクエスト
+        const newRequest = video.play().catch(error => {
+          console.log("Play error:", error);
+          // NotAllowedError（自動再生ポリシー）の場合は再生ボタンを表示
+          if (error.name === "NotAllowedError") {
+            setIsPlaying(false);
+          } else {
+            // その他のエラーはコンソールに記録
+            console.error("Unexpected play error:", error);
+          }
+        });
+        playRequestRef.current = newRequest;
+        return newRequest;
+      });
+    } else {
+      // 最初の再生リクエスト
+      const request = video.play().catch(error => {
+        console.log("Initial play error:", error);
+        if (error.name === "NotAllowedError") {
+          setIsPlaying(false);
+        } else {
+          console.error("Unexpected play error:", error);
+        }
+      });
+      playRequestRef.current = request;
+      return request;
+    }
+  };
+
   // ライブストリームをロードする関数
   const loadLiveStream = () => {
     const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
@@ -611,7 +695,43 @@ function Player(props: VideoProps) {
       hls.destroy();
     }
     
-    if (Hls.isSupported()) {
+    const video = myRef.current!;
+    
+    // シークバーの自動更新を開始（ライブモード）
+    startLiveSeekbarUpdate();
+    
+    // iOS SafariはネイティブHLSをサポートしているのでHLS.jsは不要
+    if (isIOS) {
+      video.src = videoSrc;
+      video.load();
+      
+      // iOSでは自動再生のためにミュート必須の場合がある
+      if (!userInteractedRef.current) {
+        video.muted = true;
+        setIsMuted(true);
+        setAttemptedAutoplay(true);
+      }
+      
+      // メディアが再生可能になった時の処理
+      video.oncanplay = () => {
+        setIsInitializing(false);
+        setCurrentTime(maxSeekableDuration);
+        
+        // 再生を試みる - エラーハンドリングを強化
+        safePlayVideo(video).then(() => {
+          setIsLoadingLiveStream(false);
+        }).catch(() => {
+          setIsLoadingLiveStream(false);
+        });
+      };
+      
+      video.onerror = () => {
+        setStreamError(`ストリーム読み込みに失敗しました。再試行してください。`);
+        setIsLoadingLiveStream(false);
+        setIsInitializing(false);
+      };
+    } else if (Hls.isSupported()) {
+      // 非iOS環境でHLS.jsを使用
       const newHls = new Hls({
         enableWorker: true,
         maxBufferLength: 10,
@@ -635,22 +755,25 @@ function Player(props: VideoProps) {
       newHls.loadSource(videoSrc);
       newHls.attachMedia(myRef.current!);
       newHls.on(Hls.Events.MANIFEST_PARSED, () => {
-        // 初期化中フラグを解除 - ライブ配信の準備ができたら再生を優先
         setIsInitializing(false);
-        
-        // HLSがロードされた後も明示的にシークバーの位置を最大に設定
         setCurrentTime(maxSeekableDuration);
         
-        myRef.current!.currentTime = myRef.current!.duration;
-        myRef.current!.play().catch(e => {
-          console.error("Error playing video:", e);
-          setStreamError(`再生開始に失敗しました: ${e.message}`);
+        // ユーザーインタラクションがない場合はミュートで再生を試みる
+        if (!userInteractedRef.current) {
+          video.muted = true;
+          setIsMuted(true);
+          setAttemptedAutoplay(true);
+        }
+        
+        // 改良された再生処理
+        safePlayVideo(video).then(() => {
+          setIsLoadingLiveStream(false);
+        }).catch(() => {
           setIsLoadingLiveStream(false);
         });
       });
       setHls(newHls);
     } else {
-      const video = myRef.current!;
       video.src = videoSrc;
       video.load();
       myRef.current!.currentTime = myRef.current!.duration;
@@ -661,9 +784,10 @@ function Player(props: VideoProps) {
         // ネイティブ再生の場合も明示的にシークバーの位置を最大に設定
         setCurrentTime(maxSeekableDuration);
         
-        myRef.current!.play().catch(e => {
-          console.error("Error playing video:", e);
-          setStreamError(`再生開始に失敗しました: ${e.message}`);
+        // 改良された再生処理
+        safePlayVideo(video).then(() => {
+          setIsLoadingLiveStream(false);
+        }).catch(() => {
           setIsLoadingLiveStream(false);
         });
       };
@@ -677,7 +801,30 @@ function Player(props: VideoProps) {
     
     setIsLive(true);
   };
-  
+
+  // ユーザーが明示的に再生ボタンをクリックした場合の処理
+  const handleUserInitiatedPlay = () => {
+    userInteractedRef.current = true;
+    
+    const video = myRef.current!;
+    
+    // 自動再生のためにミュートされていた場合、ユーザー設定を復元
+    if (attemptedAutoplay && isMuted) {
+      // ユーザーが明示的にミュートを設定していない場合はミュートを解除
+      const storedVolume = window?.localStorage?.getItem("volume");
+      if (storedVolume && parseFloat(storedVolume) > 0) {
+        setIsMuted(false);
+        video.muted = false;
+      }
+      setAttemptedAutoplay(false);
+    }
+    
+    // 安全な再生
+    safePlayVideo(video).catch(e => {
+      console.error("User initiated play error:", e);
+    });
+  };
+
   // 巻き戻しストリームをロードする関数
   const loadRewindStream = (targetSeekPosition?: number) => {
     const rewindSrc = `https://live-data.tokuly.com/hls_rewind/${id}/index.m3u8`;
@@ -718,7 +865,48 @@ function Player(props: VideoProps) {
       }
     });
     
-    if (Hls.isSupported()) {
+    // シークバーの自動更新を開始（タイムシフトモード）
+    startRewindSeekbarUpdate();
+    
+    // iOS SafariはネイティブHLSをサポートしているのでHLS.jsは不要
+    if (isIOS) {
+      const video = myRef.current!;
+      video.src = rewindSrc;
+      video.load();
+      
+      // ユーザーインタラクションがない場合はミュートで再生
+      if (!userInteractedRef.current) {
+        video.muted = true;
+        setIsMuted(true);
+        setAttemptedAutoplay(true);
+      }
+      
+      video.onerror = () => {
+        console.error("Video error during rewind stream loading");
+        setIsLoadingRewindStream(false);
+        setStreamError("タイムシフトの読み込みに失敗しました。ライブモードに戻ります。");
+        setTimeout(() => switchToLiveMode(), 2000);
+      };
+      
+      video.oncanplaythrough = () => {
+        if (pendingSeekTimeRef.current !== null) {
+          const timeFromEnd = maxSeekableDuration - pendingSeekTimeRef.current;
+          const targetTime = Math.max(0, video.duration - timeFromEnd);
+          
+          video.currentTime = targetTime;
+          pendingSeekTimeRef.current = null;
+        }
+        
+        // 安全に再生
+        safePlayVideo(video).catch(error => {
+          console.log("iOS自動再生エラー:", error);
+          setIsLoadingRewindStream(false);
+        }).then(() => {
+          setIsLoadingRewindStream(false);
+        });
+      };
+      
+    } else if (Hls.isSupported()) {
       const newHls = new Hls({
         enableWorker: true,
         maxBufferLength: 30,
@@ -778,21 +966,47 @@ function Player(props: VideoProps) {
             
             myRef.current.currentTime = targetTime;
             pendingSeekTimeRef.current = null;
-            myRef.current.play().catch(e => console.error("Error playing video:", e));
+            
+            // ユーザーインタラクションがない場合はミュートで再生
+            if (!userInteractedRef.current) {
+              myRef.current.muted = true;
+              setIsMuted(true);
+              setAttemptedAutoplay(true);
+            }
+            
+            const playPromise = myRef.current.play();
+            
+            if (playPromise !== undefined) {
+              playPromise.catch(e => {
+                console.error("Error playing video:", e);
+                setIsLoadingRewindStream(false);
+              }).then(() => {
+                // 再生成功
+                setIsLoadingRewindStream(false);
+              });
+            }
           } else {
             // シーク待機がない場合は通常再生
             myRef.current!.play().catch(e => console.error("Error playing video:", e));
-          }
-        }
-      });
-      
-      // 定期的にプレイリスト情報を更新
-      newHls.on(Hls.Events.LEVEL_UPDATED, (_, data) => {
-        if (data.details && data.details.totalduration) {
-          const actualDuration = data.details.totalduration;
-          if (Math.abs(actualDuration - actualHlsDuration) > 5) { // 5秒以上の変更があれば更新
-            setActualHlsDuration(actualDuration);
-            updateSeekbarRange(actualDuration);
+            
+            // ユーザーインタラクションがない場合はミュートで再生
+            if (!userInteractedRef.current) {
+              myRef.current!.muted = true;
+              setIsMuted(true);
+              setAttemptedAutoplay(true);
+            }
+            
+            const playPromise = myRef.current!.play();
+            
+            if (playPromise !== undefined) {
+              playPromise.catch(e => {
+                console.error("Error playing video:", e);
+                setIsLoadingRewindStream(false);
+              }).then(() => {
+                // 再生成功
+                setIsLoadingRewindStream(false);
+              });
+            }
           }
         }
       });
@@ -823,7 +1037,18 @@ function Player(props: VideoProps) {
           pendingSeekTimeRef.current = null;
         }
         
-        video.play().catch(e => console.error("Error playing video:", e));
+        const playPromise = video.play();
+        
+        if (playPromise !== undefined) {
+          playPromise.catch(error => {
+            console.log("iOS自動再生エラー:", error);
+            setIsLoadingRewindStream(false);
+            // NotAllowedErrorは特に処理しない（UIで再生ボタンが表示される）
+          }).then(() => {
+            // 再生成功
+            setIsLoadingRewindStream(false);
+          });
+        }
       };
       
       video.ondurationchange = () => {
@@ -836,6 +1061,63 @@ function Player(props: VideoProps) {
     setIsLive(false);
     setIsRewindMode(true);
     setHasInteractedWithSeek(true);
+  };
+  
+  // シークバーを1秒ごとに更新する関数（ライブモード）
+  const startLiveSeekbarUpdate = () => {
+    // 既存のインターバルがあれば停止
+    if (seekbarUpdateIntervalRef.current) {
+      clearInterval(seekbarUpdateIntervalRef.current);
+    }
+    
+    // 配信開始推定時刻を現在から最大シーク時間を引いた値に設定
+    estimatedStreamStartTimeRef.current = Date.now() - (maxSeekableDuration * 1000);
+    liveElapsedTimeRef.current = maxSeekableDuration;
+    
+    // 1秒ごとにシークバーを更新
+    seekbarUpdateIntervalRef.current = setInterval(() => {
+      // 配信が進むにつれて経過時間が増える
+      liveElapsedTimeRef.current += 1;
+      
+      // 経過時間が最大シーク時間を超えていない場合はシークバーを伸ばす
+      // 既に最大値に達している場合は継続して最大値を維持
+      const newMaxDuration = Math.min(liveElapsedTimeRef.current, MAX_TIMESHIFT_DURATION);
+      
+      if (newMaxDuration > maxSeekableDuration) {
+        setMaxSeekableDuration(newMaxDuration);
+        setDuration(newMaxDuration);
+        
+        // ライブモードでは現在位置も最大値に更新
+        if (isLive) {
+          setCurrentTime(newMaxDuration);
+        }
+      }
+    }, 1000);
+  };
+  
+  // シークバーを1秒ごとに更新する関数（タイムシフトモード）
+  const startRewindSeekbarUpdate = () => {
+    // 既存のインターバルがあれば停止
+    if (seekbarUpdateIntervalRef.current) {
+      clearInterval(seekbarUpdateIntervalRef.current);
+    }
+    
+    // 1秒ごとにシークバーを更新
+    seekbarUpdateIntervalRef.current = setInterval(() => {
+      // 配信開始からの経過時間を計算（ミリ秒）
+      const elapsedMs = Date.now() - estimatedStreamStartTimeRef.current;
+      const elapsedSeconds = Math.floor(elapsedMs / 1000);
+      
+      // タイムシフトモードでは経過時間に応じてシークバー最大値を拡張
+      const newMaxDuration = Math.min(elapsedSeconds, MAX_TIMESHIFT_DURATION);
+      
+      if (newMaxDuration > maxSeekableDuration) {
+        setMaxSeekableDuration(newMaxDuration);
+        setDuration(newMaxDuration);
+      }
+      
+      // シークバーの現在位置は変更しない（ユーザーが選択した位置のまま）
+    }, 1000);
   };
   
   // 定期的に更新を行う関数を開始
@@ -884,6 +1166,12 @@ function Player(props: VideoProps) {
     if (updateIntervalRef.current) {
       clearInterval(updateIntervalRef.current);
       updateIntervalRef.current = null;
+    }
+    
+    // シークバー更新を停止（新しい更新がloadLiveStream内で開始される）
+    if (seekbarUpdateIntervalRef.current) {
+      clearInterval(seekbarUpdateIntervalRef.current);
+      seekbarUpdateIntervalRef.current = null;
     }
     
     loadLiveStream();
@@ -1064,6 +1352,10 @@ function Player(props: VideoProps) {
       if (hls) {
         hls.destroy();
       }
+      if (seekbarUpdateIntervalRef.current) {
+        clearInterval(seekbarUpdateIntervalRef.current);
+        seekbarUpdateIntervalRef.current = null;
+      }
     };
   }, [id]);
 
@@ -1176,6 +1468,8 @@ function Player(props: VideoProps) {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
+                      // 明示的なユーザーアクション処理
+                      userInteractedRef.current = true;
                       toggleControls();
                     }}
                     className="text-white mr-4"
@@ -1202,10 +1496,18 @@ function Player(props: VideoProps) {
                     </button>
                   )}
                   
+                  {/* 自動再生でミュート状態になった場合の通知（オプション） */}
+                  {attemptedAutoplay && isMuted && (
+                    <div className="absolute bg-black bg-opacity-70 px-2 py-1 rounded text-white text-xs bottom-20 left-4">
+                      タップして音声を有効化
+                    </div>
+                  )}
+                  
                   <div className="flex items-center">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        userInteractedRef.current = true;
                         toggleMute();
                       }}
                       className="text-white"
@@ -1348,6 +1650,16 @@ function Player(props: VideoProps) {
           </DialogContent>
         </Dialog>
       </ContextMenu>
+      
+      {/* 明示的な再生ボタン（自動再生できない場合に表示） */}
+      {!isPlaying && !isLoadingLiveStream && !isInitializing && !streamError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 z-10 cursor-pointer"
+             onClick={handleUserInitiatedPlay}>
+          <div className="w-20 h-20 bg-red-600 bg-opacity-80 rounded-full flex items-center justify-center">
+            <FontAwesomeIcon icon={faPlay} className="text-white text-3xl" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
