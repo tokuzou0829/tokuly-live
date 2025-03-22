@@ -13,6 +13,7 @@ import {
   faCopy,
   faRotateLeft,
   faClock,
+  faRefresh,
 } from "@fortawesome/free-solid-svg-icons";
 import Hls from "hls.js";
 import {
@@ -58,7 +59,18 @@ function Player(props: VideoProps) {
   const cursorHideTimeoutRef = useRef<number | null>(null);
   const [showLiveButton, setShowLiveButton] = useState<boolean>(false);
   const [hasInteractedWithSeek, setHasInteractedWithSeek] = useState<boolean>(false);
+  const [isLoadingLiveStream, setIsLoadingLiveStream] = useState<boolean>(false);
+  const [streamError, setStreamError] = useState<string | null>(null);
+  const [isInitializing, setIsInitializing] = useState<boolean>(true);
+  const [isSeeking, setIsSeeking] = useState<boolean>(false);
+  const lastSeekTimeRef = useRef<number>(0);
+  const seekTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const seekRetryCountRef = useRef<number>(0);
+  const maxSeekRetries = 3; // 最大リトライ回数
+  const seekTargetPositionRef = useRef<number | null>(null); // シークの目標位置（シークバー上での位置）
   
+  // 実際の再生開始を検知するための状態
+  const [playbackStarted, setPlaybackStarted] = useState<boolean>(false);
   // 巻き戻し機能用の状態
   const [isRewindMode, setIsRewindMode] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
@@ -82,6 +94,9 @@ function Player(props: VideoProps) {
   const [isLoadingRewindStream, setIsLoadingRewindStream] = useState<boolean>(false);
   // シーク待機中の目標時間
   const pendingSeekTimeRef = useRef<number | null>(null);
+
+  // 自動的にライブモードに戻るための閾値（秒）
+  const liveThresholdSeconds = 5;
 
   // コンポーネントがアンマウントされたときにクリーンアップ
   useEffect(() => {
@@ -145,37 +160,131 @@ function Player(props: VideoProps) {
     if (!video) return;
 
     const updateCurrentTime = () => {
+      // 再生が始まったらローディングを非表示に
+      if (!playbackStarted && video.currentTime > 0) {
+        setPlaybackStarted(true);
+        setIsLoadingLiveStream(false);
+        setIsLoadingRewindStream(false);
+        setIsInitializing(false);
+      }
+      
+      // シーク操作中で、目標時間に近い位置まで到達したらシーク完了とみなす
+      if (isSeeking && isRewindMode) {
+        const currentSeekTime = video.currentTime;
+        const seekDifference = Math.abs(currentSeekTime - lastSeekTimeRef.current);
+        
+        // 目標時間に1秒以内に近づいたか、またはバッファリングが目標時間を超えたらシーク完了
+        if (seekDifference < 1.0 || (video.buffered.length > 0 && lastSeekTimeRef.current <= video.buffered.end(video.buffered.length - 1))) {
+          console.log('Seek completed to:', currentSeekTime, 'target was:', lastSeekTimeRef.current);
+          setIsSeeking(false);
+          seekRetryCountRef.current = 0; // リトライカウントをリセット
+          seekTargetPositionRef.current = null; // シーク目標をクリア
+        }
+      }
+      
       if (isRewindMode) {
         // 巻き戻しモードでは、現在の再生位置をシークバー上の位置に変換
         const relativePosition = video.currentTime;
         // 実際の動画長に対する相対位置をシークバー上の位置に変換
         const seekBarPosition = (relativePosition / actualHlsDuration) * maxSeekableDuration;
-        setCurrentTime(seekBarPosition);
+        
+        // シークバー位置が限界を超えないように制限
+        const clampedPosition = Math.min(seekBarPosition, maxSeekableDuration);
+        setCurrentTime(clampedPosition);
         
         // バッファー状態の更新
         if (video.buffered.length > 0) {
           const bufferedEnd = video.buffered.end(video.buffered.length - 1);
           // 実際のバッファ位置をシークバー上の位置に変換
           const seekBarBufferPosition = (bufferedEnd / actualHlsDuration) * maxSeekableDuration;
-          setBufferValue(seekBarBufferPosition);
+          // バッファー位置も限界を超えないように制限
+          setBufferValue(Math.min(seekBarBufferPosition, maxSeekableDuration));
         }
         
         // 巻き戻しモードで最後まで再生したらライブモードに戻る
         if (relativePosition >= video.duration - 1) {
           switchToLiveMode();
         }
-      } else {
-        // ライブモードでは常に最大値を示す
-        setCurrentTime(maxSeekableDuration);
-        setBufferValue(maxSeekableDuration);
-      }
+        
+        // 最新位置（-0秒）に近い場合、自動的にライブモードに戻る
+        // 現在位置と最大位置の差が閾値未満かどうかをチェック
+        const remainingTime = maxSeekableDuration - clampedPosition;
+        if (remainingTime < liveThresholdSeconds && !isSeeking) {
+          console.log('Near live position, switching back to live mode');
+          switchToLiveMode();
+        }
+      } 
     };
 
     video.addEventListener("timeupdate", updateCurrentTime);
+    
+    // シーク開始時のイベントハンドラ
+    const handleSeeking = () => {
+      if (isRewindMode) {
+        console.log('Seeking started');
+        setIsSeeking(true);
+        
+        // 既存のタイムアウトをクリア
+        if (seekTimeoutRef.current) {
+          clearTimeout(seekTimeoutRef.current);
+        }
+      }
+    };
+    
+    // シーク完了時のイベントハンドラ（ネイティブイベント）
+    const handleSeeked = () => {
+      if (seekTimeoutRef.current) {
+        clearTimeout(seekTimeoutRef.current);
+      }
+      console.log('Seek ended natively');
+      setIsSeeking(false);
+    };
+    
+    // waiting イベント（バッファリング中）のハンドラ
+    const handleWaiting = () => {
+      if (isRewindMode && !isLoadingRewindStream) {
+        console.log('Buffering...');
+        setIsSeeking(true);
+        
+        if (seekTimeoutRef.current) {
+          clearTimeout(seekTimeoutRef.current);
+        }
+        
+        // 10秒後にシーク状態を強制解除（フォールバック）
+        seekTimeoutRef.current = setTimeout(() => {
+          setIsSeeking(false);
+        }, 10000);
+      }
+    };
+    
+    // playing イベント（再生開始/再開）のハンドラ
+    const handlePlaying = () => {
+      if (isSeeking) {
+        console.log('Playing, ending seek state');
+        if (seekTimeoutRef.current) {
+          clearTimeout(seekTimeoutRef.current);
+        }
+        setIsSeeking(false);
+      }
+    };
+    
+    video.addEventListener("seeking", handleSeeking);
+    video.addEventListener("seeked", handleSeeked);
+    video.addEventListener("waiting", handleWaiting);
+    video.addEventListener("playing", handlePlaying);
+    
     return () => {
       video.removeEventListener("timeupdate", updateCurrentTime);
+      video.removeEventListener("seeking", handleSeeking);
+      video.removeEventListener("seeked", handleSeeked);
+      video.removeEventListener("waiting", handleWaiting);
+      video.removeEventListener("playing", handlePlaying);
+      
+      if (seekTimeoutRef.current) {
+        clearTimeout(seekTimeoutRef.current);
+      }
     };
-  }, [isRewindMode, actualHlsDuration, maxSeekableDuration]);
+  }, [isRewindMode, actualHlsDuration, maxSeekableDuration, playbackStarted, isSeeking, isLoadingRewindStream, liveThresholdSeconds]);
 
   function copyLink() {
     if (LinkText.current) {
@@ -281,9 +390,52 @@ function Player(props: VideoProps) {
     };
   }, []);
 
+  // タイムシフトプレイリストの長さを取得する関数
+  const getRewindPlaylistDuration = async () => {
+    try {
+      const rewindSrc = `https://live-data.tokuly.com/hls_rewind/${id}/index.m3u8`;
+      const response = await fetch(rewindSrc);
+      
+      if (!response.ok) {
+        console.error(`Failed to fetch rewind playlist: ${response.status}`);
+        return null;
+      }
+      
+      const playlist = await response.text();
+      
+      // HLSプレイリストを分析して長さを取得
+      // このロジックはプレイリスト形式によって調整が必要かもしれない
+      if (playlist && playlist.includes('#EXT-X-PLAYLIST-TYPE:VOD')) {
+        // プレイリスト内の全セグメントの長さを合計
+        const segmentDurations = playlist.match(/#EXTINF:([0-9.]+)/g);
+        if (segmentDurations) {
+          let totalDuration = 0;
+          segmentDurations.forEach(segment => {
+            const duration = parseFloat(segment.replace('#EXTINF:', ''));
+            if (!isNaN(duration)) {
+              totalDuration += duration;
+            }
+          });
+          
+          console.log(`Rewind playlist total duration: ${totalDuration}s`);
+          return totalDuration;
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error fetching rewind playlist:', error);
+      return null;
+    }
+  };
+  
   // ライブストリームをロードする関数
   const loadLiveStream = () => {
     const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
+    
+    setIsLoadingLiveStream(true);
+    setStreamError(null);
+    setPlaybackStarted(false);
     
     if (hls) {
       hls.destroy();
@@ -300,11 +452,27 @@ function Player(props: VideoProps) {
         highBufferWatchdogPeriod: 3,
         maxLiveSyncPlaybackRate: 1,
       });
+      
+      // エラーハンドリング
+      newHls.on(Hls.Events.ERROR, (_, data) => {
+        console.error("HLS error:", data);
+        if (data.fatal) {
+          setStreamError(`ストリーム読み込みに失敗しました: ${data.details}`);
+          setIsLoadingLiveStream(false);
+        }
+      });
+      
       newHls.loadSource(videoSrc);
       newHls.attachMedia(myRef.current!);
       newHls.on(Hls.Events.MANIFEST_PARSED, () => {
+        // 初期化中フラグを解除 - ライブ配信の準備ができたら再生を優先
+        setIsInitializing(false);
         myRef.current!.currentTime = myRef.current!.duration;
-        myRef.current!.play();
+        myRef.current!.play().catch(e => {
+          console.error("Error playing video:", e);
+          setStreamError(`再生開始に失敗しました: ${e.message}`);
+          setIsLoadingLiveStream(false);
+        });
       });
       setHls(newHls);
     } else {
@@ -312,8 +480,20 @@ function Player(props: VideoProps) {
       video.src = videoSrc;
       video.load();
       myRef.current!.currentTime = myRef.current!.duration;
+      
       video.oncanplay = () => {
-        myRef.current!.play();
+        setIsInitializing(false);
+        myRef.current!.play().catch(e => {
+          console.error("Error playing video:", e);
+          setStreamError(`再生開始に失敗しました: ${e.message}`);
+          setIsLoadingLiveStream(false);
+        });
+      };
+      
+      video.onerror = () => {
+        setStreamError(`ストリーム読み込みに失敗しました。再試行してください。`);
+        setIsLoadingLiveStream(false);
+        setIsInitializing(false);
       };
     }
     
@@ -332,6 +512,8 @@ function Player(props: VideoProps) {
     
     // ローディング状態を設定
     setIsLoadingRewindStream(true);
+    setPlaybackStarted(false);
+    setIsSeeking(false); // 新しいストリームロード時はシーク状態をリセット
     
     // シーク目標位置があれば保存
     if (targetSeekPosition !== undefined) {
@@ -354,6 +536,9 @@ function Player(props: VideoProps) {
       const newHls = new Hls({
         enableWorker: true,
         maxBufferLength: 30,
+        // タイムアウト設定を追加して、ロード失敗時のハンドリングを強化
+        manifestLoadingTimeOut: 20000,
+        manifestLoadingMaxRetry: 3,
       });
       
       // ストリーム読み込み中のエラーハンドリング
@@ -366,6 +551,12 @@ function Player(props: VideoProps) {
           pendingSeekTimeRef.current = null;
           switchToLiveMode();
         }
+      });
+      
+      // 読み込み進捗のイベントをリッスン
+      newHls.on(Hls.Events.MANIFEST_LOADING, () => {
+        console.log("Rewind manifest loading");
+        setIsLoadingRewindStream(true);
       });
       
       newHls.loadSource(rewindSrc);
@@ -386,14 +577,16 @@ function Player(props: VideoProps) {
           // シークバーの範囲を更新
           updateSeekbarRange(actualDuration);
           
-          // 最初のセグメントが読み込まれたらローディング状態を解除
-          setIsLoadingRewindStream(false);
-          
-          // 待機中のシーク操作があれば適用
+          // 最初のセグメントが読み込まれたら再生開始
+          // ローディング状態はtimeupdate時に解除
           if (pendingSeekTimeRef.current !== null && myRef.current) {
             const seekRatio = pendingSeekTimeRef.current / maxSeekableDuration;
             const targetTime = seekRatio * actualDuration;
             console.log(`Applying pending seek to ${targetTime}s`);
+            
+            // 目標時間を記録（シーク完了判定用）
+            lastSeekTimeRef.current = targetTime;
+            
             myRef.current.currentTime = targetTime;
             pendingSeekTimeRef.current = null;
             myRef.current.play().catch(e => console.error("Error playing video:", e));
@@ -421,10 +614,16 @@ function Player(props: VideoProps) {
       video.src = rewindSrc;
       video.load();
       
-      video.oncanplaythrough = () => {
+      video.onerror = () => {
+        console.error("Video error during rewind stream loading");
         setIsLoadingRewindStream(false);
-        
-        // 待機中のシーク操作があれば適用
+        setStreamError("タイムシフトの読み込みに失敗しました。ライブモードに戻ります。");
+        setTimeout(() => switchToLiveMode(), 2000);
+      };
+      
+      video.oncanplaythrough = () => {
+        // タイムシフトの準備ができたら再生を開始
+        // 注: ローディング状態はtimeupdateイベントで解除
         if (pendingSeekTimeRef.current !== null) {
           const seekRatio = pendingSeekTimeRef.current / maxSeekableDuration;
           const targetTime = seekRatio * video.duration;
@@ -452,11 +651,21 @@ function Player(props: VideoProps) {
     // 実際の再生可能時間を計算
     // 配信が始まって間もない場合はactualDurationが短い
     // 配信時間が2時間を超える場合はHLSが2時間分のセグメントのみ保持
-    const seekableDuration = Math.min(actualDuration, 7200);
+    const seekableDuration = Math.min(Math.max(actualDuration, 0), 7200);
     setMaxSeekableDuration(seekableDuration);
     setDuration(seekableDuration);
     
     console.log(`Updating seekbar range: ${seekableDuration}s (actual: ${actualDuration}s)`);
+    
+    // 現在位置が新しい最大値を超えていないかチェック
+    if (currentTime > seekableDuration) {
+      setCurrentTime(seekableDuration);
+    }
+    
+    // バッファー位置も新しい最大値を超えていないかチェック
+    if (bufferValue > seekableDuration) {
+      setBufferValue(seekableDuration);
+    }
   };
   
   // 定期的に更新を行う関数を開始
@@ -510,22 +719,54 @@ function Player(props: VideoProps) {
   // シークバーの処理
   const handleSeekChange = (newValue: number) => {
     if (myRef.current) {
+      // シークバーの値を限界内に制限
+      const clampedValue = Math.min(Math.max(newValue, 0), maxSeekableDuration);
+      
+      // 最新位置（最大値）に非常に近い場合、ライブモードに切り替え
+      if (maxSeekableDuration - clampedValue < liveThresholdSeconds && isRewindMode) {
+        console.log('Seeking to near-live position, switching to live mode');
+        switchToLiveMode();
+        return;
+      }
+      
       if (isLive && !hasInteractedWithSeek) {
         // ライブモードでシーク操作を行った場合、自動的に巻き戻しモードに切り替え
         setShowLiveButton(true);
         
         // 巻き戻し時の目標位置をパラメータとして渡す
-        loadRewindStream(newValue);
-      } else if (isRewindMode && !isLoadingRewindStream) {
-        // 巻き戻しモード中のシーク操作（読み込み中でない場合のみ）
-        // シークバー上の比率を計算
-        const seekRatio = newValue / maxSeekableDuration;
+        loadRewindStream(clampedValue);
+      } else if (isRewindMode) {
+        // ロード中でもシーク位置を記録（ロード完了後に適用）
+        if (isLoadingRewindStream) {
+          console.log(`Storing seek position for after loading: ${clampedValue}`);
+          pendingSeekTimeRef.current = clampedValue;
+          return;
+        }
+        
+        // 巻き戻しモード中のシーク操作
+        setIsSeeking(true);
+        
+        // シークバー上の比率を計算（clampedValueを使用）
+        const seekRatio = clampedValue / maxSeekableDuration;
         // 実際のHLSプレイヤーの時間位置に変換
         const targetTime = seekRatio * actualHlsDuration;
+        
+        // 目標時間を記録
+        lastSeekTimeRef.current = targetTime;
+        seekTargetPositionRef.current = clampedValue; // シークバー上での目標位置を記録
+        seekRetryCountRef.current = 0; // リトライカウントをリセット
         myRef.current.currentTime = targetTime;
         
         // シーク操作を行うと「ライブに戻る」ボタンを表示
         setShowLiveButton(true);
+        
+        console.log(`Seeking to: ${targetTime}s (ratio: ${seekRatio})`);
+        
+        // 既存のタイムアウトをクリア
+        if (seekTimeoutRef.current) {
+          clearTimeout(seekTimeoutRef.current);
+        }
+        
       }
     }
   };
@@ -567,28 +808,82 @@ function Player(props: VideoProps) {
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
     
-    // 初回読み込み時はライブモードで開始
-    const checkM3u8Status = () => {
+    // 初回読み込み時の処理
+    const initialize = async () => {
+      setIsInitializing(true);
+      
+      // まず最初にライブストリームのチェックを行い、利用可能ならすぐに読み込む
+      // これによりタイムシフト情報を待たずにライブ配信の視聴を開始できる
       const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
-      fetch(videoSrc, { method: "HEAD" }).then((response) => {
-        if (response.status === 200) {
-          console.log("load_video");
-          clearInterval(intervalId);
-          // ライブモードでは常に最大2時間に設定
+      
+      try {
+        const liveResponse = await fetch(videoSrc, { method: "HEAD" });
+        
+        if (liveResponse.status === 200) {
+          console.log("Live stream is available, starting playback immediately");
+          
+          // デフォルトのシークバー範囲を設定（タイムシフト情報が取得できるまでの仮の値）
           setMaxSeekableDuration(7200);
           setDuration(7200);
           setCurrentTime(7200); // ライブでは常に最新位置
+          
+          // ライブ配信をすぐに開始
           loadLiveStream();
-          myRef.current!.addEventListener("pause", handleVideoPause);
+          
+          // イベントリスナーの追加
+          if (myRef.current) {
+            myRef.current.addEventListener("pause", handleVideoPause);
+          }
+          
+          // タイムシフト情報は裏で取得
+          getRewindPlaylistDuration().then(rewindDuration => {
+            if (rewindDuration) {
+              // 2時間（7200秒）を上限として設定
+              const limitedDuration = Math.min(rewindDuration, 7200);
+              setMaxSeekableDuration(limitedDuration);
+              setDuration(limitedDuration);
+              setCurrentTime(limitedDuration); // ライブでは常に最新位置
+              console.log(`Updated seekbar range to ${limitedDuration}s based on playlist`);
+            }
+          });
+          
+          // 定期的なチェックを停止
+          clearInterval(intervalId);
+        } else {
+          // ライブが見つからない場合の処理
+          setStreamError(`ライブ配信が見つかりません (ステータス: ${liveResponse.status})`);
+          setIsLoadingLiveStream(false);
+          setIsInitializing(false);
         }
-      });
+      } catch (error) {
+        console.error("Fetch error:", error);
+        setStreamError(`ライブ配信の確認に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+        setIsLoadingLiveStream(false);
+        setIsInitializing(false);
+      }
     };
     
-    intervalId = setInterval(checkM3u8Status, 4000);
-    const setUp = setTimeout(checkM3u8Status, 0);
+    initialize();
+    
+    // ライブストリームが見つからない場合は定期的に再試行
+    intervalId = setInterval(() => {
+      if (isInitializing) {
+        const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
+        
+        fetch(videoSrc, { method: "HEAD" })
+          .then((response) => {
+            if (response.status === 200) {
+              console.log("Live stream is now available");
+              clearInterval(intervalId);
+              loadLiveStream();
+              myRef.current!.addEventListener("pause", handleVideoPause);
+            }
+          })
+          .catch(error => console.error("Retry fetch error:", error));
+      }
+    }, 4000);
     
     return () => {
-      clearTimeout(setUp);
       clearInterval(intervalId);
       if (updateIntervalRef.current) {
         clearInterval(updateIntervalRef.current);
@@ -612,12 +907,48 @@ function Player(props: VideoProps) {
         onPause={handleVideoPause}
       ></video>
       
-      {/* ローディングインジケーター */}
-      {isLoadingRewindStream && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-60 z-10">
-          <div className="flex flex-col items-center">
-            <div className="w-12 h-12 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
-            <div className="mt-4 text-white text-lg">タイムシフト読み込み中...</div>
+      {/* シンプル化したローディングインジケータ - 初期化とライブストリーム読み込み */}
+      {(isInitializing || isLoadingLiveStream) && !streamError && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+          <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
+      
+      {/* シンプル化したタイムシフトローディングインジケータ - 読み込みと操作中 */}
+      {(isLoadingRewindStream || (isSeeking && isRewindMode)) && !streamError && (
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+          <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      )}
+      
+      {/* エラー表示（背景は残す） */}
+      {streamError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-80 z-20">
+          <div className="bg-red-900 bg-opacity-90 p-6 rounded-lg max-w-md">
+            <div className="text-white text-lg font-bold mb-2">エラーが発生しました</div>
+            <div className="text-white mb-4">{streamError}</div>
+            <button 
+              onClick={() => { 
+                setStreamError(null);
+                setIsInitializing(true);
+                const videoSrc = `https://live.tokuly.com/hls/${id}/index.m3u8`;
+                fetch(videoSrc, { method: "HEAD" }).then((response) => {
+                  if (response.status === 200) {
+                    loadLiveStream();
+                  } else {
+                    setIsInitializing(false);
+                    setStreamError(`ライブ配信が見つかりません (ステータス: ${response.status})`);
+                  }
+                }).catch(error => {
+                  setIsInitializing(false);
+                  setStreamError(`ライブ配信の確認に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+                });
+              }} 
+              className="bg-white text-red-900 px-4 py-2 rounded hover:bg-gray-200 flex items-center justify-center"
+            >
+              <FontAwesomeIcon icon={faRefresh} className="mr-2" />
+              再試行
+            </button>
           </div>
         </div>
       )}
@@ -645,18 +976,20 @@ function Player(props: VideoProps) {
                   value={"https://live.tokuly.com/live/" + id}
                 />
                 
-                {/* シークバー (常に表示・ただし読み込み中は操作不可) */}
+                {/* シークバー (常に操作可能) */}
                 <div className="absolute bottom-12 left-0 w-full px-4">
-                  {showSeekPreview && !isLoadingRewindStream && (
+                  {showSeekPreview && (
                     <div className="absolute bottom-6 bg-black bg-opacity-80 text-white px-2 py-1 rounded text-xs"
-                         style={{ left: `${(seekPreviewTime / maxSeekableDuration) * 100}%`, transform: 'translateX(-50%)' }}>
-                      {formatTime(seekPreviewTime)}
+                         style={{ left: `${(Math.min(seekPreviewTime, maxSeekableDuration) / maxSeekableDuration) * 100}%`, transform: 'translateX(-50%)' }}>
+                      {formatTime(Math.min(seekPreviewTime, maxSeekableDuration))}
                     </div>
                   )}
-                  <div className={isLoadingRewindStream ? 'opacity-50 pointer-events-none' : ''}>
+                  
+                  {/* 読み込み中も操作可能に - 視覚的な状態のみ変更 */}
+                  <div>
                     <SeekBar
-                      playervalue={currentTime}
-                      bufferValue={bufferValue}
+                      playervalue={Math.min(currentTime, maxSeekableDuration)}
+                      bufferValue={Math.min(bufferValue, maxSeekableDuration)}
                       duration={maxSeekableDuration}
                       onChange={handleSeekChange}
                       onMouseMove={handleSeekMouseMove}

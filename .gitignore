@@ -37,3 +37,7 @@ next-env.d.ts
 /src/app/test/
 
 .env
+
+# vscode local settings
+
+/.vscode
