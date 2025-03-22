@@ -104,7 +104,7 @@ function Player(props: VideoProps) {
   // iOS Safari判定用の状態
   const [isIOS, setIsIOS] = useState<boolean>(false);
   // 自動再生のミュート状態追跡用
-  const [attemptedAutoplay, setAttemptedAutoplay] = useState<boolean>(false);
+  const [autoplayRequiresMute, setAutoplayRequiresMute] = useState<boolean>(false);
   // ユーザーインタラクションがあったかどうか
   const userInteractedRef = useRef<boolean>(false);
   
@@ -680,6 +680,41 @@ function Player(props: VideoProps) {
     }
   };
 
+  // 自動再生に最適な方法を試す関数（まずミュートなしで試し、失敗したらミュートで試行）
+  const attemptOptimalAutoplay = async (video: HTMLVideoElement): Promise<void> => {
+    // まずミュートなしで再生を試みる
+    try {
+      // 既存のミュート状態を記憶
+      const wasMuted = video.muted;
+      video.muted = false;
+      
+      await video.play();
+      // 成功したらミュートメッセージは必要ない
+      setAutoplayRequiresMute(false);
+      setIsMuted(false);
+      console.log("Autoplay succeeded without muting");
+      return;
+    } catch (error) {
+      console.log("Autoplay failed without muting, trying with mute:", error);
+      
+      // ミュートで再試行
+      try {
+        video.muted = true;
+        setIsMuted(true);
+        await video.play();
+        // ミュートが必要だったので、メッセージを表示
+        setAutoplayRequiresMute(true);
+        console.log("Autoplay succeeded with muting");
+        return;
+      } catch (secondError) {
+        // ミュートしても再生できなかった - ユーザー操作が必要
+        console.error("Autoplay failed even with muting:", secondError);
+        setIsPlaying(false);
+        throw secondError;
+      }
+    }
+  };
+
   // ライブストリームをロードする関数
   const loadLiveStream = () => {
     const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
@@ -705,24 +740,26 @@ function Player(props: VideoProps) {
       video.src = videoSrc;
       video.load();
       
-      // iOSでは自動再生のためにミュート必須の場合がある
-      if (!userInteractedRef.current) {
-        video.muted = true;
-        setIsMuted(true);
-        setAttemptedAutoplay(true);
-      }
-      
       // メディアが再生可能になった時の処理
       video.oncanplay = () => {
         setIsInitializing(false);
         setCurrentTime(maxSeekableDuration);
         
-        // 再生を試みる - エラーハンドリングを強化
-        safePlayVideo(video).then(() => {
-          setIsLoadingLiveStream(false);
-        }).catch(() => {
-          setIsLoadingLiveStream(false);
-        });
+        // ユーザーインタラクションがない場合は最適な自動再生を試す
+        if (!userInteractedRef.current) {
+          attemptOptimalAutoplay(video).then(() => {
+            setIsLoadingLiveStream(false);
+          }).catch(() => {
+            setIsLoadingLiveStream(false);
+          });
+        } else {
+          // ユーザーインタラクションがある場合は通常再生
+          safePlayVideo(video).then(() => {
+            setIsLoadingLiveStream(false);
+          }).catch(() => {
+            setIsLoadingLiveStream(false);
+          });
+        }
       };
       
       video.onerror = () => {
@@ -758,19 +795,21 @@ function Player(props: VideoProps) {
         setIsInitializing(false);
         setCurrentTime(maxSeekableDuration);
         
-        // ユーザーインタラクションがない場合はミュートで再生を試みる
+        // ユーザーインタラクションがない場合は最適な自動再生を試す
         if (!userInteractedRef.current) {
-          video.muted = true;
-          setIsMuted(true);
-          setAttemptedAutoplay(true);
+          attemptOptimalAutoplay(video).then(() => {
+            setIsLoadingLiveStream(false);
+          }).catch(() => {
+            setIsLoadingLiveStream(false);
+          });
+        } else {
+          // ユーザーインタラクションがある場合は通常再生
+          safePlayVideo(video).then(() => {
+            setIsLoadingLiveStream(false);
+          }).catch(() => {
+            setIsLoadingLiveStream(false);
+          });
         }
-        
-        // 改良された再生処理
-        safePlayVideo(video).then(() => {
-          setIsLoadingLiveStream(false);
-        }).catch(() => {
-          setIsLoadingLiveStream(false);
-        });
       });
       setHls(newHls);
     } else {
@@ -808,15 +847,11 @@ function Player(props: VideoProps) {
     
     const video = myRef.current!;
     
-    // 自動再生のためにミュートされていた場合、ユーザー設定を復元
-    if (attemptedAutoplay && isMuted) {
-      // ユーザーが明示的にミュートを設定していない場合はミュートを解除
-      const storedVolume = window?.localStorage?.getItem("volume");
-      if (storedVolume && parseFloat(storedVolume) > 0) {
-        setIsMuted(false);
-        video.muted = false;
-      }
-      setAttemptedAutoplay(false);
+    // 自動再生のためにミュートされていた場合、ミュートを解除
+    if (autoplayRequiresMute && isMuted) {
+      setIsMuted(false);
+      video.muted = false;
+      setAutoplayRequiresMute(false);
     }
     
     // 安全な再生
@@ -874,13 +909,6 @@ function Player(props: VideoProps) {
       video.src = rewindSrc;
       video.load();
       
-      // ユーザーインタラクションがない場合はミュートで再生
-      if (!userInteractedRef.current) {
-        video.muted = true;
-        setIsMuted(true);
-        setAttemptedAutoplay(true);
-      }
-      
       video.onerror = () => {
         console.error("Video error during rewind stream loading");
         setIsLoadingRewindStream(false);
@@ -897,13 +925,21 @@ function Player(props: VideoProps) {
           pendingSeekTimeRef.current = null;
         }
         
-        // 安全に再生
-        safePlayVideo(video).catch(error => {
-          console.log("iOS自動再生エラー:", error);
-          setIsLoadingRewindStream(false);
-        }).then(() => {
-          setIsLoadingRewindStream(false);
-        });
+        // ユーザーインタラクションがない場合は最適な自動再生を試す
+        if (!userInteractedRef.current) {
+          attemptOptimalAutoplay(video).then(() => {
+            setIsLoadingRewindStream(false);
+          }).catch(() => {
+            setIsLoadingRewindStream(false);
+          });
+        } else {
+          // ユーザーインタラクションがある場合は通常再生
+          safePlayVideo(video).then(() => {
+            setIsLoadingRewindStream(false);
+          }).catch(() => {
+            setIsLoadingRewindStream(false);
+          });
+        }
       };
       
     } else if (Hls.isSupported()) {
@@ -967,21 +1003,18 @@ function Player(props: VideoProps) {
             myRef.current.currentTime = targetTime;
             pendingSeekTimeRef.current = null;
             
-            // ユーザーインタラクションがない場合はミュートで再生
+            // ユーザーインタラクションがない場合は最適な自動再生を試す
             if (!userInteractedRef.current) {
-              myRef.current.muted = true;
-              setIsMuted(true);
-              setAttemptedAutoplay(true);
-            }
-            
-            const playPromise = myRef.current.play();
-            
-            if (playPromise !== undefined) {
-              playPromise.catch(e => {
-                console.error("Error playing video:", e);
+              attemptOptimalAutoplay(myRef.current).then(() => {
                 setIsLoadingRewindStream(false);
-              }).then(() => {
-                // 再生成功
+              }).catch(() => {
+                setIsLoadingRewindStream(false);
+              });
+            } else {
+              // ユーザーインタラクションがある場合は通常再生
+              safePlayVideo(myRef.current).then(() => {
+                setIsLoadingRewindStream(false);
+              }).catch(() => {
                 setIsLoadingRewindStream(false);
               });
             }
@@ -989,21 +1022,18 @@ function Player(props: VideoProps) {
             // シーク待機がない場合は通常再生
             myRef.current!.play().catch(e => console.error("Error playing video:", e));
             
-            // ユーザーインタラクションがない場合はミュートで再生
+            // ユーザーインタラクションがない場合は最適な自動再生を試す
             if (!userInteractedRef.current) {
-              myRef.current!.muted = true;
-              setIsMuted(true);
-              setAttemptedAutoplay(true);
-            }
-            
-            const playPromise = myRef.current!.play();
-            
-            if (playPromise !== undefined) {
-              playPromise.catch(e => {
-                console.error("Error playing video:", e);
+              attemptOptimalAutoplay(myRef.current!).then(() => {
                 setIsLoadingRewindStream(false);
-              }).then(() => {
-                // 再生成功
+              }).catch(() => {
+                setIsLoadingRewindStream(false);
+              });
+            } else {
+              // ユーザーインタラクションがある場合は通常再生
+              safePlayVideo(myRef.current!).then(() => {
+                setIsLoadingRewindStream(false);
+              }).catch(() => {
                 setIsLoadingRewindStream(false);
               });
             }
@@ -1037,15 +1067,18 @@ function Player(props: VideoProps) {
           pendingSeekTimeRef.current = null;
         }
         
-        const playPromise = video.play();
-        
-        if (playPromise !== undefined) {
-          playPromise.catch(error => {
-            console.log("iOS自動再生エラー:", error);
+        // ユーザーインタラクションがない場合は最適な自動再生を試す
+        if (!userInteractedRef.current) {
+          attemptOptimalAutoplay(video).then(() => {
             setIsLoadingRewindStream(false);
-            // NotAllowedErrorは特に処理しない（UIで再生ボタンが表示される）
-          }).then(() => {
-            // 再生成功
+          }).catch(() => {
+            setIsLoadingRewindStream(false);
+          });
+        } else {
+          // ユーザーインタラクションがある場合は通常再生
+          safePlayVideo(video).then(() => {
+            setIsLoadingRewindStream(false);
+          }).catch(() => {
             setIsLoadingRewindStream(false);
           });
         }
@@ -1497,7 +1530,7 @@ function Player(props: VideoProps) {
                   )}
                   
                   {/* 自動再生でミュート状態になった場合の通知（オプション） */}
-                  {attemptedAutoplay && isMuted && (
+                  {autoplayRequiresMute && isMuted && (
                     <div className="absolute bg-black bg-opacity-70 px-2 py-1 rounded text-white text-xs bottom-20 left-4">
                       タップして音声を有効化
                     </div>
