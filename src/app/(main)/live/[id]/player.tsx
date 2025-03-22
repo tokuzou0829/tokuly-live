@@ -43,6 +43,9 @@ interface VideoProps {
   className?: string;
 }
 
+// タイムシフトの最大秒数（デフォルト：2時間 = 7200秒）
+const MAX_TIMESHIFT_DURATION = 3600;
+
 function Player(props: VideoProps) {
   const { id, className } = props;
   const playerRef = useRef<HTMLDivElement | null>(null);
@@ -74,16 +77,16 @@ function Player(props: VideoProps) {
   // 巻き戻し機能用の状態
   const [isRewindMode, setIsRewindMode] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(7200); // 最大2時間（7200秒）
+  const [duration, setDuration] = useState<number>(MAX_TIMESHIFT_DURATION); // 最大秒数を定数から設定
   const [bufferValue, setBufferValue] = useState<number>(0);
   const [hls, setHls] = useState<Hls | null>(null);
   const [isLive, setIsLive] = useState<boolean>(true);
   const [showSeekPreview, setShowSeekPreview] = useState<boolean>(false);
   const [seekPreviewTime, setSeekPreviewTime] = useState<number>(0);
   // 実際のHLS動画の長さを記録する状態
-  const [actualHlsDuration, setActualHlsDuration] = useState<number>(7200);
-  // シークバー表示用の最大時間（実際の長さまたは最大2時間）
-  const [maxSeekableDuration, setMaxSeekableDuration] = useState<number>(7200);
+  const [actualHlsDuration, setActualHlsDuration] = useState<number>(MAX_TIMESHIFT_DURATION);
+  // シークバー表示用の最大時間（実際の長さまたは最大時間）
+  const [maxSeekableDuration, setMaxSeekableDuration] = useState<number>(MAX_TIMESHIFT_DURATION);
   // 巻き戻し開始時のタイムスタンプ
   const rewindStartTimeRef = useRef<number>(0);
   // 巻き戻しモードの開始時刻
@@ -183,10 +186,12 @@ function Player(props: VideoProps) {
       }
       
       if (isRewindMode) {
-        // 巻き戻しモードでは、現在の再生位置をシークバー上の位置に変換
+        // 修正: 巻き戻しモードでは、終端からの相対位置をシークバー位置に変換
         const relativePosition = video.currentTime;
-        // 実際の動画長に対する相対位置をシークバー上の位置に変換
-        const seekBarPosition = (relativePosition / actualHlsDuration) * maxSeekableDuration;
+        // 動画の終端からの相対位置を計算
+        const timeFromEnd = Math.max(0, actualHlsDuration - relativePosition);
+        // シークバー上での位置は (maxSeekableDuration - timeFromEnd) になる
+        const seekBarPosition = Math.max(0, maxSeekableDuration - timeFromEnd);
         
         // シークバー位置が限界を超えないように制限
         const clampedPosition = Math.min(seekBarPosition, maxSeekableDuration);
@@ -195,8 +200,9 @@ function Player(props: VideoProps) {
         // バッファー状態の更新
         if (video.buffered.length > 0) {
           const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-          // 実際のバッファ位置をシークバー上の位置に変換
-          const seekBarBufferPosition = (bufferedEnd / actualHlsDuration) * maxSeekableDuration;
+          // 実際のバッファ位置も同様に変換
+          const timeFromEndBuffer = Math.max(0, actualHlsDuration - bufferedEnd);
+          const seekBarBufferPosition = Math.max(0, maxSeekableDuration - timeFromEndBuffer);
           // バッファー位置も限界を超えないように制限
           setBufferValue(Math.min(seekBarBufferPosition, maxSeekableDuration));
         }
@@ -452,8 +458,8 @@ function Player(props: VideoProps) {
   const updateSeekbarRange = (actualDuration: number) => {
     // 実際の再生可能時間を計算
     // 配信が始まって間もない場合はactualDurationが短い
-    // 配信時間が2時間を超える場合はHLSが2時間分のセグメントのみ保持
-    const seekableDuration = Math.min(Math.max(actualDuration, 0), 7200);
+    // 配信時間が最大時間を超える場合はHLSが最大時間分のセグメントのみ保持
+    const seekableDuration = Math.min(Math.max(actualDuration, 0), MAX_TIMESHIFT_DURATION);
     setMaxSeekableDuration(seekableDuration);
     setDuration(seekableDuration);
     
@@ -489,8 +495,8 @@ function Player(props: VideoProps) {
       
       // タイムシフトの情報に基づいてシークバー範囲を設定
       if (rewindDuration) {
-        // 2時間（7200秒）を上限として設定
-        const limitedDuration = Math.min(rewindDuration, 7200);
+        // 最大秒数を上限として設定
+        const limitedDuration = Math.min(rewindDuration, MAX_TIMESHIFT_DURATION);
         setMaxSeekableDuration(limitedDuration);
         setDuration(limitedDuration);
         // ライブでは最新位置を設定
@@ -498,10 +504,10 @@ function Player(props: VideoProps) {
         console.log(`Initially set seekbar range to ${limitedDuration}s based on playlist`);
       } else {
         // タイムシフト情報が取得できない場合はデフォルト値
-        console.log("Using default seekbar range of 7200s");
-        setMaxSeekableDuration(7200);
-        setDuration(7200);
-        setCurrentTime(7200);
+        console.log(`Using default seekbar range of ${MAX_TIMESHIFT_DURATION}s`);
+        setMaxSeekableDuration(MAX_TIMESHIFT_DURATION);
+        setDuration(MAX_TIMESHIFT_DURATION);
+        setCurrentTime(MAX_TIMESHIFT_DURATION);
       }
       
       // ライブストリームのチェック
@@ -545,7 +551,7 @@ function Player(props: VideoProps) {
         const rewindDuration = await getRewindPlaylistDuration();
         if (rewindDuration) {
           // 取得したタイムシフトの長さに基づいてシークバー範囲を更新
-          const limitedDuration = Math.min(rewindDuration, 7200);
+          const limitedDuration = Math.min(rewindDuration, MAX_TIMESHIFT_DURATION);
           setActualHlsDuration(rewindDuration);
           updateSeekbarRange(limitedDuration);
         }
@@ -598,6 +604,9 @@ function Player(props: VideoProps) {
     setStreamError(null);
     setPlaybackStarted(false);
     
+    // シークバーを最大値に設定（ライブモードでは最新位置）
+    setCurrentTime(maxSeekableDuration);
+    
     if (hls) {
       hls.destroy();
     }
@@ -628,6 +637,10 @@ function Player(props: VideoProps) {
       newHls.on(Hls.Events.MANIFEST_PARSED, () => {
         // 初期化中フラグを解除 - ライブ配信の準備ができたら再生を優先
         setIsInitializing(false);
+        
+        // HLSがロードされた後も明示的にシークバーの位置を最大に設定
+        setCurrentTime(maxSeekableDuration);
+        
         myRef.current!.currentTime = myRef.current!.duration;
         myRef.current!.play().catch(e => {
           console.error("Error playing video:", e);
@@ -644,6 +657,10 @@ function Player(props: VideoProps) {
       
       video.oncanplay = () => {
         setIsInitializing(false);
+        
+        // ネイティブ再生の場合も明示的にシークバーの位置を最大に設定
+        setCurrentTime(maxSeekableDuration);
+        
         myRef.current!.play().catch(e => {
           console.error("Error playing video:", e);
           setStreamError(`再生開始に失敗しました: ${e.message}`);
@@ -749,9 +766,12 @@ function Player(props: VideoProps) {
           // 最初のセグメントが読み込まれたら再生開始
           // ローディング状態はtimeupdate時に解除
           if (pendingSeekTimeRef.current !== null && myRef.current) {
-            const seekRatio = pendingSeekTimeRef.current / maxSeekableDuration;
-            const targetTime = seekRatio * actualDuration;
-            console.log(`Applying pending seek to ${targetTime}s`);
+            // 修正: シークバー位置を最新位置からの相対時間として扱う
+            const timeFromEnd = maxSeekableDuration - pendingSeekTimeRef.current;
+            // 実際の動画では終端からの相対的な位置にシーク
+            const targetTime = Math.max(0, actualDuration - timeFromEnd);
+            
+            console.log(`Applying pending seek to ${targetTime}s (${timeFromEnd}s from end)`);
             
             // 目標時間を記録（シーク完了判定用）
             lastSeekTimeRef.current = targetTime;
@@ -794,8 +814,11 @@ function Player(props: VideoProps) {
         // タイムシフトの準備ができたら再生を開始
         // 注: ローディング状態はtimeupdateイベントで解除
         if (pendingSeekTimeRef.current !== null) {
-          const seekRatio = pendingSeekTimeRef.current / maxSeekableDuration;
-          const targetTime = seekRatio * video.duration;
+          // 修正: シークバー位置を最新位置からの相対時間として扱う
+          const timeFromEnd = maxSeekableDuration - pendingSeekTimeRef.current;
+          // 実際の動画では終端からの相対的な位置にシーク
+          const targetTime = Math.max(0, video.duration - timeFromEnd);
+          
           video.currentTime = targetTime;
           pendingSeekTimeRef.current = null;
         }
@@ -834,8 +857,8 @@ function Player(props: VideoProps) {
           // 経過時間が加わることで、巻き戻し中でも時間が積み重なっていく
           const elapsedSinceStart = (Date.now() - rewindStartedAtRef.current) / 1000;
           
-          // 配信開始からの経過時間を計算（最大2時間）
-          const potentialDuration = Math.min(currentMediaDuration + elapsedSinceStart, 7200);
+          // 配信開始からの経過時間を計算（最大秒数を使用）
+          const potentialDuration = Math.min(currentMediaDuration + elapsedSinceStart, MAX_TIMESHIFT_DURATION);
           
           // 実際のHLS長さが更新されていた場合
           if (Math.abs(potentialDuration - maxSeekableDuration) > 5) { // 5秒以上の差がある場合のみ更新
@@ -854,6 +877,9 @@ function Player(props: VideoProps) {
     setShowLiveButton(false);
     setHasInteractedWithSeek(false);
     
+    // シークバーを最大値（最新位置）に設定
+    setCurrentTime(maxSeekableDuration);
+    
     // 定期更新を停止
     if (updateIntervalRef.current) {
       clearInterval(updateIntervalRef.current);
@@ -862,7 +888,7 @@ function Player(props: VideoProps) {
     
     loadLiveStream();
   };
-  
+
   // シークバーの処理
   const handleSeekChange = (newValue: number) => {
     if (myRef.current) {
@@ -893,10 +919,10 @@ function Player(props: VideoProps) {
         // 巻き戻しモード中のシーク操作
         setIsSeeking(true);
         
-        // シークバー上の比率を計算（clampedValueを使用）
-        const seekRatio = clampedValue / maxSeekableDuration;
-        // 実際のHLSプレイヤーの時間位置に変換
-        const targetTime = seekRatio * actualHlsDuration;
+        // 修正: シークバー位置を最新位置からの相対時間として扱う
+        const timeFromEnd = maxSeekableDuration - clampedValue;
+        // 実際の動画では終端からの相対的な位置にシーク
+        const targetTime = Math.max(0, actualHlsDuration - timeFromEnd);
         
         // 目標時間を記録
         lastSeekTimeRef.current = targetTime;
@@ -907,7 +933,7 @@ function Player(props: VideoProps) {
         // シーク操作を行うと「ライブに戻る」ボタンを表示
         setShowLiveButton(true);
         
-        console.log(`Seeking to: ${targetTime}s (ratio: ${seekRatio})`);
+        console.log(`Seeking to: ${targetTime}s (${timeFromEnd}s from end)`);
         
         // 既存のタイムアウトをクリア
         if (seekTimeoutRef.current) {
@@ -970,9 +996,9 @@ function Player(props: VideoProps) {
           console.log("Live stream is available, starting playback immediately");
           
           // デフォルトのシークバー範囲を設定（タイムシフト情報が取得できるまでの仮の値）
-          setMaxSeekableDuration(7200);
-          setDuration(7200);
-          setCurrentTime(7200); // ライブでは常に最新位置
+          setMaxSeekableDuration(MAX_TIMESHIFT_DURATION);
+          setDuration(MAX_TIMESHIFT_DURATION);
+          setCurrentTime(MAX_TIMESHIFT_DURATION); // ライブでは常に最新位置
           
           // ライブ配信をすぐに開始
           loadLiveStream();
@@ -985,8 +1011,8 @@ function Player(props: VideoProps) {
           // タイムシフト情報は裏で取得
           getRewindPlaylistDuration().then(rewindDuration => {
             if (rewindDuration) {
-              // 2時間（7200秒）を上限として設定
-              const limitedDuration = Math.min(rewindDuration, 7200);
+              // 最大秒数を上限として設定
+              const limitedDuration = Math.min(rewindDuration, MAX_TIMESHIFT_DURATION);
               setMaxSeekableDuration(limitedDuration);
               setDuration(limitedDuration);
               setCurrentTime(limitedDuration); // ライブでは常に最新位置
