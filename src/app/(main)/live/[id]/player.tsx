@@ -403,15 +403,15 @@ function Player(props: VideoProps) {
       
       const playlist = await response.text();
       
-      // HLSプレイリストを分析して長さを取得
-      // このロジックはプレイリスト形式によって調整が必要かもしれない
-      if (playlist && playlist.includes('#EXT-X-PLAYLIST-TYPE:VOD')) {
+      // プレイリストがVODタイプ（タイムシフト）かつセグメント情報を含むか確認
+      if (playlist) {
         // プレイリスト内の全セグメントの長さを合計
         const segmentDurations = playlist.match(/#EXTINF:([0-9.]+)/g);
         if (segmentDurations) {
           let totalDuration = 0;
           segmentDurations.forEach(segment => {
-            const duration = parseFloat(segment.replace('#EXTINF:', ''));
+            // #EXTINF:1.000, の形式から数値部分を抽出
+            const duration = parseFloat(segment.replace('#EXTINF:', '').split(',')[0]);
             if (!isNaN(duration)) {
               totalDuration += duration;
             }
@@ -419,6 +419,25 @@ function Player(props: VideoProps) {
           
           console.log(`Rewind playlist total duration: ${totalDuration}s`);
           return totalDuration;
+        }
+        
+        // target duration タグがあればそれを基に推測（より正確な方法）
+        const targetDurationMatch = playlist.match(/#EXT-X-TARGETDURATION:([0-9.]+)/);
+        const mediaSequenceMatch = playlist.match(/#EXT-X-MEDIA-SEQUENCE:([0-9]+)/);
+        
+        if (targetDurationMatch && mediaSequenceMatch) {
+          const targetDuration = parseFloat(targetDurationMatch[1]);
+          const mediaSequence = parseInt(mediaSequenceMatch[1], 10);
+          
+          // セグメント数をカウント
+          const segmentCount = (playlist.match(/#EXTINF/g) || []).length;
+          
+          // おおよその長さを計算（セグメント数 × ターゲット時間）
+          if (segmentCount > 0 && targetDuration > 0) {
+            const estimatedDuration = segmentCount * targetDuration;
+            console.log(`Estimated rewind duration based on segments: ${estimatedDuration}s`);
+            return estimatedDuration;
+          }
         }
       }
       
@@ -429,6 +448,148 @@ function Player(props: VideoProps) {
     }
   };
   
+  // シークバーの範囲を更新する関数
+  const updateSeekbarRange = (actualDuration: number) => {
+    // 実際の再生可能時間を計算
+    // 配信が始まって間もない場合はactualDurationが短い
+    // 配信時間が2時間を超える場合はHLSが2時間分のセグメントのみ保持
+    const seekableDuration = Math.min(Math.max(actualDuration, 0), 7200);
+    setMaxSeekableDuration(seekableDuration);
+    setDuration(seekableDuration);
+    
+    console.log(`Updating seekbar range: ${seekableDuration}s (actual: ${actualDuration}s)`);
+    
+    // 現在位置が新しい最大値を超えていないかチェック
+    if (currentTime > seekableDuration) {
+      setCurrentTime(seekableDuration);
+    }
+    
+    // バッファー位置も新しい最大値を超えていないかチェック
+    if (bufferValue > seekableDuration) {
+      setBufferValue(seekableDuration);
+    }
+  };
+
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    
+    // 初回読み込み時の処理
+    const initialize = async () => {
+      setIsInitializing(true);
+      
+      // タイムシフトプレイリストの長さを先に取得
+      let rewindDuration: number | null = null;
+      
+      try {
+        rewindDuration = await getRewindPlaylistDuration();
+        console.log(`Rewind duration from playlist: ${rewindDuration}`);
+      } catch (error) {
+        console.error("Error getting rewind playlist duration:", error);
+      }
+      
+      // タイムシフトの情報に基づいてシークバー範囲を設定
+      if (rewindDuration) {
+        // 2時間（7200秒）を上限として設定
+        const limitedDuration = Math.min(rewindDuration, 7200);
+        setMaxSeekableDuration(limitedDuration);
+        setDuration(limitedDuration);
+        // ライブでは最新位置を設定
+        setCurrentTime(limitedDuration);
+        console.log(`Initially set seekbar range to ${limitedDuration}s based on playlist`);
+      } else {
+        // タイムシフト情報が取得できない場合はデフォルト値
+        console.log("Using default seekbar range of 7200s");
+        setMaxSeekableDuration(7200);
+        setDuration(7200);
+        setCurrentTime(7200);
+      }
+      
+      // ライブストリームのチェック
+      const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
+      
+      try {
+        const liveResponse = await fetch(videoSrc, { method: "HEAD" });
+        
+        if (liveResponse.status === 200) {
+          console.log("Live stream is available, starting playback immediately");
+          
+          // ライブ配信をすぐに開始
+          loadLiveStream();
+          
+          // イベントリスナーの追加
+          if (myRef.current) {
+            myRef.current.addEventListener("pause", handleVideoPause);
+          }
+          
+          // 定期的なチェックを停止
+          clearInterval(intervalId);
+        } else {
+          // ライブが見つからない場合の処理
+          setStreamError(`ライブ配信が見つかりません (ステータス: ${liveResponse.status})`);
+          setIsLoadingLiveStream(false);
+          setIsInitializing(false);
+        }
+      } catch (error) {
+        console.error("Fetch error:", error);
+        setStreamError(`ライブ配信の確認に失敗しました: ${error instanceof Error ? error.message : String(error)}`);
+        setIsLoadingLiveStream(false);
+        setIsInitializing(false);
+      }
+    };
+    
+    initialize();
+    
+    // 定期的にタイムシフト情報を更新する
+    const updateRewindInfo = async () => {
+      try {
+        const rewindDuration = await getRewindPlaylistDuration();
+        if (rewindDuration) {
+          // 取得したタイムシフトの長さに基づいてシークバー範囲を更新
+          const limitedDuration = Math.min(rewindDuration, 7200);
+          setActualHlsDuration(rewindDuration);
+          updateSeekbarRange(limitedDuration);
+        }
+      } catch (error) {
+        console.error("Error updating rewind info:", error);
+      }
+    };
+    
+    // 最初の更新
+    updateRewindInfo();
+    
+    // 30秒ごとにタイムシフト情報を更新
+    const rewindUpdateInterval = setInterval(updateRewindInfo, 30000);
+    
+    // ライブストリームが見つからない場合は定期的に再試行
+    intervalId = setInterval(() => {
+      if (isInitializing) {
+        const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
+        
+        fetch(videoSrc, { method: "HEAD" })
+          .then((response) => {
+            if (response.status === 200) {
+              console.log("Live stream is now available");
+              clearInterval(intervalId);
+              loadLiveStream();
+              myRef.current!.addEventListener("pause", handleVideoPause);
+            }
+          })
+          .catch(error => console.error("Retry fetch error:", error));
+      }
+    }, 4000);
+    
+    return () => {
+      clearInterval(intervalId);
+      clearInterval(rewindUpdateInterval);
+      if (updateIntervalRef.current) {
+        clearInterval(updateIntervalRef.current);
+      }
+      if (hls) {
+        hls.destroy();
+      }
+    };
+  }, [id]);
+
   // ライブストリームをロードする関数
   const loadLiveStream = () => {
     const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
@@ -531,6 +692,14 @@ function Player(props: VideoProps) {
     
     // 巻き戻しモード開始時に定期的な更新を開始
     startPeriodicUpdate();
+    
+    // タイムシフトプレイリストの長さを取得して更新
+    getRewindPlaylistDuration().then(rewindDuration => {
+      if (rewindDuration) {
+        setActualHlsDuration(rewindDuration);
+        console.log(`Updated actual HLS duration to ${rewindDuration}s from playlist`);
+      }
+    });
     
     if (Hls.isSupported()) {
       const newHls = new Hls({
@@ -644,28 +813,6 @@ function Player(props: VideoProps) {
     setIsLive(false);
     setIsRewindMode(true);
     setHasInteractedWithSeek(true);
-  };
-  
-  // シークバーの範囲を更新する関数
-  const updateSeekbarRange = (actualDuration: number) => {
-    // 実際の再生可能時間を計算
-    // 配信が始まって間もない場合はactualDurationが短い
-    // 配信時間が2時間を超える場合はHLSが2時間分のセグメントのみ保持
-    const seekableDuration = Math.min(Math.max(actualDuration, 0), 7200);
-    setMaxSeekableDuration(seekableDuration);
-    setDuration(seekableDuration);
-    
-    console.log(`Updating seekbar range: ${seekableDuration}s (actual: ${actualDuration}s)`);
-    
-    // 現在位置が新しい最大値を超えていないかチェック
-    if (currentTime > seekableDuration) {
-      setCurrentTime(seekableDuration);
-    }
-    
-    // バッファー位置も新しい最大値を超えていないかチェック
-    if (bufferValue > seekableDuration) {
-      setBufferValue(seekableDuration);
-    }
   };
   
   // 定期的に更新を行う関数を開始
