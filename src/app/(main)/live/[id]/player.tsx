@@ -1104,7 +1104,7 @@ function Player(props: VideoProps) {
               onClick={() => { 
                 setStreamError(null);
                 setIsInitializing(true);
-                const videoSrc = `https://live.tokuly.com/hls/${id}/index.m3u8`;
+                const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
                 fetch(videoSrc, { method: "HEAD" }).then((response) => {
                   if (response.status === 200) {
                     loadLiveStream();
