@@ -43,7 +43,7 @@ export default async function Home() {
         <>
           <TopLive lives={lives.lives}></TopLive>
           <p className=" text-[20px] m-[10px] font-bold">おすすめのコンテンツ</p>
-          <div className="flex flex-wrap sm-center">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 justify-center px-4">
             {lives.lives.map((live, index) => (
               <Live key={index} live={live}></Live>
             ))}

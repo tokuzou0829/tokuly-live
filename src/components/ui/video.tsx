@@ -7,14 +7,14 @@ export default function Video({live}:{live:LiveList}) {
   return (
     <Link
       href={"/video/" + live.stream_name}
-      className="m-3 block w-[250px] shrink-0"
+      className="block w-full max-w-[250px] mx-auto"
     >
       <div
         className="relative"
       >
         <img
           src={live.thumbnail_url}
-          className="w-[250px] rounded-lg aspect-video object-cover"
+          className="w-full rounded-lg aspect-video object-cover"
         />
         <div className="absolute bg-white w-[100px] h-[25px] top-[5px] left-[5px] rounded-md">
           <p className="text-black text-center font-semibold">アーカイブ</p>
@@ -25,8 +25,8 @@ export default function Video({live}:{live:LiveList}) {
           src={live.ch_icon}
           className="w-[40px] h-[40px] rounded-full aspect-square mr-1 object-cover"
         />
-        <div>
-          <p className="font-bold mb-0 truncate w-[210px]">{live.title}</p>
+        <div className="flex-1 min-w-0">
+          <p className="font-bold mb-0 truncate">{live.title}</p>
           <p className="mt-0 text-sm">{live.ch_name}</p>
         </div>
       </div>
