@@ -23,7 +23,7 @@ export default function LayoutContent({
   children: React.ReactNode;
   channels: Channels;
 }) {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? '';
   const firstLocation = pathname.startsWith('/video/') || pathname.startsWith('/live/');
   const [isCollapsed, setIsCollapsed] = useState(firstLocation ? true : false);
   const [isWatch, setIsWatch] = useState(false);
