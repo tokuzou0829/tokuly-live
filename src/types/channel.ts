@@ -22,6 +22,8 @@ export type Channel = {
   game: string;
   streams: LiveList[];
   waiting: LiveList[];
+  archives: LiveList[];
+  videos: LiveList[];
   thumbnail_url: string;
 };
 

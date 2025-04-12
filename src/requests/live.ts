@@ -26,6 +26,12 @@ export async function getArchivesList(): Promise<Archives> {
   });
 }
 
+export async function getRecommendVideo(): Promise<Archives> {
+  return await fetch.post<null, Archives>(`/live/video-recommend/get`, null, {
+    headers: {},
+  });
+}
+
 export async function getLive(param: OnlineCheckParams): Promise<Live> {
   const formData = new FormData();
   formData.append("name", param.id);

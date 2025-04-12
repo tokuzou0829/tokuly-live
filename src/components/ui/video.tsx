@@ -7,7 +7,7 @@ export default function Video({live}:{live:LiveList}) {
   return (
     <Link
       href={"/video/" + live.stream_name}
-      className="block w-full max-w-[250px] mx-auto"
+      className="block w-full max-w-[250px] shrink-0 mr-2"
     >
       <div
         className="relative"
@@ -16,9 +16,11 @@ export default function Video({live}:{live:LiveList}) {
           src={live.thumbnail_url}
           className="w-full rounded-lg aspect-video object-cover"
         />
-        <div className="absolute bg-white w-[100px] h-[25px] top-[5px] left-[5px] rounded-md">
-          <p className="text-black text-center font-semibold">アーカイブ</p>
-        </div>
+        {live.type === "archive" && (
+          <div className="absolute bg-white w-[100px] h-[25px] top-[5px] left-[5px] rounded-md">
+            <p className="text-black text-center font-semibold">アーカイブ</p>
+          </div>
+        )}
       </div>
       <div className="flex m-1 overflow-hidden">
         <img

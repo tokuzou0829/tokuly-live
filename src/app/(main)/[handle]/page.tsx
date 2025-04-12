@@ -2,6 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { getChannel } from "@/requests/channel";
 import Live from "@/components/ui/live";
+import Video from "@/components/ui/video";
 export const revalidate = 0;
 
 export async function generateMetadata({
@@ -64,7 +65,7 @@ export default async function LivePlayer({
             </p>
             <div className="overflow-scroll	w-[100%] flex py-3">
               {channel.streams.map((stream, index) => (
-              <Live key={index} live={stream} />
+                <Live key={index} live={stream} />
               ))}
             </div>
           </div>
@@ -98,6 +99,27 @@ export default async function LivePlayer({
                     </div>
                   </div>
                 </Link>
+              ))}
+            </div>
+          </div>
+        )}
+        {channel.archives && channel.archives.length !== 0 && (
+          <div className="mx-[20px] mt-[20px]">
+            <p className=" text-xl font-semibold">アーカイブ配信</p>
+            <div className="overflow-scroll w-[100%] flex py-3">
+              {channel.archives.map((archive, index) => (
+                <Video key={index} live={archive} />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {channel.videos && channel.videos.length !== 0 && (
+          <div className="mx-[20px] mt-[20px]">
+            <p className=" text-xl font-semibold">アップロードした動画</p>
+            <div className="overflow-scroll w-[100%] flex py-3">
+              {channel.videos.map((videos, index) => (
+                <Video key={index} live={videos} />
               ))}
             </div>
           </div>

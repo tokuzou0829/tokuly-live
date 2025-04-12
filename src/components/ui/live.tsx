@@ -27,7 +27,7 @@ export default function Live({live}:{live:LiveList}) {
   return (
     <Link
       href={"/live/" + live.stream_name}
-      className="block w-full max-w-[250px] mx-auto"
+      className="block w-full max-w-[250px] shrink-0 mr-2"
     >
       <div
         className="relative"

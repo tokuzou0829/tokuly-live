@@ -3,13 +3,13 @@ import TopLive from "./toplive";
 import Link from "next/link";
 import Live from "@/components/ui/live";
 import Video from "@/components/ui/video";
-import { getOnlineLiveList,getArchivesList } from "@/requests/live";
+import { getOnlineLiveList, getRecommendVideo } from "@/requests/live";
 
 export const revalidate = 0;
 
 export default async function Home() {
   const lives = await getOnlineLiveList();
-  const archives = await getArchivesList();
+  const archives = await getRecommendVideo();
 
   return (
     <div>

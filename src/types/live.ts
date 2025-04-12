@@ -37,6 +37,7 @@ export type MoreVideoList = {
 export type LiveList = {
   id: number;
   title: string;
+  type: "live" | "archive" | "live_waiting" | "video";
   stream_name: string;
   thumbnail_url: string;
   ch_name: string;
