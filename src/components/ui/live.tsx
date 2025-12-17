@@ -3,14 +3,14 @@ import Link from "next/link";
 import { useState } from "react";
 import type { Live, LiveList } from "@/types/live";
 
-export default function Live({live}:{live:LiveList}) {
+export default function Live({ live }: { live: LiveList }) {
   const [isHovered, setIsHovered] = useState(false);
   const [isHoverImageLoaded, setIsHoverImageLoaded] = useState(false);
-  const [hoverImageUrl, setHoverImageUrl] = useState('');
+  const [hoverImageUrl, setHoverImageUrl] = useState("");
 
   const handleMouseEnter = () => {
     if (!isHoverImageLoaded && !hoverImageUrl) {
-      const previewUrl = 'https://live-data.tokuly.com/thumbnail-preview?id=' + live.stream_name;
+      const previewUrl = "https://live-data.tokuly.com/thumbnail-preview?id=" + live.stream_name;
       setHoverImageUrl(previewUrl);
     }
     setIsHovered(true);
@@ -25,15 +25,8 @@ export default function Live({live}:{live:LiveList}) {
   };
 
   return (
-    <Link
-      href={"/live/" + live.stream_name}
-      className="block w-full max-w-[250px] shrink-0 mr-2"
-    >
-      <div
-        className="relative"
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-      >
+    <Link href={"/live/" + live.stream_name} className="block w-full max-w-[250px] shrink-0 mr-2">
+      <div className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
         <img
           src={isHovered && isHoverImageLoaded ? hoverImageUrl : live.thumbnail_url}
           className="w-full rounded-lg aspect-video object-cover"
@@ -42,11 +35,7 @@ export default function Live({live}:{live:LiveList}) {
           <p className="text-white text-center font-semibold">ライブ配信</p>
         </div>
         {hoverImageUrl && (
-          <img
-            src={hoverImageUrl}
-            className="hidden"
-            onLoad={handleHoverImageLoad}
-          />
+          <img src={hoverImageUrl} className="hidden" onLoad={handleHoverImageLoad} />
         )}
       </div>
       <div className="flex m-1 overflow-hidden">

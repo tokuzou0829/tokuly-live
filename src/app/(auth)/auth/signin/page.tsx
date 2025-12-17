@@ -30,7 +30,7 @@ function UserAuthForm({ className, ...props }: UserAuthFormProps) {
     setIsLoading(true);
 
     const res = await signIn("credentials", {
-      redirect:false,
+      redirect: false,
       email: formValues.email,
       password: formValues.password,
       callbackUrl,
@@ -40,7 +40,7 @@ function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
     //console.log(res);
     if (!res?.error) {
-      router.push(callbackUrl) 
+      router.push(callbackUrl);
     } else {
       console.log("メールアドレスか、パスワードが間違っています");
     }
@@ -48,11 +48,17 @@ function UserAuthForm({ className, ...props }: UserAuthFormProps) {
 
   return (
     <div className={cn("grid gap-6", className)} {...props}>
-      <form onSubmit={onSubmit} >
+      <form onSubmit={onSubmit}>
         <div className="grid gap-5">
           <div className="grid gap-2">
             <Label htmlFor="email">メールアドレス</Label>
-            <Input id="email" type="email" name="email" placeholder="tokulylove@example.com" onInput={handleChange}/>
+            <Input
+              id="email"
+              type="email"
+              name="email"
+              placeholder="tokulylove@example.com"
+              onInput={handleChange}
+            />
           </div>
           <div className="grid gap-2">
             <Label htmlFor="password">パスワード</Label>
@@ -77,14 +83,9 @@ export default function LoginForm() {
       <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
         <div className="flex flex-col space-y-2 text-center">
           <div className="w-full mx-auto flex justify-center">
-            <img
-              src="/tokuly.png"
-              className="h-[40px] w-[40px] rounded mx-auto"
-            />
+            <img src="/tokuly.png" className="h-[40px] w-[40px] rounded mx-auto" />
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            おかえりなさい！
-          </h1>
+          <h1 className="text-2xl font-semibold tracking-tight">おかえりなさい！</h1>
           <p className="text-sm text-muted-foreground">
             いつものTokulyアカウントでログインできます。
           </p>
@@ -92,10 +93,7 @@ export default function LoginForm() {
         <UserAuthForm />
         <p className="px-8 text-center text-sm text-muted-foreground">
           Tokulyアカウントをお持ちでありませんか？
-          <Link
-            href="/terms"
-            className="underline underline-offset-4 hover:text-primary"
-          >
+          <Link href="/terms" className="underline underline-offset-4 hover:text-primary">
             こちら
           </Link>
           から作成できます。

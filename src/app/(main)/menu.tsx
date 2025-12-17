@@ -43,30 +43,20 @@ export default function AccountDropdownMenu(props: Props) {
           <DropdownMenuContent className="w-56" align="end" forceMount>
             <DropdownMenuLabel className="font-normal">
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium leading-none">
-                  {session.user.name}
-                </p>
-                <p className="text-muted-foreground text-xs leading-none">
-                  {session.user.email}
-                </p>
+                <p className="text-sm font-medium leading-none">{session.user.name}</p>
+                <p className="text-muted-foreground text-xs leading-none">{session.user.email}</p>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <Link href="https://tokuly.com/studio" target="_blank">
-                <DropdownMenuItem className="cursor-pointer">
-                  配信する
-                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">配信する</DropdownMenuItem>
               </Link>
               <Link href="https://tokuly.com/user/profile" target="_blank">
-                <DropdownMenuItem className="cursor-pointer">
-                  アカウント管理
-                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">アカウント管理</DropdownMenuItem>
               </Link>
               <Link href="https://tokuly.com/" target="_blank">
-                <DropdownMenuItem className="cursor-pointer">
-                  tokulyに移動
-                </DropdownMenuItem>
+                <DropdownMenuItem className="cursor-pointer">tokulyに移動</DropdownMenuItem>
               </Link>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
@@ -79,9 +69,7 @@ export default function AccountDropdownMenu(props: Props) {
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
-        <Button onClick={() => signIn("tokuly", { callbackUrl: pathname })}>
-          ログイン
-        </Button>
+        <Button onClick={() => signIn("tokuly", { callbackUrl: pathname })}>ログイン</Button>
       )}
     </>
   );

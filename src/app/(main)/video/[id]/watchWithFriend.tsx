@@ -1,9 +1,9 @@
 "use client";
-import React, { useEffect, useState, useRef } from 'react';
-import io, { Socket } from 'socket.io-client';
+import React, { useEffect, useState, useRef } from "react";
+import io, { Socket } from "socket.io-client";
 import NextAuth, { type Session } from "next-auth";
-import { Crown, Plane, Send } from 'lucide-react';
-import { AvatarGroup } from '@/components/ui/avatarGroup';
+import { Crown, Plane, Send } from "lucide-react";
+import { AvatarGroup } from "@/components/ui/avatarGroup";
 import { useAtom } from "jotai";
 import { WatchWinFriendRooomId, IsPartyHost, VideoPlayerRef } from "@/atoms/watchWithFriendAtom";
 
@@ -14,7 +14,7 @@ interface ChatProps {
 
 // Define the type for a chat message
 type ChatMessage = {
-  id:number | null;
+  id: number | null;
   image: string;
   name: string;
   text: string;
@@ -23,46 +23,50 @@ type ChatMessage = {
 type User = {
   id: string;
   image: string;
-  name: string
+  name: string;
   role: "user" | "admin";
-}
-  
+};
+
 export default function Chat(props: ChatProps) {
   const { id, session } = props;
   const [socket, setSocket] = useState<Socket | null>(null); // Type the socket
-  const [msg, setMsg] = useState('');
-  const [is_connection , setIs_connection] = useState<boolean>(false);
+  const [msg, setMsg] = useState("");
+  const [is_connection, setIs_connection] = useState<boolean>(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]); // Use the ChatMessage type
   const [urlName, setUrlName] = useState<string | null | undefined>(null);
-  const [WFRoomID, ] = useAtom<string | null>(WatchWinFriendRooomId);
+  const [WFRoomID] = useAtom<string | null>(WatchWinFriendRooomId);
   const [Users, setUsers] = useState<User[]>([]);
   const [isHost, setIsHost] = useAtom<boolean>(IsPartyHost);
-  const [me , setMe] = useState<User | null>(null);
+  const [me, setMe] = useState<User | null>(null);
   const VideoTimeInterval = useRef<NodeJS.Timeout>();
-  const [VideoRef, ] = useAtom<HTMLVideoElement | null>(VideoPlayerRef);
+  const [VideoRef] = useAtom<HTMLVideoElement | null>(VideoPlayerRef);
 
   useEffect(() => {
-    let me_data:User;
-    console.log("WFRoomID:",WFRoomID);
-    const socket = io('https://live-data.tokuly.com', {
-      path: '/wwf/socket.io/',
+    let me_data: User;
+    console.log("WFRoomID:", WFRoomID);
+    const socket = io("https://live-data.tokuly.com", {
+      path: "/wwf/socket.io/",
     });
     setSocket(socket);
-    async function connectChat(){
+    async function connectChat() {
       const roomId = WFRoomID;
       console.log(roomId);
       if (session?.user) {
         socket.on("connect", () => {
           setUrlName(session?.user?.name);
-          socket.emit("join", { roomId: roomId, name: session?.user?.name, image: session?.user?.image });
+          socket.emit("join", {
+            roomId: roomId,
+            name: session?.user?.name,
+            image: session?.user?.image,
+          });
           setIs_connection(true);
         });
       } else {
-          setUrlName("guest");
-          socket.on("connect", () => {
-            socket.emit("join", { roomId: roomId, name: "guest" , image: "guest"});
-            setIs_connection(true);
-          });
+        setUrlName("guest");
+        socket.on("connect", () => {
+          socket.emit("join", { roomId: roomId, name: "guest", image: "guest" });
+          setIs_connection(true);
+        });
       }
       socket.on("message", (msg) => {
         setMessages((prevMessages) => [msg, ...prevMessages]);
@@ -72,7 +76,7 @@ export default function Chat(props: ChatProps) {
         me_data = user;
         if (user.role === "admin") {
           setIsHost(true);
-        }else{
+        } else {
           setIsHost(false);
         }
       });
@@ -82,7 +86,7 @@ export default function Chat(props: ChatProps) {
       socket.on("join", (user) => {
         setUsers((prevUsers) => {
           if (prevUsers.some((u) => u.id === user.id)) {
-        return prevUsers;
+            return prevUsers;
           }
           return [user, ...prevUsers];
         });
@@ -110,17 +114,17 @@ export default function Chat(props: ChatProps) {
 
   useEffect(() => {
     if (VideoRef && isHost) {
-      VideoRef.addEventListener('play', () => {
-        socket?.emit('play');
+      VideoRef.addEventListener("play", () => {
+        socket?.emit("play");
       });
-      VideoRef.addEventListener('pause', () => {
-        socket?.emit('pause');
+      VideoRef.addEventListener("pause", () => {
+        socket?.emit("pause");
       });
-      VideoRef.addEventListener('seeked', () => {
-        socket?.emit('video_time', {time:VideoRef.currentTime,playing: !VideoRef.paused});
+      VideoRef.addEventListener("seeked", () => {
+        socket?.emit("video_time", { time: VideoRef.currentTime, playing: !VideoRef.paused });
       });
       VideoTimeInterval.current = setInterval(() => {
-        socket?.emit('video_time', {time:VideoRef.currentTime,playing: !VideoRef.paused});
+        socket?.emit("video_time", { time: VideoRef.currentTime, playing: !VideoRef.paused });
       }, 1000);
       return () => {
         if (VideoTimeInterval.current) {
@@ -136,13 +140,13 @@ export default function Chat(props: ChatProps) {
 
   useEffect(() => {
     if (VideoRef && !isHost) {
-      socket?.on('play', () => {
+      socket?.on("play", () => {
         VideoRef.play();
       });
-      socket?.on('pause', () => {
+      socket?.on("pause", () => {
         VideoRef.pause();
       });
-      socket?.on('video_time', (time) => {
+      socket?.on("video_time", (time) => {
         if (Math.abs(VideoRef.currentTime - time.time) > 1.5) {
           VideoRef.currentTime = time.time;
         }
@@ -151,9 +155,9 @@ export default function Chat(props: ChatProps) {
         }
       });
       return () => {
-        socket?.off('play');
-        socket?.off('pause');
-        socket?.off('video_time');
+        socket?.off("play");
+        socket?.off("pause");
+        socket?.off("video_time");
       };
     }
   }, [VideoRef, isHost, socket]);
@@ -162,13 +166,13 @@ export default function Chat(props: ChatProps) {
     if (socket) {
       e.preventDefault();
 
-      if (msg === '') {
+      if (msg === "") {
         return;
       }
 
-      socket.emit('post', { text: msg});
+      socket.emit("post", { text: msg });
 
-      setMsg('');
+      setMsg("");
     }
   };
 
@@ -176,22 +180,30 @@ export default function Chat(props: ChatProps) {
     <div className="w-[100%] h-[600px] bg-[White] rounded-[10px] border-[1px] mb-[10px]">
       <div className="text-center border-b-[1px]">
         <p className=" pt-2">一緒に観る</p>
-        <div className='flex items-center m-[5px]'>
+        <div className="flex items-center m-[5px]">
           <AvatarGroup avatarDataList={Users} max={4} />
-            <div className='flex ml-auto items-center m-[5px] ounded-[10px] border-[1px] px-[10px] py-[3px] rounded-[10px]'>
-              <Crown className='mr-[5px]' color='gold'/>
-              <img className="w-[30px] h-[30px] aspect-square object-cover rounded-full" src={Users.find(user => user.role === 'admin')?.image ?? ''}></img>
-            </div>
+          <div className="flex ml-auto items-center m-[5px] ounded-[10px] border-[1px] px-[10px] py-[3px] rounded-[10px]">
+            <Crown className="mr-[5px]" color="gold" />
+            <img
+              className="w-[30px] h-[30px] aspect-square object-cover rounded-full"
+              src={Users.find((user) => user.role === "admin")?.image ?? ""}
+            ></img>
           </div>
+        </div>
       </div>
       <div className="h-[75%] bg-[#ffffff] overflow-y-scroll flex flex-col-reverse">
-      {messages.map((message, index) => (
+        {messages.map((message, index) => (
           <div className="m-1 flex items-center chat-message" key={index}>
-            <img src={message.image} className='w-[20px] h-[20px] object-cover rounded-full mr-1'></img>
-            <span className='mr-[10px] text-[grey] text-[14px] shrink-0 break-keep chat-message-name max-w-[40%] text-ellipsis-1'>{message.name}</span>
-            <span className='text-[16px] chat-message-text'> {message.text}</span>
+            <img
+              src={message.image}
+              className="w-[20px] h-[20px] object-cover rounded-full mr-1"
+            ></img>
+            <span className="mr-[10px] text-[grey] text-[14px] shrink-0 break-keep chat-message-name max-w-[40%] text-ellipsis-1">
+              {message.name}
+            </span>
+            <span className="text-[16px] chat-message-text"> {message.text}</span>
           </div>
-      ))}
+        ))}
         {is_connection && (
           <>
             {!session?.user && (
@@ -201,21 +213,21 @@ export default function Chat(props: ChatProps) {
           </>
         )}
       </div>
-        <form onSubmit={handleSubmit}>
-          <div className="flex justify-center w-[100%] items-center">
-            <input
-              type="text"
-              id="msg"
-              autoComplete="off"
-              value={msg}
-              onChange={(e) => setMsg(e.target.value)}
-              className="w-full ml-[10px] my-[10px] block border-solid divide-inherit border-2 rounded-md	h-[30px]"
-            />
-            <button type="submit" className="w-[40px] h-[40px] p-1 pr-3 ml-2">
-              <Send className="m-auto" size={24} />
-            </button>
-          </div>
-        </form>
+      <form onSubmit={handleSubmit}>
+        <div className="flex justify-center w-[100%] items-center">
+          <input
+            type="text"
+            id="msg"
+            autoComplete="off"
+            value={msg}
+            onChange={(e) => setMsg(e.target.value)}
+            className="w-full ml-[10px] my-[10px] block border-solid divide-inherit border-2 rounded-md	h-[30px]"
+          />
+          <button type="submit" className="w-[40px] h-[40px] p-1 pr-3 ml-2">
+            <Send className="m-auto" size={24} />
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

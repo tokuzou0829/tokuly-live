@@ -1,13 +1,7 @@
 import Link from "next/link";
 import type { Channels, ListChannel } from "@/types/channel";
 
-export function ChList({
-  channels,
-  isCollapsed,
-}: {
-  channels: Channels;
-  isCollapsed: boolean;
-}) {
+export function ChList({ channels, isCollapsed }: { channels: Channels; isCollapsed: boolean }) {
   return (
     <div className="space-y-3">
       {!isCollapsed && <p className="px-4">おすすめチャンネル</p>}

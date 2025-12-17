@@ -13,26 +13,21 @@ export async function GET(req: NextRequest): Promise<Response | ImageResponse> {
     const live = await getChannel({ handle: ch_handle });
 
     return new ImageResponse(
-      (
-        <div
-          style={{
-            height: "100%",
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
-            background: "#fff",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "250px",
-            position: "relative",
-          }}
-        >
-          <img
-            style={{ height: "100%", width: "100%", objectFit: "cover" }}
-            src={live.icon_url}
-          />
-        </div>
-      ),
+      <div
+        style={{
+          height: "100%",
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          background: "#fff",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "250px",
+          position: "relative",
+        }}
+      >
+        <img style={{ height: "100%", width: "100%", objectFit: "cover" }} src={live.icon_url} />
+      </div>,
       {
         width: 512,
         height: 512,

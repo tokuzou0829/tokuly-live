@@ -8,7 +8,7 @@ export type Live = {
   status: string;
   stream_name: string;
   thumbnail_url: string;
-  static_thumbnail_url:string;
+  static_thumbnail_url: string;
   stream_overview: string;
   archive: boolean;
   stream_start_time: string;
@@ -25,7 +25,7 @@ export type MoreVideoList = {
   stream_name: string;
   thumbnail_url: string;
   type: string;
-  static_thumbnail_url:string;
+  static_thumbnail_url: string;
   stream_overview: string;
   stream_start_time: string;
   publishing_setting: string;

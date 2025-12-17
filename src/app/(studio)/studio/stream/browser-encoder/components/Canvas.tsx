@@ -1,10 +1,10 @@
-import { Card, CardContent } from '@/components/ui/card';
-import { ResizeInfo } from '../types';
+import { Card, CardContent } from "@/components/ui/card";
+import { ResizeInfo } from "../types";
 
 interface CanvasProps {
   canvasRef: React.RefObject<HTMLCanvasElement>;
   overlayCanvasRef: React.RefObject<HTMLCanvasElement>;
-  resolution: '720p' | '1080p';
+  resolution: "720p" | "1080p";
   resizeInfo: ResizeInfo | null;
   onMouseDown: (e: React.MouseEvent<HTMLCanvasElement>) => void;
   onMouseMove: (e: React.MouseEvent<HTMLCanvasElement>) => void;
@@ -24,12 +24,12 @@ export const Canvas: React.FC<CanvasProps> = ({
   onMouseLeave,
   updateCursor,
 }) => {
-  const getCanvasSize = (res: '720p' | '1080p') => {
-    return res === '720p' ? { width: 1280, height: 720 } : { width: 1920, height: 1080 };
+  const getCanvasSize = (res: "720p" | "1080p") => {
+    return res === "720p" ? { width: 1280, height: 720 } : { width: 1920, height: 1080 };
   };
 
   return (
-    <Card className='flex items-center'>
+    <Card className="flex items-center">
       <CardContent className="p-4 w-full">
         <div className="relative aspect-video bg-black rounded-lg overflow-hidden">
           <canvas

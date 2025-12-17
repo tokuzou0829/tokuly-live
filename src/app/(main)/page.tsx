@@ -13,7 +13,7 @@ export default async function Home() {
 
   return (
     <div>
-      {(lives.lives.length === 0 && archives.archives.length === 0) ? (
+      {lives.lives.length === 0 && archives.archives.length === 0 ? (
         <>
           <p
             style={{

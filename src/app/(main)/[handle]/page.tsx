@@ -5,11 +5,7 @@ import Live from "@/components/ui/live";
 import Video from "@/components/ui/video";
 export const revalidate = 0;
 
-export async function generateMetadata({
-  params,
-}: {
-  params: { handle: string };
-}) {
+export async function generateMetadata({ params }: { params: { handle: string } }) {
   const channel = await getChannel({ handle: params.handle });
 
   return {
@@ -18,9 +14,7 @@ export async function generateMetadata({
     keywords: ["ライブ配信", channel.name],
     twitter: {
       card: "summary",
-      images: [
-        `https://live.tokuly.com/api/og/ch_icon?handle=${channel.handle}`,
-      ],
+      images: [`https://live.tokuly.com/api/og/ch_icon?handle=${channel.handle}`],
     },
     openGraph: {
       title: channel.name,
@@ -35,20 +29,13 @@ export async function generateMetadata({
     },
   };
 }
-export default async function LivePlayer({
-  params,
-}: {
-  params: { handle: string };
-}) {
+export default async function LivePlayer({ params }: { params: { handle: string } }) {
   const channel = await getChannel({ handle: params.handle });
 
   return (
     <div className="h-[100%] w-[100%]">
       <div className="h-[100%] w-[100%]">
-        <img
-          src={channel.banner_url}
-          className=" w-[100%] h-[15%] object-cover bg-[#bffff9]"
-        />
+        <img src={channel.banner_url} className=" w-[100%] h-[15%] object-cover bg-[#bffff9]" />
         <div className=" flex items-center mx-[20px] mt-[10px]">
           <img
             src={channel.icon_url}
@@ -60,9 +47,7 @@ export default async function LivePlayer({
         </div>
         {channel.streams.length !== 0 && (
           <div className="mx-[20px] mt-[20px]">
-            <p className=" text-xl font-semibold">
-              このクリエイターは配信中です！
-            </p>
+            <p className=" text-xl font-semibold">このクリエイターは配信中です！</p>
             <div className="overflow-scroll	w-[100%] flex py-3">
               {channel.streams.map((stream, index) => (
                 <Live key={index} live={stream} />
@@ -92,9 +77,7 @@ export default async function LivePlayer({
                       className="w-[40px] h-[40px] rounded-full aspect-square mr-1 object-cover bg-gray-500"
                     />
                     <div>
-                      <p className="font-bold mb-0 truncate w-[205px]">
-                        {stream.title}
-                      </p>
+                      <p className="font-bold mb-0 truncate w-[205px]">{stream.title}</p>
                       <p className="mt-0 text-sm">{channel.name}</p>
                     </div>
                   </div>

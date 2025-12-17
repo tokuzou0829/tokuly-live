@@ -24,12 +24,15 @@ export default function LivePage({ params }: { params: { id: string } }) {
         const errorCode: Number = await res.status;
         const newLivedata: Live = await res.json();
         setStatus(newLivedata.status);
-        if(newLivedata.status === "end" && !isArchive){
-          const checkvideo = await fetch(`https://live-data.tokuly.com/videos/hls/${params.id}/index.m3u8`, {
-            method:"GET",
-            headers: {},
-          });
-          if(checkvideo.ok){
+        if (newLivedata.status === "end" && !isArchive) {
+          const checkvideo = await fetch(
+            `https://live-data.tokuly.com/videos/hls/${params.id}/index.m3u8`,
+            {
+              method: "GET",
+              headers: {},
+            }
+          );
+          if (checkvideo.ok) {
             setIsArchive(true);
           }
         }
@@ -47,12 +50,15 @@ export default function LivePage({ params }: { params: { id: string } }) {
       const newLivedata: Live = await res.json();
       setStatus(newLivedata.status);
       setLive(newLivedata);
-      if((newLivedata.status === "end" || newLivedata.status === "video") && !isArchive){
-        const checkvideo = await fetch(`https://live-data.tokuly.com/videos/hls/${params.id}/index.m3u8`, {
-          method:"GET",
-          headers: {},
-        });
-        if(checkvideo.ok){
+      if ((newLivedata.status === "end" || newLivedata.status === "video") && !isArchive) {
+        const checkvideo = await fetch(
+          `https://live-data.tokuly.com/videos/hls/${params.id}/index.m3u8`,
+          {
+            method: "GET",
+            headers: {},
+          }
+        );
+        if (checkvideo.ok) {
           setIsArchive(true);
         }
       }
@@ -71,8 +77,12 @@ export default function LivePage({ params }: { params: { id: string } }) {
           ) : (
             <>
               {isArchive ? (
-                <VideoPlayer id={params.id} poster_url={live.static_thumbnail_url} isUploadVideo={live.status === "video"} />
-              ):(
+                <VideoPlayer
+                  id={params.id}
+                  poster_url={live.static_thumbnail_url}
+                  isUploadVideo={live.status === "video"}
+                />
+              ) : (
                 <div
                   style={{
                     width: "100%",

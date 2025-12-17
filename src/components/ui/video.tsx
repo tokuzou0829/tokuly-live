@@ -3,19 +3,11 @@ import Link from "next/link";
 import { useState } from "react";
 import type { Live, LiveList } from "@/types/live";
 
-export default function Video({live}:{live:LiveList}) {
+export default function Video({ live }: { live: LiveList }) {
   return (
-    <Link
-      href={"/video/" + live.stream_name}
-      className="block w-full max-w-[250px] shrink-0 mr-2"
-    >
-      <div
-        className="relative"
-      >
-        <img
-          src={live.thumbnail_url}
-          className="w-full rounded-lg aspect-video object-cover"
-        />
+    <Link href={"/video/" + live.stream_name} className="block w-full max-w-[250px] shrink-0 mr-2">
+      <div className="relative">
+        <img src={live.thumbnail_url} className="w-full rounded-lg aspect-video object-cover" />
         {live.type === "archive" && (
           <div className="absolute bg-white w-[100px] h-[25px] top-[5px] left-[5px] rounded-md">
             <p className="text-black text-center font-semibold">アーカイブ</p>

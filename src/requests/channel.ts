@@ -20,11 +20,7 @@ export async function getChannel(param: Handle): Promise<Channel> {
 }
 
 export async function getRecommendChannel(): Promise<Channels> {
-  return await fetch.post<null, Channels>(
-    `/live/channel/recommendation`,
-    null,
-    {
-      headers: {},
-    }
-  );
+  return await fetch.post<null, Channels>(`/live/channel/recommendation`, null, {
+    headers: {},
+  });
 }

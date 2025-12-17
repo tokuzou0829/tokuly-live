@@ -17,11 +17,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogClose
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Copy } from "lucide-react"
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Copy } from "lucide-react";
 
 export default function LiveOverview({ live }: { live: Live }) {
   const [isWWF, setIsWWF] = useAtom<boolean>(IsWatchWithFriend);
@@ -38,15 +38,10 @@ export default function LiveOverview({ live }: { live: Live }) {
     }
   }
   const [status, setStatus] = useState<string>("offline");
-  const [streamOverview, setStreamOverview] = useState<string>(
-    live.stream_overview
-  );
-  const [StreamStartTime, setStreamStartTime] = useState<string>(
-    live.stream_start_time
-  );
+  const [streamOverview, setStreamOverview] = useState<string>(live.stream_overview);
+  const [StreamStartTime, setStreamStartTime] = useState<string>(live.stream_start_time);
   function linkify(text: string) {
-    const urlRegex =
-      /(\bhttps?:\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gi;
+    const urlRegex = /(\bhttps?:\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gi;
 
     return text.split("\n").map((line, index, array) => (
       <span key={index}>
@@ -74,9 +69,7 @@ export default function LiveOverview({ live }: { live: Live }) {
     if (StreamStartTimeData) {
       const timeZone = "Asia/Tokyo";
       const zonedDate = utcToZonedTime(StreamStartTimeData, timeZone);
-      return (
-        formatDistanceToNowStrict(zonedDate, { locale: ja }) + "前に配信"
-      );
+      return formatDistanceToNowStrict(zonedDate, { locale: ja }) + "前に配信";
     } else {
       return "ストリーマーを待機中";
     }
@@ -107,80 +100,83 @@ export default function LiveOverview({ live }: { live: Live }) {
     <div className="p-[10px] bg-slate-100 mt-3 rounded-lg">
       <p className="font-bold text-slate-900	">{formatDate(StreamStartTime)}</p>
       <p className="mb-0">{linkify(streamOverview)}</p>
-        <div className="mt-5">
-          <input
-            ref={LinkText}
-            className="hidden"
-            readOnly
-            value={"https://live.tokuly.com/video/" + live.stream_name + "?room_id=" + roomid}
-          />
-          <Dialog>
-            <DialogTrigger asChild>
-              {live.status == "video" && !isWWF && (
-                <button className="flex items-center text-gray-600 p-1 rounded-lg hover:bg-gray-200" onClick={() => {
+      <div className="mt-5">
+        <input
+          ref={LinkText}
+          className="hidden"
+          readOnly
+          value={"https://live.tokuly.com/video/" + live.stream_name + "?room_id=" + roomid}
+        />
+        <Dialog>
+          <DialogTrigger asChild>
+            {live.status == "video" && !isWWF && (
+              <button
+                className="flex items-center text-gray-600 p-1 rounded-lg hover:bg-gray-200"
+                onClick={() => {
                   const room_id = Math.random().toString(32).substring(2);
                   setRoomId(room_id);
                   setWWFRoomId(room_id);
                   setIsWWF(true);
                   const url = new URL(window.location.href);
-                  url.searchParams.set('room_id', room_id);
-                  window.history.pushState({}, '', url.toString());
-                  }}>
-                  <PartyPopper size={15} />
-                  <span className="ml-1">この動画をみんなで観る</span>
-                </button>
-              )}
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>一緒に観る</DialogTitle>
-                  <DialogDescription>
-                    友達にこのリンクを共有して一緒にこの動画を楽しみましょう！
-                  </DialogDescription>
-                </DialogHeader>
-                  <div className="flex items-center space-x-2">
-                    <div className="grid flex-1 gap-2">
-                      <Label htmlFor="link" className="sr-only">
-                        Link
-                      </Label>
-                      <Input
-                        id="link"
-                        defaultValue={"https://live.tokuly.com/video/" + live.stream_name + "?room_id=" + roomid}
-                        readOnly
-                      />
-                    </div>
-                    <Button
-                      type="submit"
-                      size="sm"
-                      className="px-3"
-                      onClick={copyLink}
-                    >
-                      <span className="sr-only">Copy</span>
-                      <Copy className="h-4 w-4" />
-                    </Button>
-                  </div>
-                <DialogFooter>
-                  <DialogClose asChild>
-                    <Button type="submit">始める</Button>
-                  </DialogClose>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
-            {isWWF && (
-                <button className="flex items-center text-gray-600 p-1 rounded-lg hover:bg-gray-200" onClick={() => {
-                  setRoomId(null);
-                  setIsWWF(false);
-                  setIsHost(false);
-                  setWWFRoomId(null);
-                  const url = new URL(window.location.href);
-                  url.searchParams.delete('room_id');
-                  window.history.pushState({}, '', url.toString());
-                  }}>
-                  <LogOut size={15} />
-                  <span className="ml-1">パーティーから退出する</span>
-                </button>
-              )}
-        </div>
+                  url.searchParams.set("room_id", room_id);
+                  window.history.pushState({}, "", url.toString());
+                }}
+              >
+                <PartyPopper size={15} />
+                <span className="ml-1">この動画をみんなで観る</span>
+              </button>
+            )}
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>一緒に観る</DialogTitle>
+              <DialogDescription>
+                友達にこのリンクを共有して一緒にこの動画を楽しみましょう！
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex items-center space-x-2">
+              <div className="grid flex-1 gap-2">
+                <Label htmlFor="link" className="sr-only">
+                  Link
+                </Label>
+                <Input
+                  id="link"
+                  defaultValue={
+                    "https://live.tokuly.com/video/" + live.stream_name + "?room_id=" + roomid
+                  }
+                  readOnly
+                />
+              </div>
+              <Button type="submit" size="sm" className="px-3" onClick={copyLink}>
+                <span className="sr-only">Copy</span>
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            <DialogFooter>
+              <DialogClose asChild>
+                <Button type="submit">始める</Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        {isWWF && (
+          <button
+            className="flex items-center text-gray-600 p-1 rounded-lg hover:bg-gray-200"
+            onClick={() => {
+              setRoomId(null);
+              setIsWWF(false);
+              setIsHost(false);
+              setWWFRoomId(null);
+              const url = new URL(window.location.href);
+              url.searchParams.delete("room_id");
+              window.history.pushState({}, "", url.toString());
+            }}
+          >
+            <LogOut size={15} />
+            <span className="ml-1">パーティーから退出する</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 }
