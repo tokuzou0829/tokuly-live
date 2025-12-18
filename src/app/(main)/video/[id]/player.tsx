@@ -14,6 +14,7 @@ import {
   faGear,
   faCheck,
   faX,
+  faArrowRotateLeft,
 } from "@fortawesome/free-solid-svg-icons";
 import Hls from "hls.js";
 import {
@@ -836,13 +837,13 @@ function Player(props: VideoProps) {
                     setIsLoop(newLoop);
                   }
                 }}
+                className="flex justify-between"
               >
-                {isLoop ? (
-                  <FontAwesomeIcon icon={faCheck} className="mr-[10px]" />
-                ) : (
-                  <FontAwesomeIcon icon={faX} className="mr-[10px]" />
-                )}
-                ループ再生
+                <span>
+                  <FontAwesomeIcon icon={faArrowRotateLeft} className="mr-[10px]" />
+                  ループ再生
+                </span>
+                {isLoop && <FontAwesomeIcon icon={faCheck} />}
               </ContextMenuItem>
               <ContextMenuItem
                 onClick={(e) => {
