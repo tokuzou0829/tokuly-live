@@ -1,4 +1,5 @@
 "use client";
+
 import React, { useRef, useEffect, useState } from "react";
 import { Copy } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -13,7 +14,6 @@ import {
   faCopy,
   faGear,
   faCheck,
-  faX,
   faArrowRotateLeft,
 } from "@fortawesome/free-solid-svg-icons";
 import Hls from "hls.js";
