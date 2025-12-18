@@ -1,10 +1,6 @@
 "use client";
 
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { ChList } from "./chList";
 import type { Channels } from "@/types/channel";
 import { useEffect, useState, useRef } from "react";
@@ -12,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { Nav } from "@/app/(main)/nav";
 import { Home, Radio } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { usePathname } from 'next/navigation';
+import { usePathname } from "next/navigation";
 import { is } from "date-fns/locale";
 import { set } from "date-fns";
 
@@ -23,8 +19,8 @@ export default function LayoutContent({
   children: React.ReactNode;
   channels: Channels;
 }) {
-  const pathname = usePathname() ?? '';
-  const firstLocation = pathname.startsWith('/video/') || pathname.startsWith('/live/');
+  const pathname = usePathname() ?? "";
+  const firstLocation = pathname.startsWith("/video/") || pathname.startsWith("/live/");
   const [isCollapsed, setIsCollapsed] = useState(firstLocation ? true : false);
   const [isWatch, setIsWatch] = useState(false);
   const panelRef = useRef<any>(null);
@@ -33,65 +29,58 @@ export default function LayoutContent({
   useEffect(() => {
     const isPhone = window.innerWidth < 1150;
     setIsPhone(isPhone);
-    if(isPhone) {
+    if (isPhone) {
       setIsCollapsed(true);
       panelRef.current?.collapse();
     }
   }, []);
 
   useEffect(() => {
-    const isLocation = pathname.startsWith('/video/') || pathname.startsWith('/live/');
+    const isLocation = pathname.startsWith("/video/") || pathname.startsWith("/live/");
     if (isLocation) {
       panelRef.current?.collapse();
       setIsCollapsed(true);
       setIsWatch(true);
-    }else{
+    } else {
       setIsWatch(false);
     }
-    if(pathname === '/' && window.innerWidth > 1150) {
+    if (pathname === "/" && window.innerWidth > 1150) {
       panelRef.current?.expand();
       setIsCollapsed(false);
     }
   }, [pathname]);
 
   return (
-      <TooltipProvider delayDuration={0}>
-        <ResizablePanelGroup
-          onLayout={(sizes: number[]) => {
-            document.cookie = `react-resizable-panels:layout=${JSON.stringify(
-              sizes
-            )}`;
-          }}
-          direction="horizontal"
-          className="items-stretch"
-        >
-          {!((isWatch) && isPhone) ? (
-            <>
-              <ResizablePanel
-                defaultSize={firstLocation? 4 : 15}
-                collapsedSize={4}
-                ref={panelRef}
-                collapsible={true}
-                minSize={!isPhone ? 15 : 4}
-                maxSize={!isPhone ? 15 : 4}
-                onCollapse={() => {
-                  setIsCollapsed(true);
-                  document.cookie = `react-resizable-panels:collapsed=${JSON.stringify(
-                    true
-                  )}`;
-                }}
-                onExpand={() => {
-                  setIsCollapsed(false);
-                  document.cookie = `react-resizable-panels:collapsed=${JSON.stringify(
-                    false
-                  )}`;
-                }}
-                className={cn(
-                  "bg-white sticky top-[0px] z-20",
-                  isCollapsed &&
-                    "min-w-[50px] transition-all duration-300 ease-in-out"
-                )}
-              >
+    <TooltipProvider delayDuration={0}>
+      <ResizablePanelGroup
+        onLayout={(sizes: number[]) => {
+          document.cookie = `react-resizable-panels:layout=${JSON.stringify(sizes)}`;
+        }}
+        direction="horizontal"
+        className="items-stretch"
+      >
+        {!(isWatch && isPhone) ? (
+          <>
+            <ResizablePanel
+              defaultSize={firstLocation ? 4 : 15}
+              collapsedSize={4}
+              ref={panelRef}
+              collapsible={true}
+              minSize={!isPhone ? 15 : 4}
+              maxSize={!isPhone ? 15 : 4}
+              onCollapse={() => {
+                setIsCollapsed(true);
+                document.cookie = `react-resizable-panels:collapsed=${JSON.stringify(true)}`;
+              }}
+              onExpand={() => {
+                setIsCollapsed(false);
+                document.cookie = `react-resizable-panels:collapsed=${JSON.stringify(false)}`;
+              }}
+              className={cn(
+                "bg-white sticky top-[0px] z-20",
+                isCollapsed && "min-w-[50px] transition-all duration-300 ease-in-out"
+              )}
+            >
               <Nav
                 isCollapsed={isCollapsed}
                 links={[
@@ -111,15 +100,15 @@ export default function LayoutContent({
                   },
                 ]}
               />
-                <ChList isCollapsed={isCollapsed} channels={channels} />
-              </ResizablePanel>
-              <ResizableHandle withHandle={!isPhone ? true : false} />
-            </>
-          ):(
-            <></>
-          )}
-          <ResizablePanel defaultSize={85}>{children}</ResizablePanel>
-        </ResizablePanelGroup>
-      </TooltipProvider>
-    );
+              <ChList isCollapsed={isCollapsed} channels={channels} />
+            </ResizablePanel>
+            <ResizableHandle withHandle={!isPhone ? true : false} />
+          </>
+        ) : (
+          <></>
+        )}
+        <ResizablePanel defaultSize={85}>{children}</ResizablePanel>
+      </ResizablePanelGroup>
+    </TooltipProvider>
+  );
 }

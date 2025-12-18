@@ -20,17 +20,7 @@ interface OptionProps {
 type LiveProps = {
   lives: LiveList[];
 };
-function Option({
-  image,
-  icon,
-  main,
-  sub,
-  active,
-  onClick,
-  style,
-  video_id,
-  handle,
-}: OptionProps) {
+function Option({ image, icon, main, sub, active, onClick, style, video_id, handle }: OptionProps) {
   const optionClass = active ? "option active" : "option";
 
   return (

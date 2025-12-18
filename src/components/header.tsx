@@ -18,11 +18,7 @@ export default function Header({ session }: { session: Session | null }) {
           <p className="font-bold">Tokuly Live</p>
         </Link>
         <div className="flex gap-x-5 items-center">
-          <Link
-            href="https://tokuly.com/studio"
-            target="_blank"
-            className="text-sm"
-          >
+          <Link href="https://tokuly.com/studio" target="_blank" className="text-sm">
             配信を開始
           </Link>
           <div style={{ marginRight: "10px", marginLeft: "auto" }}>

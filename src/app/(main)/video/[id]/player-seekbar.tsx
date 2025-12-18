@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { useAtom } from 'jotai';
-import { IsWatchWithFriend, IsPartyHost } from '@/atoms/watchWithFriendAtom';
+import React, { useState, useRef, useEffect, useCallback } from "react";
+import { useAtom } from "jotai";
+import { IsWatchWithFriend, IsPartyHost } from "@/atoms/watchWithFriendAtom";
 
 type SeekBarProps = {
   playervalue: number;
@@ -19,64 +19,72 @@ const SeekBar = ({
   onChange,
   onMouseMove,
   onMouseLeave,
-  onClick
+  onClick,
 }: SeekBarProps) => {
   const [value, setValue] = useState((playervalue / duration) * 100);
   const [isDragging, setIsDragging] = useState(false);
   const seekBarRef = useRef<HTMLDivElement>(null);
   const [seek, setSeek] = useState(0);
-  const [isWatchWithFriend,] = useAtom(IsWatchWithFriend);
-  const [isHost,] = useAtom(IsPartyHost);
+  const [isWatchWithFriend] = useAtom(IsWatchWithFriend);
+  const [isHost] = useAtom(IsPartyHost);
 
   useEffect(() => {
     console.log(isHost);
-  },[isHost]);
+  }, [isHost]);
 
-  const updateValue = useCallback((clientX: number) => {
-    if (seekBarRef.current && (!isWatchWithFriend || isHost)) {
-      const rect = seekBarRef.current.getBoundingClientRect();
-      const x = clientX - rect.left;
-      const newValue = Math.max(0, Math.min(100, (x / rect.width) * 100));
-      onChange((newValue / 100) * duration);
-    }
-  }, [onChange, duration]);
+  const updateValue = useCallback(
+    (clientX: number) => {
+      if (seekBarRef.current && (!isWatchWithFriend || isHost)) {
+        const rect = seekBarRef.current.getBoundingClientRect();
+        const x = clientX - rect.left;
+        const newValue = Math.max(0, Math.min(100, (x / rect.width) * 100));
+        onChange((newValue / 100) * duration);
+      }
+    },
+    [onChange, duration]
+  );
 
   const handleStart = (clientX: number) => {
     setIsDragging(true);
     updateValue(clientX);
   };
 
-  const handleMove = useCallback((clientX: number) => {
-    if (isDragging) {
-      updateValue(clientX);
-    }
-    if (onMouseMove && seekBarRef.current) {
-      const rect = seekBarRef.current.getBoundingClientRect();
-      const syntheticEvent = {
-        currentTarget: seekBarRef.current,
-        target: seekBarRef.current,
-        clientX: clientX,
-        clientY: 0,
-        getBoundingClientRect: () => rect,
-      } as unknown as React.MouseEvent<HTMLDivElement, MouseEvent>;
-      const x = clientX - rect.left;
-      const newSeekValue = Math.max(0, Math.min(100, (x / rect.width) * 100));
-      setSeek(newSeekValue);
-      onMouseMove(syntheticEvent);
-    }
-  }, [isDragging, onMouseMove, updateValue]);
-  
+  const handleMove = useCallback(
+    (clientX: number) => {
+      if (isDragging) {
+        updateValue(clientX);
+      }
+      if (onMouseMove && seekBarRef.current) {
+        const rect = seekBarRef.current.getBoundingClientRect();
+        const syntheticEvent = {
+          currentTarget: seekBarRef.current,
+          target: seekBarRef.current,
+          clientX: clientX,
+          clientY: 0,
+          getBoundingClientRect: () => rect,
+        } as unknown as React.MouseEvent<HTMLDivElement, MouseEvent>;
+        const x = clientX - rect.left;
+        const newSeekValue = Math.max(0, Math.min(100, (x / rect.width) * 100));
+        setSeek(newSeekValue);
+        onMouseMove(syntheticEvent);
+      }
+    },
+    [isDragging, onMouseMove, updateValue]
+  );
+
   const handleEnd = useCallback(() => {
     setIsDragging(false);
   }, []);
 
   // Mouse event handlers
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => handleStart(e.clientX);
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => !isDragging && handleMove(e.clientX);
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) =>
+    !isDragging && handleMove(e.clientX);
   const handleMouseUp = () => handleEnd();
 
   // Touch event handlers
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => handleStart(e.touches[0].clientX);
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) =>
+    handleStart(e.touches[0].clientX);
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => handleMove(e.touches[0].clientX);
   const handleTouchEnd = () => handleEnd();
 
@@ -85,17 +93,17 @@ const SeekBar = ({
     const handleGlobalTouchMove = (e: TouchEvent) => isDragging && handleMove(e.touches[0].clientX);
 
     if (isDragging) {
-      document.addEventListener('mousemove', handleGlobalMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('touchmove', handleGlobalTouchMove);
-      document.addEventListener('touchend', handleTouchEnd);
+      document.addEventListener("mousemove", handleGlobalMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+      document.addEventListener("touchmove", handleGlobalTouchMove);
+      document.addEventListener("touchend", handleTouchEnd);
     }
 
     return () => {
-      document.removeEventListener('mousemove', handleGlobalMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-      document.removeEventListener('touchmove', handleGlobalTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
+      document.removeEventListener("mousemove", handleGlobalMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("touchmove", handleGlobalTouchMove);
+      document.removeEventListener("touchend", handleTouchEnd);
     };
   }, [isDragging, handleMove, handleMouseUp, handleTouchEnd]);
 
@@ -114,7 +122,14 @@ const SeekBar = ({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onClick={onClick ? (e) => { e.stopPropagation(); onClick(e); } : undefined}
+        onClick={
+          onClick
+            ? (e) => {
+                e.stopPropagation();
+                onClick(e);
+              }
+            : undefined
+        }
       >
         <div
           style={{ width: `${(bufferValue / duration) * 100}%` }}
@@ -126,10 +141,7 @@ const SeekBar = ({
             className="absolute h-full bg-gray-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
           />
         )}
-        <div
-          style={{ width: `${value}%` }}
-          className="absolute h-full bg-white rounded-full"
-        />
+        <div style={{ width: `${value}%` }} className="absolute h-full bg-white rounded-full" />
         {(!isWatchWithFriend || isHost) && (
           <div
             style={{ left: `${value}%` }}

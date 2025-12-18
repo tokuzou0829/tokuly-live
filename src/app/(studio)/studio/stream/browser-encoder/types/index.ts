@@ -33,20 +33,20 @@ export interface AudioSource {
   loop?: boolean;
   audioElement?: HTMLAudioElement;
   name: string;
-  type: 'mic' | 'audio' | 'screen';
+  type: "mic" | "audio" | "screen";
   analyser?: AnalyserNode;
   level?: number;
 }
 
 export interface ScreenShareSettings {
   maintainAspectRatio: boolean;
-  resolution: '720p' | '1080p';
+  resolution: "720p" | "1080p";
 }
 
 export interface ResizeInfo {
   sourceId: string;
-  type: 'move' | 'resize' | 'crop';
-  edge?: 'left' | 'right' | 'top' | 'bottom' | 'corner';
+  type: "move" | "resize" | "crop";
+  edge?: "left" | "right" | "top" | "bottom" | "corner";
   startX: number;
   startY: number;
   startWidth: number;
@@ -65,7 +65,7 @@ export interface AudioSourceState {
   muted: boolean;
   loop?: boolean;
   name: string;
-  type: 'mic' | 'audio' | 'screen';
+  type: "mic" | "audio" | "screen";
   level?: number;
 }
 

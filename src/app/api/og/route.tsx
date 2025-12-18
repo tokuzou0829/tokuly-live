@@ -13,26 +13,24 @@ export async function GET(req: NextRequest): Promise<Response | ImageResponse> {
     const live = await getLive({ id: video_id });
 
     return new ImageResponse(
-      (
-        <div
-          style={{
-            height: "100%",
-            width: "100%",
-            display: "flex",
-            flexDirection: "column",
-            background: "#fff",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "250px",
-            position: "relative",
-          }}
-        >
-          <img
-            style={{ height: "100%", width: "100%", objectFit: "cover" }}
-            src={live.static_thumbnail_url}
-          />
-        </div>
-      ),
+      <div
+        style={{
+          height: "100%",
+          width: "100%",
+          display: "flex",
+          flexDirection: "column",
+          background: "#fff",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: "250px",
+          position: "relative",
+        }}
+      >
+        <img
+          style={{ height: "100%", width: "100%", objectFit: "cover" }}
+          src={live.static_thumbnail_url}
+        />
+      </div>,
       {
         width: 1200,
         height: 630,

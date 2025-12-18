@@ -1,6 +1,6 @@
 "use client";
 import React, { useRef, useEffect, useState } from "react";
-import { Copy, PartyPopper } from "lucide-react";
+import { Copy } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlay,
@@ -11,8 +11,9 @@ import {
   faVolumeMute,
   faShare,
   faCopy,
-  faHandMiddleFinger,
-  faGear
+  faGear,
+  faCheck,
+  faX,
 } from "@fortawesome/free-solid-svg-icons";
 import Hls from "hls.js";
 import {
@@ -47,12 +48,12 @@ import {
   DropdownMenuItem,
   DropdownMenuSub,
   DropdownMenuSubTrigger,
-  DropdownMenuSubContent
-} from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
+  DropdownMenuSubContent,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { useSearchParams } from "next/navigation";
 import { useAtom } from "jotai";
-import { IsWatchWithFriend ,VideoPlayerRef, IsPartyHost} from "@/atoms/watchWithFriendAtom";
+import { IsWatchWithFriend, VideoPlayerRef, IsPartyHost } from "@/atoms/watchWithFriendAtom";
 
 interface VideoProps {
   id: string;
@@ -66,7 +67,7 @@ declare global {
   }
 }
 function Player(props: VideoProps) {
-  const { id, className,poster_url,isUploadVideo } = props;
+  const { id, className, poster_url, isUploadVideo } = props;
   const playerRef = useRef<HTMLDivElement | null>(null);
   const myRef = useRef<HTMLVideoElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
@@ -82,6 +83,7 @@ function Player(props: VideoProps) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [buffer, setBuffer] = useState(0);
+  const [isLoop, setIsLoop] = useState(false);
 
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   const [showPreview, setShowPreview] = useState(false);
@@ -99,26 +101,27 @@ function Player(props: VideoProps) {
   const searchParams = useSearchParams();
 
   // 音声トラック管理のための状態変数を追加
-  const [audioTracks, setAudioTracks] = useState<{ id: number, name: string, lang: string, default: boolean }[]>([]);
+  const [audioTracks, setAudioTracks] = useState<
+    { id: number; name: string; lang: string; default: boolean }[]
+  >([]);
   const [currentAudioTrack, setCurrentAudioTrack] = useState<number | null>(null);
 
-  const [isWWF,] = useAtom(IsWatchWithFriend);
-  const [,setVideoPlayerRef] = useAtom(VideoPlayerRef);
-  const [isHost,] = useAtom(IsPartyHost);
+  const [isWWF] = useAtom(IsWatchWithFriend);
+  const [, setVideoPlayerRef] = useAtom(VideoPlayerRef);
+  const [isHost] = useAtom(IsPartyHost);
 
-  useEffect(()=>{
-    if(isWWF && myRef.current){
+  useEffect(() => {
+    if (isWWF && myRef.current) {
       setVideoPlayerRef(myRef.current);
     }
-  },[isWWF, setVideoPlayerRef, myRef])
+  }, [isWWF, setVideoPlayerRef, myRef]);
 
-
-  useEffect(()=>{
-    if(globalThis.navigator){
-        const userAgent = navigator.userAgent || navigator.vendor;
-        setIsMobile(/android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent));
+  useEffect(() => {
+    if (globalThis.navigator) {
+      const userAgent = navigator.userAgent || navigator.vendor;
+      setIsMobile(/android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent));
     }
-  },[])
+  }, []);
 
   // コンポーネントがアンマウントされたときにクリーンアップ
   useEffect(() => {
@@ -177,26 +180,26 @@ function Player(props: VideoProps) {
   }, [volume]);
 
   useEffect(() => {
-    const handleKeyDown = (event:any) => {
+    const handleKeyDown = (event: any) => {
       // フォーカスされている要素をチェック
       const activeElement = document.activeElement;
-      const isInputElement = 
+      const isInputElement =
         activeElement instanceof HTMLInputElement ||
         activeElement instanceof HTMLTextAreaElement ||
         activeElement instanceof HTMLSelectElement ||
-        activeElement?.getAttribute('contenteditable') === 'true';
-      
+        activeElement?.getAttribute("contenteditable") === "true";
+
       // 入力要素にフォーカスがある場合は、ショートカットを無視
       if (isInputElement) return;
-      
+
       if (!myRef.current) return;
-      
+
       const video = myRef.current;
 
       switch (event.key) {
-        case ' ': // スペースキーで再生/一時停止
+        case " ": // スペースキーで再生/一時停止
           event.preventDefault(); // ページのスクロール防止
-          if(!isWWF || isHost) {
+          if (!isWWF || isHost) {
             if (video.paused) {
               video.play();
             } else {
@@ -204,25 +207,25 @@ function Player(props: VideoProps) {
             }
           }
           break;
-        case 'ArrowLeft': // 左矢印キーで5秒巻き戻し
-          if(!isWWF || isHost) {
+        case "ArrowLeft": // 左矢印キーで5秒巻き戻し
+          if (!isWWF || isHost) {
             video.currentTime = Math.max(0, video.currentTime - 5);
           }
           break;
-        case 'ArrowRight': // 右矢印キーで5秒早送り
-          if(!isWWF || isHost) {
+        case "ArrowRight": // 右矢印キーで5秒早送り
+          if (!isWWF || isHost) {
             video.currentTime = Math.min(video.duration, video.currentTime + 5);
           }
           break;
-        case 'ArrowUp': // 上矢印キーで音量を上げる
+        case "ArrowUp": // 上矢印キーで音量を上げる
           setVolume(Math.min(1, video.volume + 0.05));
           video.volume = Math.min(1, video.volume + 0.05);
           break;
-        case 'ArrowDown': // 下矢印キーで音量を下げる
+        case "ArrowDown": // 下矢印キーで音量を下げる
           setVolume(Math.max(0, video.volume - 0.05));
           video.volume = Math.max(0, video.volume - 0.05);
           break;
-        case 'f': // "f"キーでフルスクリーンにする/解除
+        case "f": // "f"キーでフルスクリーンにする/解除
           if (document.fullscreenElement) {
             exitFullScreen();
           } else {
@@ -234,12 +237,12 @@ function Player(props: VideoProps) {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isWWF, isHost ,myRef.current]);
+  }, [isWWF, isHost, myRef.current]);
 
   function copyLink() {
     if (LinkText.current) {
@@ -301,7 +304,7 @@ function Player(props: VideoProps) {
 
   const handleVideoHoverLeave = () => {
     setIsHovered(false);
-  if (!myRef.current?.paused && !qualityMenuOpen) {
+    if (!myRef.current?.paused && !qualityMenuOpen) {
       setShowControls(false);
     }
   };
@@ -310,8 +313,8 @@ function Player(props: VideoProps) {
     if (playerRef.current) {
       if (playerRef.current.requestFullscreen) {
         playerRef.current.requestFullscreen();
-      }else{
-        if(myRef.current && myRef.current.webkitEnterFullScreen){
+      } else {
+        if (myRef.current && myRef.current.webkitEnterFullScreen) {
           myRef.current.webkitEnterFullScreen();
         }
       }
@@ -340,18 +343,9 @@ function Player(props: VideoProps) {
 
     return () => {
       document.removeEventListener("fullscreenchange", handleFullScreenChange);
-      document.removeEventListener(
-        "mozfullscreenchange",
-        handleFullScreenChange
-      );
-      document.removeEventListener(
-        "webkitfullscreenchange",
-        handleFullScreenChange
-      );
-      document.removeEventListener(
-        "msfullscreenchange",
-        handleFullScreenChange
-      );
+      document.removeEventListener("mozfullscreenchange", handleFullScreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullScreenChange);
+      document.removeEventListener("msfullscreenchange", handleFullScreenChange);
     };
   }, []);
 
@@ -384,44 +378,44 @@ function Player(props: VideoProps) {
               console.log("bufferedSeconds", bufferedSeconds);
               setBuffer(bufferedSeconds);
             });
-            hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
-                const qualityMap = new Map();
-                hls.levels.forEach(level => {
-                  const quality = level.height + 'p';
-                  if (!qualityMap.has(quality)) {
+            hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+              const qualityMap = new Map();
+              hls.levels.forEach((level) => {
+                const quality = level.height + "p";
+                if (!qualityMap.has(quality)) {
+                  qualityMap.set(quality, level.bitrate);
+                } else {
+                  if (level.bitrate > qualityMap.get(quality)) {
                     qualityMap.set(quality, level.bitrate);
-                  } else {
-                    if (level.bitrate > qualityMap.get(quality)) {
-                      qualityMap.set(quality, level.bitrate);
-                    }
                   }
-                });
-                const availableQualities = hls.levels.map(level => {
-                  const quality = level.height + 'p';
-                  const isHighQuality = qualityMap.get(quality) === level.bitrate;
-                  const qualityCount = hls.levels.filter(l => l.height === level.height).length;
-                  return isHighQuality && qualityCount > 1 ? quality + ' (hq)' : quality;
-                });
-                setVideoQualityList(availableQualities);
-                
+                }
+              });
+              const availableQualities = hls.levels.map((level) => {
+                const quality = level.height + "p";
+                const isHighQuality = qualityMap.get(quality) === level.bitrate;
+                const qualityCount = hls.levels.filter((l) => l.height === level.height).length;
+                return isHighQuality && qualityCount > 1 ? quality + " (hq)" : quality;
+              });
+              setVideoQualityList(availableQualities);
+
               if (share_time) {
                 myRef.current!.currentTime = parseFloat(share_time);
               }
             });
 
             // オーディオトラック情報を更新されたタイミングで取得
-            hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, function(event, data) {
+            hls.on(Hls.Events.AUDIO_TRACKS_UPDATED, function (event, data) {
               if (hls.audioTracks && hls.audioTracks.length > 1) {
-                const tracks = hls.audioTracks.map(track => ({
+                const tracks = hls.audioTracks.map((track) => ({
                   id: track.id,
                   name: track.name || `音声 ${track.id + 1}`,
-                  lang: track.lang || 'unknown',
-                  default: track.default || false
+                  lang: track.lang || "unknown",
+                  default: track.default || false,
                 }));
                 setAudioTracks(tracks);
-                
+
                 // デフォルトのオーディオトラックを設定
-                const defaultTrack = tracks.find(track => track.default);
+                const defaultTrack = tracks.find((track) => track.default);
                 if (defaultTrack) {
                   setCurrentAudioTrack(defaultTrack.id);
                   hls.audioTrack = defaultTrack.id;
@@ -433,7 +427,7 @@ function Player(props: VideoProps) {
             });
 
             // オーディオトラックの変更を監視（AUDIO_TRACK_SWITCHINGからAUDIO_TRACK_SWITCHEDへ変更）
-            hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, function(event, data) {
+            hls.on(Hls.Events.AUDIO_TRACK_SWITCHED, function (event, data) {
               setCurrentAudioTrack(data.id);
             });
           } else {
@@ -455,72 +449,73 @@ function Player(props: VideoProps) {
     };
   }, []);
 
-  useEffect(()=>{
-    if(myRef.current){
+  useEffect(() => {
+    if (myRef.current) {
       setDuration(myRef.current.duration);
     }
-  },[myRef.current])
+  }, [myRef.current]);
 
   useEffect(() => {
-    if(hlsRef.current){
-        hlsRef.current.nextLevel = Number(videoQuality);
+    if (hlsRef.current) {
+      hlsRef.current.nextLevel = Number(videoQuality);
     }
   }, [videoQuality]);
 
   const handleTimeUpdate = () => {
-    if(myRef.current){
+    if (myRef.current) {
       setCurrentTime(myRef.current.currentTime);
     }
   };
 
-  const handleSeek = (e:any) => {
-    if(myRef.current){
+  const handleSeek = (e: any) => {
+    if (myRef.current) {
       const newTime = e;
       myRef.current.currentTime = newTime;
       setCurrentTime(newTime);
-      }
+    }
   };
 
-  const formatTime = (time:any) => {
+  const formatTime = (time: any) => {
     const hours = Math.floor(time / 3600);
     const minutes = Math.floor((time % 3600) / 60);
     const seconds = Math.floor(time % 60);
-  
+
     if (hours === 0) {
-      return `${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+      return `${minutes < 10 ? "0" : ""}${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
     } else if (hours < 10) {
-      return `${hours}:${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+      return `${hours}:${minutes < 10 ? "0" : ""}${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
     } else {
-      return `${hours < 10 ? '0' : ''}${hours}:${minutes < 10 ? '0' : ''}${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+      return `${hours < 10 ? "0" : ""}${hours}:${minutes < 10 ? "0" : ""}${minutes}:${
+        seconds < 10 ? "0" : ""
+      }${seconds}`;
     }
   };
-  
 
   const handleSeekHover = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const percentage = x / rect.width;
     const previewTime = percentage * duration;
-    if(previewTime > duration){
+    if (previewTime > duration) {
       setShowPreview(false);
       return;
     }
     // プレビュー画像の位置を計算
     const tileSetNumber = Math.ceil(previewTime / 125);
-    if(tileSetNumber === 0){
+    if (tileSetNumber === 0) {
       setShowPreview(false);
       return;
     }
-    const tileSet = tileSetNumber === 0 ? '001' : tileSetNumber.toString().padStart(3, '0');
-    
+    const tileSet = tileSetNumber === 0 ? "001" : tileSetNumber.toString().padStart(3, "0");
+
     // 5秒ごとに1フレームのインデックスを計算
     const tileIndex = Math.round(previewTime / 5);
     const tileX = tileIndex % 5;
     const tileY = Math.floor(tileIndex / 5);
 
     setPreviewPosition({
-        x: -(tileX * 160),  // 160はプレビュー画像の幅
-        y: -(tileY * 90)    // 90はプレビュー画像の高さ
+      x: -(tileX * 160), // 160はプレビュー画像の幅
+      y: -(tileY * 90), // 90はプレビュー画像の高さ
     });
 
     // タイルセットの番号に基づいて適切な画像URLを生成
@@ -531,13 +526,13 @@ function Player(props: VideoProps) {
     setShowPreview(true);
     setHoverPosition(percentage);
     setPreviewTime(previewTime);
-};
+  };
 
   const handleSeekLeave = () => {
     setShowPreview(false);
   };
 
-  function testSetting(){
+  function testSetting() {
     console.log("test");
   }
 
@@ -570,53 +565,60 @@ function Player(props: VideoProps) {
           <div
             ref={overlayRef}
             className={`absolute bottom-0 left-0 h-full w-full transition-opacity duration-300 ease-in-out ${
-              showControls ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+              showControls ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
             }`}
             style={{
-              background: 'linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 30%)',
+              background: "linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 30%)",
             }}
             onMouseLeave={handleVideoHoverLeave}
-            onClick={(!isWWF || isHost) ? toggleControls : void(0)}
+            onClick={!isWWF || isHost ? toggleControls : void 0}
           >
             {/* Overlay menu */}
             <ContextMenuTrigger>
               <div className="flex flex-col justify-end h-full">
-                <div className="p-4" onClick={(e)=>{e.stopPropagation();}}>
-                    <div className="flex items-center mb-4 relative">
-                      <div className="relative flex-grow">
-                        <SeekBar 
-                            playervalue={currentTime}
-                            duration={duration}
-                            bufferValue={buffer} 
-                            onChange={handleSeek}
-                            onMouseMove={handleSeekHover}
-                            onMouseLeave={handleSeekLeave}
-                            onClick={(e) => e.stopPropagation()}         
-                          ></SeekBar>
-                          {showPreview && currentPreviewUrl && (
-                            <div 
-                              className="absolute bottom-4 w-40 flex flex-col justify-center z-50" 
+                <div
+                  className="p-4"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                  }}
+                >
+                  <div className="flex items-center mb-4 relative">
+                    <div className="relative flex-grow">
+                      <SeekBar
+                        playervalue={currentTime}
+                        duration={duration}
+                        bufferValue={buffer}
+                        onChange={handleSeek}
+                        onMouseMove={handleSeekHover}
+                        onMouseLeave={handleSeekLeave}
+                        onClick={(e) => e.stopPropagation()}
+                      ></SeekBar>
+                      {showPreview && currentPreviewUrl && (
+                        <div
+                          className="absolute bottom-4 w-40 flex flex-col justify-center z-50"
+                          style={{
+                            left: `clamp(0px, calc(${
+                              hoverPosition * 100
+                            }% - 80px), calc(100% - 160px))`,
+                          }}
+                        >
+                          <div
+                            ref={previewRef}
+                            className="h-[90px] overflow-hidden pointer-events-none rounded border-white border"
+                          >
+                            <div
+                              className="w-[800px] h-[450px]" // 10x10タイルの全体サイズ
                               style={{
-                                left: `clamp(0px, calc(${hoverPosition * 100}% - 80px), calc(100% - 160px))`,
+                                backgroundImage: `url(${currentPreviewUrl})`,
+                                backgroundPosition: `${previewPosition.x}px ${previewPosition.y}px`,
                               }}
-                            >
-                              <div
-                                ref={previewRef}
-                                className="h-[90px] overflow-hidden pointer-events-none rounded border-white border"
-                              >
-                                <div
-                                  className="w-[800px] h-[450px]"  // 10x10タイルの全体サイズ
-                                  style={{
-                                    backgroundImage: `url(${currentPreviewUrl})`,
-                                    backgroundPosition: `${previewPosition.x}px ${previewPosition.y}px`,
-                                  }}
-                                />
-                              </div>
-                              <p className="mt-1 text-white mx-[auto]">{formatTime(previewTime)}</p>
-                            </div>
-                          )}
-                      </div>
+                            />
+                          </div>
+                          <p className="mt-1 text-white mx-[auto]">{formatTime(previewTime)}</p>
+                        </div>
+                      )}
                     </div>
+                  </div>
                   <input
                     ref={LinkText}
                     className="hidden"
@@ -629,7 +631,7 @@ function Player(props: VideoProps) {
                         //e.stopPropagation();
                         console.log(IsWatchWithFriend);
                         console.log(isHost);
-                        if(!isWWF || isHost) {
+                        if (!isWWF || isHost) {
                           console.log("test");
                           toggleControls();
                         }
@@ -651,17 +653,9 @@ function Player(props: VideoProps) {
                         className="text-white"
                       >
                         {isMuted ? (
-                          <FontAwesomeIcon
-                            className="text-white"
-                            size="lg"
-                            icon={faVolumeMute}
-                          />
+                          <FontAwesomeIcon className="text-white" size="lg" icon={faVolumeMute} />
                         ) : (
-                          <FontAwesomeIcon
-                            className="text-white"
-                            size="lg"
-                            icon={faVolumeHigh}
-                          />
+                          <FontAwesomeIcon className="text-white" size="lg" icon={faVolumeHigh} />
                         )}
                       </button>
                       {!isMobile && (
@@ -683,16 +677,23 @@ function Player(props: VideoProps) {
                       <span className="text-white">{formatTime(duration)}</span>
                     </div>
                     <div className="ml-[auto]">
-                      <DropdownMenu open={qualityMenuOpen} onOpenChange={(open)=>{
-                        if(open){
-                          setQualityMenuOpen(true);
-                          setShowControls(true);
-                        }else{
-                          setQualityMenuOpen(false);
-                        }
-                      }}>
-                        <DropdownMenuTrigger onClick={(e)=>{e.stopPropagation()}}>
-                            <FontAwesomeIcon size="lg" icon={faGear} color="white" />
+                      <DropdownMenu
+                        open={qualityMenuOpen}
+                        onOpenChange={(open) => {
+                          if (open) {
+                            setQualityMenuOpen(true);
+                            setShowControls(true);
+                          } else {
+                            setQualityMenuOpen(false);
+                          }
+                        }}
+                      >
+                        <DropdownMenuTrigger
+                          onClick={(e) => {
+                            e.stopPropagation();
+                          }}
+                        >
+                          <FontAwesomeIcon size="lg" icon={faGear} color="white" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContentNoPortal side="top">
                           <DropdownMenuLabel>再生設定</DropdownMenuLabel>
@@ -702,43 +703,62 @@ function Player(props: VideoProps) {
                             <DropdownMenuSubTrigger>
                               <span>画質</span>
                               <span className="ml-2 text-xs text-muted-foreground">
-                                {videoQuality === "-1" 
-                                  ? "自動" 
+                                {videoQuality === "-1"
+                                  ? "自動"
                                   : videoQualityList[Number(videoQuality)] || ""}
                               </span>
                             </DropdownMenuSubTrigger>
                             <DropdownMenuSubContent>
-                              <DropdownMenuRadioGroup 
-                                value={videoQuality} 
-                                onValueChange={setVideoQuality} 
-                                onClick={(e)=>{e.stopPropagation(),setShowControls(false)}}
+                              <DropdownMenuRadioGroup
+                                value={videoQuality}
+                                onValueChange={setVideoQuality}
+                                onClick={(e) => {
+                                  (e.stopPropagation(), setShowControls(false));
+                                }}
                               >
                                 <DropdownMenuRadioItem value="-1">
-                                  Auto {videoQuality === "-1" ? videoQualityList.length >= 2 ? `(${videoQualityList[hlsRef.current ? hlsRef.current.currentLevel : 0]})`: "(ソース)" : ""}
+                                  Auto{" "}
+                                  {videoQuality === "-1"
+                                    ? videoQualityList.length >= 2
+                                      ? `(${
+                                          videoQualityList[
+                                            hlsRef.current ? hlsRef.current.currentLevel : 0
+                                          ]
+                                        })`
+                                      : "(ソース)"
+                                    : ""}
                                 </DropdownMenuRadioItem>
-                                {videoQualityList.length >= 2 && videoQualityList.slice().reverse().map((quality, index) => (
-                                  <DropdownMenuRadioItem key={videoQualityList.length - 1 - index} value={(videoQualityList.length - 1 - index).toString()}>
-                                    {quality}
-                                  </DropdownMenuRadioItem>
-                                ))}
+                                {videoQualityList.length >= 2 &&
+                                  videoQualityList
+                                    .slice()
+                                    .reverse()
+                                    .map((quality, index) => (
+                                      <DropdownMenuRadioItem
+                                        key={videoQualityList.length - 1 - index}
+                                        value={(videoQualityList.length - 1 - index).toString()}
+                                      >
+                                        {quality}
+                                      </DropdownMenuRadioItem>
+                                    ))}
                               </DropdownMenuRadioGroup>
                             </DropdownMenuSubContent>
                           </DropdownMenuSub>
-                          
+
                           {/* 音声トラック選択をサブメニューに変更 */}
                           {audioTracks.length > 1 && (
                             <DropdownMenuSub>
                               <DropdownMenuSubTrigger>
                                 <span>音声トラック</span>
                                 <span className="ml-2 text-xs text-muted-foreground">
-                                  {currentAudioTrack !== null 
-                                    ? audioTracks.find(t => t.id === currentAudioTrack)?.name || "" 
+                                  {currentAudioTrack !== null
+                                    ? audioTracks.find((t) => t.id === currentAudioTrack)?.name ||
+                                      ""
                                     : ""}
                                 </span>
                               </DropdownMenuSubTrigger>
                               <DropdownMenuSubContent>
                                 {audioTracks.map((track) => (
-                                  <DropdownMenuItem 
+                                  <DropdownMenuItem
                                     key={track.id}
                                     onClick={(e) => {
                                       e.stopPropagation();
@@ -747,9 +767,16 @@ function Player(props: VideoProps) {
                                     }}
                                   >
                                     <div className="flex items-center">
-                                      <div className={`mr-2 h-2 w-2 rounded-full ${currentAudioTrack === track.id ? 'bg-primary' : 'bg-transparent'}`} />
-                                      {track.name} {track.lang !== 'unknown' ? `(${track.lang})` : ''}
-                                      {track.default && ' (デフォルト)'}
+                                      <div
+                                        className={`mr-2 h-2 w-2 rounded-full ${
+                                          currentAudioTrack === track.id
+                                            ? "bg-primary"
+                                            : "bg-transparent"
+                                        }`}
+                                      />
+                                      {track.name}{" "}
+                                      {track.lang !== "unknown" ? `(${track.lang})` : ""}
+                                      {track.default && " (デフォルト)"}
                                     </div>
                                   </DropdownMenuItem>
                                 ))}
@@ -783,9 +810,7 @@ function Player(props: VideoProps) {
                   </div>
                   {!isUploadVideo && (
                     <div className="absolute bg-white w-[100px] h-[25px] top-[20px] right-[10px] rounded-md">
-                      <p className=" text-black text-center font-semibold">
-                        アーカイブ
-                      </p>
+                      <p className=" text-black text-center font-semibold">アーカイブ</p>
                     </div>
                   )}
                 </div>
@@ -802,6 +827,23 @@ function Player(props: VideoProps) {
                   共有する
                 </ContextMenuItem>
               </DialogTrigger>
+              <ContextMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (myRef.current) {
+                    const newLoop = !isLoop;
+                    myRef.current.loop = newLoop;
+                    setIsLoop(newLoop);
+                  }
+                }}
+              >
+                {isLoop ? (
+                  <FontAwesomeIcon icon={faCheck} className="mr-[10px]" />
+                ) : (
+                  <FontAwesomeIcon icon={faX} className="mr-[10px]" />
+                )}
+                ループ再生
+              </ContextMenuItem>
               <ContextMenuItem
                 onClick={(e) => {
                   e.stopPropagation();
@@ -825,27 +867,16 @@ function Player(props: VideoProps) {
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>シェアリンク</DialogTitle>
-              <DialogDescription>
-                このリンクを他の人にシェアしよう！
-              </DialogDescription>
+              <DialogDescription>このリンクを他の人にシェアしよう！</DialogDescription>
             </DialogHeader>
             <div className="flex items-center space-x-2">
               <div className="grid flex-1 gap-2">
                 <Label htmlFor="link" className="sr-only">
                   Link
                 </Label>
-                <Input
-                  id="link"
-                  defaultValue={"https://live.tokuly.com/video/" + id}
-                  readOnly
-                />
+                <Input id="link" defaultValue={"https://live.tokuly.com/video/" + id} readOnly />
               </div>
-              <Button
-                type="submit"
-                size="sm"
-                className="px-3"
-                onClick={copyLink}
-              >
+              <Button type="submit" size="sm" className="px-3" onClick={copyLink}>
                 <span className="sr-only">Copy</span>
                 <Copy className="h-4 w-4" />
               </Button>
@@ -862,12 +893,7 @@ function Player(props: VideoProps) {
                   defaultValue={`<iframe src="https://live.tokuly.com/embed/${id}" title="Tokuly video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="tokuly-live"></iframe>`}
                 ></Textarea>
               </div>
-              <Button
-                type="submit"
-                size="sm"
-                className="px-3"
-                onClick={copyEmdedCode}
-              >
+              <Button type="submit" size="sm" className="px-3" onClick={copyEmdedCode}>
                 <span className="sr-only">Copy</span>
                 <Copy className="h-4 w-4" />
               </Button>

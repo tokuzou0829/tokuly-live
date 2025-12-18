@@ -1,4 +1,4 @@
-import { atom } from 'jotai';
+import { atom } from "jotai";
 
 export const IsWatchWithFriend = atom<boolean>(false);
 export const IsPartyHost = atom<boolean>(false);

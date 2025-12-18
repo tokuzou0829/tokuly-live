@@ -68,10 +68,7 @@ async function http<T>(
   validateStatus?: (status: number) => boolean
 ): Promise<T> {
   // biome-ignore lint/style/noNonNullAssertion: <explanation>
-  const request = new Request(
-    buildFullPath(process.env.NEXT_PUBLIC_API_ROOT!, path),
-    config
-  );
+  const request = new Request(buildFullPath(process.env.NEXT_PUBLIC_API_ROOT!, path), config);
 
   const res = await fetch(request);
 
@@ -84,10 +81,9 @@ async function http<T>(
   }
 
   if (validateStatus && !validateStatus(res.status)) {
-    const error = new FetchError(
-      "HTTPステータスコードがバリデーションエラーになりました",
-      { status: res.status }
-    );
+    const error = new FetchError("HTTPステータスコードがバリデーションエラーになりました", {
+      status: res.status,
+    });
     throw error;
   }
 
@@ -96,10 +92,7 @@ async function http<T>(
   return await res.json();
 }
 
-export async function get<T, U = object>(
-  path: string,
-  options?: Options<U>
-): Promise<T> {
+export async function get<T, U = object>(path: string, options?: Options<U>): Promise<T> {
   return http<T>(
     buildPathWithSearchParams(path, options?.params),
     {
@@ -125,11 +118,7 @@ export async function post<T, U, V = object>(
   );
 }
 
-export async function put<T, U = object>(
-  path: string,
-  body: T,
-  options?: Options<U>
-): Promise<U> {
+export async function put<T, U = object>(path: string, body: T, options?: Options<U>): Promise<U> {
   return http<U>(
     path,
     {
@@ -142,10 +131,7 @@ export async function put<T, U = object>(
 }
 
 // deleteはJSの予約語であるためdestroyとする
-export async function destroy<T = object>(
-  path: string,
-  options?: Options<T>
-): Promise<unknown> {
+export async function destroy<T = object>(path: string, options?: Options<T>): Promise<unknown> {
   return http(
     buildPathWithSearchParams(path, options?.params),
     {

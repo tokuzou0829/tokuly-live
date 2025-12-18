@@ -23,17 +23,21 @@ export default function Videoflame(props: Flameprops) {
       setIsWatchWithFriend(true);
       setIsHost(false);
       setWFRooomId(roomid);
-    }else{
+    } else {
       setIsWatchWithFriend(false);
       setIsHost(false);
       setWFRooomId(null);
     }
   }, []);
-  
+
   return (
     <div className="w-[100%] min-w-[100%] p-[10px]">
       <div className="overflow-hidden rounded-lg">
-        <Video id={live.stream_name} poster_url={live.static_thumbnail_url} isUploadVideo={live.status === "video"} />
+        <Video
+          id={live.stream_name}
+          poster_url={live.static_thumbnail_url}
+          isUploadVideo={live.status === "video"}
+        />
       </div>
     </div>
   );

@@ -11,8 +11,7 @@ type Props = {
 };
 
 export const AvatarGroup: FC<Props> = ({ avatarDataList, max }) => {
-  const avatarDataListWithinMax =
-    max !== undefined ? avatarDataList.slice(0, max) : avatarDataList;
+  const avatarDataListWithinMax = max !== undefined ? avatarDataList.slice(0, max) : avatarDataList;
   const excess = max !== undefined ? avatarDataList.length - max : 0;
 
   const reversetDataList = [...avatarDataListWithinMax].reverse();
@@ -25,9 +24,9 @@ export const AvatarGroup: FC<Props> = ({ avatarDataList, max }) => {
         </Gavatar>
       )}
       {reversetDataList.map((user, i) => (
-        <Gavatar key={i} >
+        <Gavatar key={i}>
           <AvatarImage src={user.image} alt={user.name} />
-          <AvatarFallback>{(user.name)}</AvatarFallback>
+          <AvatarFallback>{user.name}</AvatarFallback>
         </Gavatar>
       ))}
     </div>

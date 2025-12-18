@@ -20,15 +20,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default async function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const [session, channels] = await Promise.all([
-    auth(),
-    getRecommendChannel(),
-  ]);
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const [session, channels] = await Promise.all([auth(), getRecommendChannel()]);
 
   return (
     <div>

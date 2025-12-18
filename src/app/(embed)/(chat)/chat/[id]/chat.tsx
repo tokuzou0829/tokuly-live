@@ -48,20 +48,18 @@ export default function Chat(props: ChatProps) {
       });
   }, []);
   useEffect(() => {
-    const socket = io('https://live-data.tokuly.com', {
-      path: '/chat/socket.io/',
+    const socket = io("https://live-data.tokuly.com", {
+      path: "/chat/socket.io/",
     });
     setSocket(socket);
-    async function connectChat(){
+    async function connectChat() {
       const roomId = id;
       if (session?.user) {
-        const req = await fetch('https://live-data.tokuly.com/chat-auth/',
-          {
-            method: 'POST',
-            body: `{"token":"${session?.user?.access_token}"}`,
-            headers: {"Content-Type": "application/json"}
-          }
-        );
+        const req = await fetch("https://live-data.tokuly.com/chat-auth/", {
+          method: "POST",
+          body: `{"token":"${session?.user?.access_token}"}`,
+          headers: { "Content-Type": "application/json" },
+        });
         const chatKey = await req.json();
         const name = session.user.name;
         const token = chatKey.authKey;
@@ -81,7 +79,7 @@ export default function Chat(props: ChatProps) {
       });
     }
     connectChat();
-    
+
     return () => {
       socket.disconnect();
     };
@@ -112,26 +110,18 @@ export default function Chat(props: ChatProps) {
             <span className="mr-[10px] text-[grey] text-[14px] shrink-0 break-keep chat-message-name">
               {message.name}
             </span>
-            <span className="text-[16px] chat-message-text">
-              {" "}
-              {message.text}
-            </span>
+            <span className="text-[16px] chat-message-text"> {message.text}</span>
           </div>
         ))}
         {is_connection && (
-          <p className="text-[#5f5f5f] m-[10px] chat-status">
-            チャットに接続しました
-          </p>
+          <p className="text-[#5f5f5f] m-[10px] chat-status">チャットに接続しました</p>
         )}
         {history_messages.map((message, index) => (
           <div className="m-1 flex items-center chat-message" key={index}>
             <span className="mr-[10px] text-[grey] text-[14px] shrink-0 break-keep chat-message-name">
               {message.name}
             </span>
-            <span className="text-[16px] chat-message-text">
-              {" "}
-              {message.text}
-            </span>
+            <span className="text-[16px] chat-message-text"> {message.text}</span>
           </div>
         ))}
       </div>
@@ -155,9 +145,7 @@ export default function Chat(props: ChatProps) {
         </form>
       ) : (
         <div className="w-[100%] h-[60px] border-t-[1px] chat-input">
-          <p className=" w-[fit-content] pt-[25px] m-[auto]">
-            ログインしてチャットに参加
-          </p>
+          <p className=" w-[fit-content] pt-[25px] m-[auto]">ログインしてチャットに参加</p>
         </div>
       )}
     </div>

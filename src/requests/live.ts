@@ -1,6 +1,6 @@
 import * as fetch from "@/utils/fetch";
 import { notFound } from "next/navigation";
-import type { Live, LiveList,MoreVideoList } from "@/types/live";
+import type { Live, LiveList, MoreVideoList } from "@/types/live";
 
 type OnlineCheckParams = {
   id: string;
@@ -12,7 +12,6 @@ type Lives = {
 type Archives = {
   archives: LiveList[];
 };
-
 
 export async function getOnlineLiveList(): Promise<Lives> {
   return await fetch.post<null, Lives>(`/live/online/get`, null, {
@@ -53,7 +52,7 @@ export async function onlineCheck(param: OnlineCheckParams): Promise<any> {
     const res = await fetch.post<FormData, any>(`/live/online/check`, formData, {
       headers: {},
     });
-    if(res.publishing_setting && res.publishing_setting == "friend"){
+    if (res.publishing_setting && res.publishing_setting == "friend") {
       notFound();
     }
     return res;
@@ -81,10 +80,10 @@ export async function VideoCheck(param: OnlineCheckParams): Promise<any> {
     const res = await fetch.post<FormData, Live>(`/live/stream/data`, formData, {
       headers: {},
     });
-    if((res.status !== "end" && res.status !== "video") || res.publishing_setting == "friend"){
+    if ((res.status !== "end" && res.status !== "video") || res.publishing_setting == "friend") {
       notFound();
     }
-    if(res.status == "end" && !res.archive){
+    if (res.status == "end" && !res.archive) {
       notFound();
     }
     return res;

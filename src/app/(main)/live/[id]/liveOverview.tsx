@@ -10,15 +10,10 @@ export default function LiveOverview({ live }: { live: Live }) {
   //console.log(live);
 
   const [status, setStatus] = useState<string>("offline");
-  const [streamOverview, setStreamOverview] = useState<string>(
-    live.stream_overview
-  );
-  const [StreamStartTime, setStreamStartTime] = useState<string>(
-    live.stream_start_time
-  );
+  const [streamOverview, setStreamOverview] = useState<string>(live.stream_overview);
+  const [StreamStartTime, setStreamStartTime] = useState<string>(live.stream_start_time);
   function linkify(text: string) {
-    const urlRegex =
-      /(\bhttps?:\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gi;
+    const urlRegex = /(\bhttps?:\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/gi;
 
     return text.split("\n").map((line, index, array) => (
       <span key={index}>
@@ -46,9 +41,7 @@ export default function LiveOverview({ live }: { live: Live }) {
     if (StreamStartTimeData) {
       const timeZone = "Asia/Tokyo";
       const zonedDate = utcToZonedTime(StreamStartTimeData, timeZone);
-      return (
-        formatDistanceToNowStrict(zonedDate, { locale: ja }) + "前に配信開始"
-      );
+      return formatDistanceToNowStrict(zonedDate, { locale: ja }) + "前に配信開始";
     } else {
       return "ストリーマーを待機中";
     }
