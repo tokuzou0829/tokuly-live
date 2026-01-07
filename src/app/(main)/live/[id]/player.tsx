@@ -11,9 +11,10 @@ import {
   faVolumeMute,
   faShare,
   faCopy,
-  faRotateLeft,
   faClock,
   faRefresh,
+  faWindowMaximize,
+  faWindowRestore,
 } from "@fortawesome/free-solid-svg-icons";
 import Hls from "hls.js";
 import {
@@ -59,6 +60,7 @@ function Player(props: VideoProps) {
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isPictureInPicture, setIsPictureInPicture] = useState<boolean>(false);
   const cursorHideTimeoutRef = useRef<number | null>(null);
   const [showLiveButton, setShowLiveButton] = useState<boolean>(false);
   const [hasInteractedWithSeek, setHasInteractedWithSeek] = useState<boolean>(false);
@@ -453,6 +455,70 @@ function Player(props: VideoProps) {
       document.removeEventListener("msfullscreenchange", handleFullScreenChange);
     };
   }, []);
+
+  // ピクチャインピクチャモードの切り替えを監視
+  useEffect(() => {
+    const handlePictureInPictureChange = () => {
+      if (document.pictureInPictureElement === myRef.current) {
+        setIsPictureInPicture(true);
+      } else {
+        setIsPictureInPicture(false);
+      }
+    };
+
+    const video = myRef.current;
+    if (video) {
+      video.addEventListener("enterpictureinpicture", handlePictureInPictureChange);
+      video.addEventListener("leavepictureinpicture", handlePictureInPictureChange);
+    }
+
+    return () => {
+      if (video) {
+        video.removeEventListener("enterpictureinpicture", handlePictureInPictureChange);
+        video.removeEventListener("leavepictureinpicture", handlePictureInPictureChange);
+      }
+    };
+  }, []);
+
+  // ピクチャインピクチャがサポートされているかチェック
+  const isPictureInPictureSupported = () => {
+    return (
+      document.pictureInPictureEnabled && myRef.current && myRef.current.requestPictureInPicture
+    );
+  };
+
+  // ピクチャインピクチャに入る
+  const enterPictureInPicture = async () => {
+    if (!myRef.current || !isPictureInPictureSupported()) {
+      return;
+    }
+
+    try {
+      await myRef.current.requestPictureInPicture();
+    } catch (error) {
+      console.error("Failed to enter picture-in-picture:", error);
+    }
+  };
+
+  // ピクチャインピクチャから出る
+  const exitPictureInPicture = async () => {
+    if (document.pictureInPictureElement) {
+      try {
+        await document.exitPictureInPicture();
+      } catch (error) {
+        console.error("Failed to exit picture-in-picture:", error);
+      }
+    }
+  };
+
+  // ピクチャインピクチャの切り替え
+  const togglePictureInPicture = async () => {
+    if (isPictureInPicture) {
+      await exitPictureInPicture();
+    } else {
+      await enterPictureInPicture();
+    }
+  };
 
   // タイムシフトプレイリストの長さを取得する関数
   const getRewindPlaylistDuration = async () => {
@@ -1667,6 +1733,20 @@ function Player(props: VideoProps) {
                 <FontAwesomeIcon icon={faCopy} className="mr-[10px]" />
                 リンクをコピー
               </ContextMenuItem>
+              {isPictureInPictureSupported() && (
+                <ContextMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    togglePictureInPicture();
+                  }}
+                >
+                  <FontAwesomeIcon
+                    icon={isPictureInPicture ? faWindowRestore : faWindowMaximize}
+                    className="mr-[10px]"
+                  />
+                  {isPictureInPicture ? "ピクチャインピクチャを終了" : "ピクチャインピクチャ"}
+                </ContextMenuItem>
+              )}
             </ContextMenuContent>
           </div>
           <DialogContent className="sm:max-w-md">
