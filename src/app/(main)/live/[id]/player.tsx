@@ -1,6 +1,6 @@
 "use client";
 import React, { useRef, useEffect, useState } from "react";
-import { Copy } from "lucide-react";
+import { Copy, PictureInPicture2 } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlay,
@@ -11,7 +11,6 @@ import {
   faVolumeMute,
   faShare,
   faCopy,
-  faRotateLeft,
   faClock,
   faRefresh,
 } from "@fortawesome/free-solid-svg-icons";
@@ -59,6 +58,7 @@ function Player(props: VideoProps) {
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isPictureInPicture, setIsPictureInPicture] = useState<boolean>(false);
   const cursorHideTimeoutRef = useRef<number | null>(null);
   const [showLiveButton, setShowLiveButton] = useState<boolean>(false);
   const [hasInteractedWithSeek, setHasInteractedWithSeek] = useState<boolean>(false);
@@ -453,6 +453,70 @@ function Player(props: VideoProps) {
       document.removeEventListener("msfullscreenchange", handleFullScreenChange);
     };
   }, []);
+
+  // ピクチャインピクチャモードの切り替えを監視
+  useEffect(() => {
+    const handlePictureInPictureChange = () => {
+      if (document.pictureInPictureElement === myRef.current) {
+        setIsPictureInPicture(true);
+      } else {
+        setIsPictureInPicture(false);
+      }
+    };
+
+    const video = myRef.current;
+    if (video) {
+      video.addEventListener("enterpictureinpicture", handlePictureInPictureChange);
+      video.addEventListener("leavepictureinpicture", handlePictureInPictureChange);
+    }
+
+    return () => {
+      if (video) {
+        video.removeEventListener("enterpictureinpicture", handlePictureInPictureChange);
+        video.removeEventListener("leavepictureinpicture", handlePictureInPictureChange);
+      }
+    };
+  }, []);
+
+  // ピクチャインピクチャがサポートされているかチェック
+  const isPictureInPictureSupported = () => {
+    return (
+      document.pictureInPictureEnabled && myRef.current && myRef.current.requestPictureInPicture
+    );
+  };
+
+  // ピクチャインピクチャに入る
+  const enterPictureInPicture = async () => {
+    if (!myRef.current || !isPictureInPictureSupported()) {
+      return;
+    }
+
+    try {
+      await myRef.current.requestPictureInPicture();
+    } catch (error) {
+      console.error("Failed to enter picture-in-picture:", error);
+    }
+  };
+
+  // ピクチャインピクチャから出る
+  const exitPictureInPicture = async () => {
+    if (document.pictureInPictureElement) {
+      try {
+        await document.exitPictureInPicture();
+      } catch (error) {
+        console.error("Failed to exit picture-in-picture:", error);
+      }
+    }
+  };
+
+  // ピクチャインピクチャの切り替え
+  const togglePictureInPicture = async () => {
+    if (isPictureInPicture) {
+      await exitPictureInPicture();
+    } else {
+      await enterPictureInPicture();
+    }
+  };
 
   // タイムシフトプレイリストの長さを取得する関数
   const getRewindPlaylistDuration = async () => {
@@ -1612,7 +1676,21 @@ function Player(props: VideoProps) {
                       className="ml-[5px] h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer bg-gray-700"
                     />
                   </div>
-                  <div className="ml-[auto]">
+                  <div className="ml-[auto] flex items-center">
+                    {isPictureInPictureSupported() && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePictureInPicture();
+                        }}
+                        className="text-white mr-3"
+                        title={
+                          isPictureInPicture ? "ピクチャインピクチャを終了" : "ピクチャインピクチャ"
+                        }
+                      >
+                        <PictureInPicture2 className="w-5 h-5" />
+                      </button>
+                    )}
                     {isFullScreen ? (
                       <button
                         onClick={(e) => {

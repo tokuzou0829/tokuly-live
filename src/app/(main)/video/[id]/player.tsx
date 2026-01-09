@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect, useState } from "react";
-import { Copy } from "lucide-react";
+import { Copy, PictureInPicture2 } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlay,
@@ -80,6 +80,7 @@ function Player(props: VideoProps) {
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
+  const [isPictureInPicture, setIsPictureInPicture] = useState<boolean>(false);
   const cursorHideTimeoutRef = useRef<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -349,6 +350,70 @@ function Player(props: VideoProps) {
       document.removeEventListener("msfullscreenchange", handleFullScreenChange);
     };
   }, []);
+
+  // ピクチャインピクチャモードの切り替えを監視
+  useEffect(() => {
+    const handlePictureInPictureChange = () => {
+      if (document.pictureInPictureElement === myRef.current) {
+        setIsPictureInPicture(true);
+      } else {
+        setIsPictureInPicture(false);
+      }
+    };
+
+    const video = myRef.current;
+    if (video) {
+      video.addEventListener("enterpictureinpicture", handlePictureInPictureChange);
+      video.addEventListener("leavepictureinpicture", handlePictureInPictureChange);
+    }
+
+    return () => {
+      if (video) {
+        video.removeEventListener("enterpictureinpicture", handlePictureInPictureChange);
+        video.removeEventListener("leavepictureinpicture", handlePictureInPictureChange);
+      }
+    };
+  }, []);
+
+  // ピクチャインピクチャがサポートされているかチェック
+  const isPictureInPictureSupported = () => {
+    return (
+      document.pictureInPictureEnabled && myRef.current && myRef.current.requestPictureInPicture
+    );
+  };
+
+  // ピクチャインピクチャに入る
+  const enterPictureInPicture = async () => {
+    if (!myRef.current || !isPictureInPictureSupported()) {
+      return;
+    }
+
+    try {
+      await myRef.current.requestPictureInPicture();
+    } catch (error) {
+      console.error("Failed to enter picture-in-picture:", error);
+    }
+  };
+
+  // ピクチャインピクチャから出る
+  const exitPictureInPicture = async () => {
+    if (document.pictureInPictureElement) {
+      try {
+        await document.exitPictureInPicture();
+      } catch (error) {
+        console.error("Failed to exit picture-in-picture:", error);
+      }
+    }
+  };
+
+  // ピクチャインピクチャの切り替え
+  const togglePictureInPicture = async () => {
+    if (isPictureInPicture) {
+      await exitPictureInPicture();
+    } else {
+      await enterPictureInPicture();
+    }
+  };
 
   useEffect(() => {
     let hls: Hls; // HLS.js インスタンスを保持する変数を定義
@@ -677,7 +742,19 @@ function Player(props: VideoProps) {
                       <span className="text-white mx-1">/</span>
                       <span className="text-white">{formatTime(duration)}</span>
                     </div>
-                    <div className="ml-[auto]">
+                    <div className="ml-[auto] flex items-center">
+                      {isPictureInPictureSupported() && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePictureInPicture();
+                          }}
+                          className="text-white mr-3"
+                          title={isPictureInPicture ? "ピクチャインピクチャを終了" : "ピクチャインピクチャ"}
+                        >
+                          <PictureInPicture2 className="w-6 h-6" />
+                        </button>
+                      )}
                       <DropdownMenu
                         open={qualityMenuOpen}
                         onOpenChange={(open) => {
@@ -792,7 +869,7 @@ function Player(props: VideoProps) {
                             e.stopPropagation();
                             exitFullScreen();
                           }}
-                          className="bottom-[0px] right-[0px] mt-[-10px] mr-[10px] ml-[20px] text-white"
+                          className="text-white ml-3"
                         >
                           <FontAwesomeIcon size="lg" icon={faCompress} />
                         </button>
@@ -802,7 +879,7 @@ function Player(props: VideoProps) {
                             e.stopPropagation();
                             enterFullScreen();
                           }}
-                          className="bottom-[0px] right-[0px] mt-[-10px] mr-[10px] ml-[20px] text-white"
+                          className="text-white ml-3"
                         >
                           <FontAwesomeIcon size="lg" icon={faExpand} />
                         </button>
