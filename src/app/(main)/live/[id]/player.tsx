@@ -1,6 +1,6 @@
 "use client";
 import React, { useRef, useEffect, useState } from "react";
-import { Copy } from "lucide-react";
+import { Copy, PictureInPicture2 } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlay,
@@ -13,8 +13,6 @@ import {
   faCopy,
   faClock,
   faRefresh,
-  faWindowMaximize,
-  faWindowRestore,
 } from "@fortawesome/free-solid-svg-icons";
 import Hls from "hls.js";
 import {
@@ -1690,9 +1688,7 @@ function Player(props: VideoProps) {
                           isPictureInPicture ? "ピクチャインピクチャを終了" : "ピクチャインピクチャ"
                         }
                       >
-                        <FontAwesomeIcon
-                          icon={isPictureInPicture ? faWindowRestore : faWindowMaximize}
-                        />
+                        <PictureInPicture2 className="w-5 h-5" />
                       </button>
                     )}
                     {isFullScreen ? (
