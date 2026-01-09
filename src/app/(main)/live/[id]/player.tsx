@@ -1678,7 +1678,23 @@ function Player(props: VideoProps) {
                       className="ml-[5px] h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer bg-gray-700"
                     />
                   </div>
-                  <div className="ml-[auto]">
+                  <div className="ml-[auto] flex items-center">
+                    {isPictureInPictureSupported() && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          togglePictureInPicture();
+                        }}
+                        className="text-white mr-3"
+                        title={
+                          isPictureInPicture ? "ピクチャインピクチャを終了" : "ピクチャインピクチャ"
+                        }
+                      >
+                        <FontAwesomeIcon
+                          icon={isPictureInPicture ? faWindowRestore : faWindowMaximize}
+                        />
+                      </button>
+                    )}
                     {isFullScreen ? (
                       <button
                         onClick={(e) => {
@@ -1733,20 +1749,6 @@ function Player(props: VideoProps) {
                 <FontAwesomeIcon icon={faCopy} className="mr-[10px]" />
                 リンクをコピー
               </ContextMenuItem>
-              {isPictureInPictureSupported() && (
-                <ContextMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    togglePictureInPicture();
-                  }}
-                >
-                  <FontAwesomeIcon
-                    icon={isPictureInPicture ? faWindowRestore : faWindowMaximize}
-                    className="mr-[10px]"
-                  />
-                  {isPictureInPicture ? "ピクチャインピクチャを終了" : "ピクチャインピクチャ"}
-                </ContextMenuItem>
-              )}
             </ContextMenuContent>
           </div>
           <DialogContent className="sm:max-w-md">

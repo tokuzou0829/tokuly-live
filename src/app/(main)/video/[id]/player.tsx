@@ -744,7 +744,23 @@ function Player(props: VideoProps) {
                       <span className="text-white mx-1">/</span>
                       <span className="text-white">{formatTime(duration)}</span>
                     </div>
-                    <div className="ml-[auto]">
+                    <div className="ml-[auto] flex items-center">
+                      {isPictureInPictureSupported() && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            togglePictureInPicture();
+                          }}
+                          className="text-white mr-3"
+                          title={isPictureInPicture ? "ピクチャインピクチャを終了" : "ピクチャインピクチャ"}
+                        >
+                          <FontAwesomeIcon
+                            size="lg"
+                            icon={isPictureInPicture ? faWindowRestore : faWindowMaximize}
+                            color="white"
+                          />
+                        </button>
+                      )}
                       <DropdownMenu
                         open={qualityMenuOpen}
                         onOpenChange={(open) => {
@@ -859,7 +875,7 @@ function Player(props: VideoProps) {
                             e.stopPropagation();
                             exitFullScreen();
                           }}
-                          className="bottom-[0px] right-[0px] mt-[-10px] mr-[10px] ml-[20px] text-white"
+                          className="text-white ml-3"
                         >
                           <FontAwesomeIcon size="lg" icon={faCompress} />
                         </button>
@@ -869,7 +885,7 @@ function Player(props: VideoProps) {
                             e.stopPropagation();
                             enterFullScreen();
                           }}
-                          className="bottom-[0px] right-[0px] mt-[-10px] mr-[10px] ml-[20px] text-white"
+                          className="text-white ml-3"
                         >
                           <FontAwesomeIcon size="lg" icon={faExpand} />
                         </button>
@@ -930,20 +946,6 @@ function Player(props: VideoProps) {
                 <FontAwesomeIcon icon={faCopy} className="mr-[10px]" />
                 時間付きリンクをコピー
               </ContextMenuItem>
-              {isPictureInPictureSupported() && (
-                <ContextMenuItem
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    togglePictureInPicture();
-                  }}
-                >
-                  <FontAwesomeIcon
-                    icon={isPictureInPicture ? faWindowRestore : faWindowMaximize}
-                    className="mr-[10px]"
-                  />
-                  {isPictureInPicture ? "ピクチャインピクチャを終了" : "ピクチャインピクチャ"}
-                </ContextMenuItem>
-              )}
             </ContextMenuContent>
           </div>
           <DialogContent className="sm:max-w-md">
