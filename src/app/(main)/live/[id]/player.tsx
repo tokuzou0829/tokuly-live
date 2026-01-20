@@ -79,7 +79,7 @@ function Player(props: VideoProps) {
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(MAX_TIMESHIFT_DURATION); // 最大秒数を定数から設定
   const [bufferValue, setBufferValue] = useState<number>(0);
-  const [hls, setHls] = useState<Hls | null>(null);
+  const hlsRef = useRef<Hls | null>(null);
   const [isLive, setIsLive] = useState<boolean>(true);
   const [showSeekPreview, setShowSeekPreview] = useState<boolean>(false);
   const [seekPreviewTime, setSeekPreviewTime] = useState<number>(0);
@@ -714,8 +714,9 @@ function Player(props: VideoProps) {
       if (updateIntervalRef.current) {
         clearInterval(updateIntervalRef.current);
       }
-      if (hls) {
-        hls.destroy();
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
       }
     };
   }, [id]);
@@ -802,8 +803,9 @@ function Player(props: VideoProps) {
     // シークバーを最大値に設定（ライブモードでは最新位置）
     setCurrentTime(maxSeekableDuration);
 
-    if (hls) {
-      hls.destroy();
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
     }
 
     const video = myRef.current!;
@@ -895,7 +897,7 @@ function Player(props: VideoProps) {
             });
         }
       });
-      setHls(newHls);
+      hlsRef.current = newHls;
     } else {
       video.src = videoSrc;
       video.load();
@@ -967,8 +969,9 @@ function Player(props: VideoProps) {
     }
 
     // 既存のHLSインスタンスを破棄
-    if (hls) {
-      hls.destroy();
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
     }
 
     // 巻き戻し開始時のタイムスタンプを記録
@@ -1138,7 +1141,7 @@ function Player(props: VideoProps) {
         }
       });
 
-      setHls(newHls);
+      hlsRef.current = newHls;
     } else {
       const video = myRef.current!;
       video.src = rewindSrc;
@@ -1266,8 +1269,8 @@ function Player(props: VideoProps) {
       if (isRewindMode) {
         // 配信が進むにつれてHLSの長さも増加する可能性があるため、
         // 定期的にHLS.jsに問い合わせて最新の時間情報を取得
-        if (hls && hls.media && hls.media.duration) {
-          const currentMediaDuration = hls.media.duration;
+        if (hlsRef.current && hlsRef.current.media && hlsRef.current.media.duration) {
+          const currentMediaDuration = hlsRef.current.media.duration;
 
           // 現在時刻 - 巻き戻し開始時刻 = 経過時間
           // 経過時間が加わることで、巻き戻し中でも時間が積み重なっていく
@@ -1487,8 +1490,9 @@ function Player(props: VideoProps) {
       if (updateIntervalRef.current) {
         clearInterval(updateIntervalRef.current);
       }
-      if (hls) {
-        hls.destroy();
+      if (hlsRef.current) {
+        hlsRef.current.destroy();
+        hlsRef.current = null;
       }
       if (seekbarUpdateIntervalRef.current) {
         clearInterval(seekbarUpdateIntervalRef.current);
