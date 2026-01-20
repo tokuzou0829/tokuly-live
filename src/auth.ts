@@ -64,12 +64,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           expires_at: account.expires_at ?? 0,
           refresh_token: account.refresh_token,
         };
-      } else if (Date.now() > token.expires_at) {
-        // Subsequent logins, but the `access_token` is still valid
+      } else if (Math.floor(Date.now() / 1000) < token.expires_at) {
+        // Subsequent logins, `access_token` is still valid
         //console.log(token.refresh_token)
         return token;
       } else {
-        // Subsequent logins, but the `access_token` has expired, try to refresh it
+        // Subsequent logins, `access_token` has expired, try to refresh it
         //console.log('refresh_token', token.refresh_token)
         if (!token.refresh_token) throw new TypeError("Missing refresh_token");
 
