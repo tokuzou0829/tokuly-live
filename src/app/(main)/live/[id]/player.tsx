@@ -853,13 +853,8 @@ function Player(props: VideoProps) {
       // 非iOS環境でHLS.jsを使用
       const newHls = new Hls({
         enableWorker: true,
-        maxBufferLength: 10,
-        liveBackBufferLength: 5,
-        liveSyncDuration: 3,
-        liveMaxLatencyDuration: 10,
-        liveDurationInfinity: true,
-        highBufferWatchdogPeriod: 3,
-        maxLiveSyncPlaybackRate: 1,
+        lowLatencyMode: true,
+        backBufferLength: 5,
       });
 
       // エラーハンドリング
@@ -1038,7 +1033,6 @@ function Player(props: VideoProps) {
       const newHls = new Hls({
         enableWorker: true,
         maxBufferLength: 30,
-        // タイムアウト設定を追加して、ロード失敗時のハンドリングを強化
         manifestLoadingTimeOut: 20000,
         manifestLoadingMaxRetry: 3,
       });
