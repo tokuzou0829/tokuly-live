@@ -378,7 +378,7 @@ function Player(props: VideoProps) {
   // ピクチャインピクチャがサポートされているかチェック
   const isPictureInPictureSupported = () => {
     return (
-      document.pictureInPictureEnabled && myRef.current && myRef.current.requestPictureInPicture
+      globalThis.document && document.pictureInPictureEnabled && myRef.current && myRef.current.requestPictureInPicture
     );
   };
 
@@ -418,7 +418,7 @@ function Player(props: VideoProps) {
   useEffect(() => {
     let hls: Hls; // HLS.js インスタンスを保持する変数を定義
     const videoSrc = `https://live-data.tokuly.com/videos/hls/${id}/index.m3u8`;
-    const share_time = searchParams.get("t");
+    const share_time = searchParams?.get("t");
     // Function to check the m3u8 file status
     const checkM3u8Status = () => {
       fetch(videoSrc, { method: "HEAD" }).then((response) => {

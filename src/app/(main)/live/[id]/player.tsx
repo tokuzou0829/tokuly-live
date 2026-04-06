@@ -481,7 +481,7 @@ function Player(props: VideoProps) {
   // ピクチャインピクチャがサポートされているかチェック
   const isPictureInPictureSupported = () => {
     return (
-      document.pictureInPictureEnabled && myRef.current && myRef.current.requestPictureInPicture
+      globalThis.document && document.pictureInPictureEnabled && myRef.current && myRef.current.requestPictureInPicture
     );
   };
 
