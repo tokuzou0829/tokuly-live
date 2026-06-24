@@ -18,7 +18,7 @@ export default function Videoflame(props: Flameprops) {
 
   //一緒に観るための処理
   useEffect(() => {
-    const roomid = searchParams.get("room_id");
+    const roomid = searchParams?.get("room_id");
     if (roomid) {
       setIsWatchWithFriend(true);
       setIsHost(false);
@@ -31,8 +31,8 @@ export default function Videoflame(props: Flameprops) {
   }, []);
 
   return (
-    <div className="w-[100%] min-w-[100%] p-[10px]">
-      <div className="overflow-hidden rounded-lg">
+    <div className="w-[100%] min-w-[100%] p-0 sm:p-[10px]">
+      <div className="overflow-hidden rounded-none sm:rounded-lg">
         <Video
           id={live.stream_name}
           poster_url={live.static_thumbnail_url}

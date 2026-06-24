@@ -87,6 +87,8 @@ function Player(props: VideoProps) {
   const [actualHlsDuration, setActualHlsDuration] = useState<number>(MAX_TIMESHIFT_DURATION);
   // シークバー表示用の最大時間（実際の長さまたは最大時間）
   const [maxSeekableDuration, setMaxSeekableDuration] = useState<number>(MAX_TIMESHIFT_DURATION);
+  const liveHlsErrorCountRef = useRef<number>(0);
+  const liveStallTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   // 巻き戻し開始時のタイムスタンプ
   const rewindStartTimeRef = useRef<number>(0);
   // 巻き戻しモードの開始時刻
@@ -315,6 +317,21 @@ function Player(props: VideoProps) {
         seekTimeoutRef.current = setTimeout(() => {
           setIsSeeking(false);
         }, 10000);
+      } else if (isLive && hlsRef.current) {
+        if (liveStallTimeoutRef.current) {
+          clearTimeout(liveStallTimeoutRef.current);
+        }
+
+        liveStallTimeoutRef.current = setTimeout(() => {
+          liveStallTimeoutRef.current = null;
+          recoverLiveStall("video-waiting");
+        }, 2500);
+      }
+    };
+
+    const handleStalled = () => {
+      if (isLive) {
+        recoverLiveStall("video-stalled");
       }
     };
 
@@ -327,11 +344,17 @@ function Player(props: VideoProps) {
         }
         setIsSeeking(false);
       }
+      if (liveStallTimeoutRef.current) {
+        clearTimeout(liveStallTimeoutRef.current);
+        liveStallTimeoutRef.current = null;
+      }
+      liveHlsErrorCountRef.current = 0;
     };
 
     video.addEventListener("seeking", handleSeeking);
     video.addEventListener("seeked", handleSeeked);
     video.addEventListener("waiting", handleWaiting);
+    video.addEventListener("stalled", handleStalled);
     video.addEventListener("playing", handlePlaying);
 
     return () => {
@@ -339,10 +362,15 @@ function Player(props: VideoProps) {
       video.removeEventListener("seeking", handleSeeking);
       video.removeEventListener("seeked", handleSeeked);
       video.removeEventListener("waiting", handleWaiting);
+      video.removeEventListener("stalled", handleStalled);
       video.removeEventListener("playing", handlePlaying);
 
       if (seekTimeoutRef.current) {
         clearTimeout(seekTimeoutRef.current);
+      }
+      if (liveStallTimeoutRef.current) {
+        clearTimeout(liveStallTimeoutRef.current);
+        liveStallTimeoutRef.current = null;
       }
     };
   }, [
@@ -718,6 +746,7 @@ function Player(props: VideoProps) {
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
+      resetLiveStallTimeout();
     };
   }, [id]);
 
@@ -792,10 +821,69 @@ function Player(props: VideoProps) {
     }
   };
 
+  const resetLiveStallTimeout = () => {
+    if (liveStallTimeoutRef.current) {
+      clearTimeout(liveStallTimeoutRef.current);
+      liveStallTimeoutRef.current = null;
+    }
+  };
+
+  const recoverLiveStall = (reason: string) => {
+    const hls = hlsRef.current;
+    const video = myRef.current;
+    if (!hls || !video || isRewindMode) return;
+
+    console.warn(`Recovering live playback: ${reason}`);
+    hls.startLoad();
+    safePlayVideo(video).catch((error) => {
+      console.error(`Live recovery play failed (${reason}):`, error);
+    });
+
+    resetLiveStallTimeout();
+    liveStallTimeoutRef.current = setTimeout(() => {
+      liveStallTimeoutRef.current = null;
+      if (!myRef.current || myRef.current.paused || isRewindMode) return;
+      hlsRef.current?.destroy();
+      hlsRef.current = null;
+      loadLiveStream();
+    }, 3000);
+  };
+
+  const handleLiveHlsError = (hls: Hls, data: { fatal: boolean; type: string; details?: string }) => {
+    console.error("HLS error:", data);
+    if (hlsRef.current !== hls) return;
+
+    if (!data.fatal) {
+      if (data.details === Hls.ErrorDetails.BUFFER_STALLED_ERROR) {
+        recoverLiveStall(data.details);
+      }
+      return;
+    }
+
+    liveHlsErrorCountRef.current += 1;
+    if (data.type === Hls.ErrorTypes.NETWORK_ERROR && liveHlsErrorCountRef.current <= 3) {
+      hls.startLoad();
+      return;
+    }
+    if (data.type === Hls.ErrorTypes.MEDIA_ERROR && liveHlsErrorCountRef.current <= 2) {
+      hls.recoverMediaError();
+      return;
+    }
+    if (liveHlsErrorCountRef.current <= 4) {
+      loadLiveStream();
+      return;
+    }
+
+    setStreamError(`ストリーム読み込みに失敗しました: ${data.details}`);
+    setIsLoadingLiveStream(false);
+  };
+
   // ライブストリームをロードする関数
   const loadLiveStream = () => {
     const videoSrc = `https://live-data.tokuly.com/hls/${id}/index.m3u8`;
 
+    resetLiveStallTimeout();
+    liveHlsErrorCountRef.current = 0;
     setIsLoadingLiveStream(true);
     setStreamError(null);
     setPlaybackStarted(false);
@@ -859,11 +947,7 @@ function Player(props: VideoProps) {
 
       // エラーハンドリング
       newHls.on(Hls.Events.ERROR, (_, data) => {
-        console.error("HLS error:", data);
-        if (data.fatal) {
-          setStreamError(`ストリーム読み込みに失敗しました: ${data.details}`);
-          setIsLoadingLiveStream(false);
-        }
+        handleLiveHlsError(newHls, data);
       });
 
       newHls.loadSource(videoSrc);
@@ -946,6 +1030,8 @@ function Player(props: VideoProps) {
   // 巻き戻しストリームをロードする関数
   const loadRewindStream = (targetSeekPosition?: number) => {
     const rewindSrc = `https://live-data.tokuly.com/hls_rewind/${id}/index.m3u8`;
+
+    resetLiveStallTimeout();
 
     // 既存のHLSインスタンスを破棄する前に、現在の映像を一時的に保持
     if (myRef.current) {
@@ -1492,6 +1578,7 @@ function Player(props: VideoProps) {
         clearInterval(seekbarUpdateIntervalRef.current);
         seekbarUpdateIntervalRef.current = null;
       }
+      resetLiveStallTimeout();
     };
   }, [id]);
 

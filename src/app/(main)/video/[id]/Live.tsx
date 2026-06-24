@@ -20,18 +20,21 @@ export default async function LivePlayer({ id }: LiveProps) {
       <div className="xl:flex">
         <div className="w-full">
           <Video live={live} />
-          <div className="px-2">
-            <p className="mt-[5px] mb-[5px] text-2xl font-bold ">{live.title}</p>
-            <Link href={`/${live.ch_handle}`}>
-              <div className="flex items-center bg-slate-100 p-2 rounded-lg">
-                <img
-                  src={live.ch_icon}
-                  alt={`${live.ch_name} icon`}
-                  className="w-12 h-12 rounded-full object-cover flex-shrink-0 mr-1"
-                />
-                <div className="flex flex-col justify-center">
-                  <h2 className="font-bold text-xl leading-tight">{live.ch_name}</h2>
-                </div>
+          <div className="px-2 pt-2">
+            <p className="mb-2 text-2xl font-bold leading-snug">{live.title}</p>
+            <Link
+              href={`/${live.ch_handle}`}
+              className="flex w-fit max-w-full items-center gap-3 rounded-full py-1 pr-3 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+            >
+              <img
+                src={live.ch_icon}
+                alt={`${live.ch_name} icon`}
+                className="h-11 w-11 flex-shrink-0 rounded-full object-cover ring-1 ring-slate-200"
+              />
+              <div className="min-w-0">
+                <h2 className="truncate text-lg font-bold leading-tight text-slate-950">
+                  {live.ch_name}
+                </h2>
               </div>
             </Link>
             <LiveOverview live={live} />

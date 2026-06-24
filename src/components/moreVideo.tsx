@@ -1,30 +1,23 @@
 import { getMoreVideo } from "@/requests/live";
 import { auth } from "@/auth";
-import { Live } from "@/types/live";
-import Link from "next/link";
+import type { Live } from "@/types/live";
+import { MoreVideoItem } from "@/components/moreVideoItem";
+
 export async function MoreVideo({ stream }: { stream: Live }) {
-  const [session, videos] = await Promise.all([auth(), getMoreVideo({ id: stream.stream_name })]);
+  const [, videos] = await Promise.all([auth(), getMoreVideo({ id: stream.stream_name })]);
+
+  if (!videos || videos.length === 0) {
+    return null;
+  }
+
   return (
-    <>
-      <div className="w-[100%]">
-        <p className=" font-bold text-[20px]">{stream.ch_name} をもっと見る</p>
-        {videos &&
-          videos.map((video, index) => (
-            <div key={index}>
-              <Link href={`/${video.type == "live" ? "live" : "video"}/${video.stream_name}`}>
-                <div className="flex items-center my-[5px]">
-                  <img
-                    className="object-cover w-[140px] aspect-video rounded"
-                    src={video.thumbnail_url}
-                  ></img>
-                  <div className="ml-2 mr-2">
-                    <span className="text-ellipsis-2">{video.title}</span>
-                  </div>
-                </div>
-              </Link>
-            </div>
-          ))}
+    <section className="w-full">
+      <p className="mb-3 text-[18px] font-bold leading-tight">{stream.ch_name} をもっと見る</p>
+      <div className="space-y-2">
+        {videos.map((video) => (
+          <MoreVideoItem key={video.id} video={video} />
+        ))}
       </div>
-    </>
+    </section>
   );
 }

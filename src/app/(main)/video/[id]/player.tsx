@@ -87,12 +87,14 @@ function Player(props: VideoProps) {
   const [buffer, setBuffer] = useState(0);
   const [isLoop, setIsLoop] = useState(false);
 
+  const previewBaseUrl = `https://live-data.tokuly.com/videos/hls/${id}/video_preview/video_preview_`;
   const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
   const [showPreview, setShowPreview] = useState(false);
   const [currentPreviewUrl, setCurrentPreviewUrl] = useState("");
   const [hoverPosition, setHoverPosition] = useState(0);
   const previewRef = useRef<HTMLDivElement>(null);
   const [previewTime, setPreviewTime] = useState(0);
+  const [isPreviewAvailable, setIsPreviewAvailable] = useState(false);
 
   const [videoQuality, setVideoQuality] = useState("-1");
   const [loadVideoQuality, setLoadVideoQuality] = useState(0);
@@ -124,6 +126,31 @@ function Player(props: VideoProps) {
       setIsMobile(/android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent));
     }
   }, []);
+
+  useEffect(() => {
+    let isCancelled = false;
+    const previewImage = new Image();
+
+    setIsPreviewAvailable(false);
+
+    previewImage.onload = () => {
+      if (!isCancelled) {
+        setIsPreviewAvailable(true);
+      }
+    };
+    previewImage.onerror = () => {
+      if (!isCancelled) {
+        setIsPreviewAvailable(false);
+      }
+    };
+    previewImage.src = `${previewBaseUrl}001.jpg`;
+
+    return () => {
+      isCancelled = true;
+      previewImage.onload = null;
+      previewImage.onerror = null;
+    };
+  }, [previewBaseUrl]);
 
   // コンポーネントがアンマウントされたときにクリーンアップ
   useEffect(() => {
@@ -558,6 +585,11 @@ function Player(props: VideoProps) {
   };
 
   const handleSeekHover = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    if (!Number.isFinite(duration) || duration <= 0) {
+      setShowPreview(false);
+      return;
+    }
+
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const percentage = x / rect.width;
@@ -566,29 +598,27 @@ function Player(props: VideoProps) {
       setShowPreview(false);
       return;
     }
-    // プレビュー画像の位置を計算
-    const tileSetNumber = Math.ceil(previewTime / 125);
-    if (tileSetNumber === 0) {
-      setShowPreview(false);
-      return;
+
+    if (isPreviewAvailable) {
+      // プレビュー画像の位置を計算
+      const tileSetNumber = Math.max(1, Math.ceil(previewTime / 125));
+      const tileSet = tileSetNumber.toString().padStart(3, "0");
+
+      // 5秒ごとに1フレームのインデックスを計算
+      const tileIndex = Math.round(previewTime / 5);
+      const tileX = tileIndex % 5;
+      const tileY = Math.floor(tileIndex / 5);
+
+      setPreviewPosition({
+        x: -(tileX * 160), // 160はプレビュー画像の幅
+        y: -(tileY * 90), // 90はプレビュー画像の高さ
+      });
+
+      // タイルセットの番号に基づいて適切な画像URLを生成
+      const imageUrl = `${previewBaseUrl}${tileSet}.jpg`;
+      setCurrentPreviewUrl(imageUrl);
     }
-    const tileSet = tileSetNumber === 0 ? "001" : tileSetNumber.toString().padStart(3, "0");
 
-    // 5秒ごとに1フレームのインデックスを計算
-    const tileIndex = Math.round(previewTime / 5);
-    const tileX = tileIndex % 5;
-    const tileY = Math.floor(tileIndex / 5);
-
-    setPreviewPosition({
-      x: -(tileX * 160), // 160はプレビュー画像の幅
-      y: -(tileY * 90), // 90はプレビュー画像の高さ
-    });
-
-    // タイルセットの番号に基づいて適切な画像URLを生成
-    const baseUrl = `https://live-data.tokuly.com/videos/hls/${id}/video_preview/video_preview_`;
-    const imageUrl = `${baseUrl}${tileSet}.jpg`;
-
-    setCurrentPreviewUrl(imageUrl);
     setShowPreview(true);
     setHoverPosition(percentage);
     setPreviewTime(previewTime);
@@ -659,7 +689,7 @@ function Player(props: VideoProps) {
                         onMouseLeave={handleSeekLeave}
                         onClick={(e) => e.stopPropagation()}
                       ></SeekBar>
-                      {showPreview && currentPreviewUrl && (
+                      {showPreview && (
                         <div
                           className="absolute bottom-4 w-40 flex flex-col justify-center z-50"
                           style={{
@@ -668,18 +698,20 @@ function Player(props: VideoProps) {
                             }% - 80px), calc(100% - 160px))`,
                           }}
                         >
-                          <div
-                            ref={previewRef}
-                            className="h-[90px] overflow-hidden pointer-events-none rounded border-white border"
-                          >
+                          {isPreviewAvailable && currentPreviewUrl && (
                             <div
-                              className="w-[800px] h-[450px]" // 10x10タイルの全体サイズ
-                              style={{
-                                backgroundImage: `url(${currentPreviewUrl})`,
-                                backgroundPosition: `${previewPosition.x}px ${previewPosition.y}px`,
-                              }}
-                            />
-                          </div>
+                              ref={previewRef}
+                              className="h-[90px] overflow-hidden pointer-events-none rounded border-white border"
+                            >
+                              <div
+                                className="w-[800px] h-[450px]" // 10x10タイルの全体サイズ
+                                style={{
+                                  backgroundImage: `url(${currentPreviewUrl})`,
+                                  backgroundPosition: `${previewPosition.x}px ${previewPosition.y}px`,
+                                }}
+                              />
+                            </div>
+                          )}
                           <p className="mt-1 text-white mx-[auto]">{formatTime(previewTime)}</p>
                         </div>
                       )}

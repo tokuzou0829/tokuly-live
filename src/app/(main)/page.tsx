@@ -42,15 +42,17 @@ export default async function Home() {
       ) : (
         <>
           <TopLive lives={lives.lives}></TopLive>
-          <p className=" text-[20px] m-[10px] font-bold">おすすめのコンテンツ</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 justify-center px-4">
-            {lives.lives.map((live, index) => (
-              <Live key={index} live={live}></Live>
-            ))}
-            {archives.archives.map((live, index) => (
-              <Video key={index} live={live}></Video>
-            ))}
-          </div>
+          <section className="mt-3 px-3 pb-8 sm:px-4">
+            <p className="mb-3 text-[20px] font-bold">おすすめのコンテンツ</p>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,180px),1fr))] gap-x-4 gap-y-6 sm:grid-cols-[repeat(auto-fill,minmax(200px,1fr))] lg:grid-cols-[repeat(auto-fill,minmax(220px,1fr))] 2xl:grid-cols-[repeat(auto-fill,minmax(230px,1fr))]">
+              {lives.lives.map((live, index) => (
+                <Live key={index} live={live} className="mr-0 w-full shrink" />
+              ))}
+              {archives.archives.map((live, index) => (
+                <Video key={index} live={live} className="mr-0 w-full shrink" />
+              ))}
+            </div>
+          </section>
         </>
       )}
     </div>

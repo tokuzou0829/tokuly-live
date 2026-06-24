@@ -1,9 +1,9 @@
 "use client";
-import Link from "next/link";
 import { useState } from "react";
-import type { Live, LiveList } from "@/types/live";
+import { ContentCard } from "@/components/ui/content-card";
+import type { LiveList } from "@/types/live";
 
-export default function Live({ live }: { live: LiveList }) {
+export default function Live({ live, className }: { live: LiveList; className?: string }) {
   const [isHovered, setIsHovered] = useState(false);
   const [isHoverImageLoaded, setIsHoverImageLoaded] = useState(false);
   const [hoverImageUrl, setHoverImageUrl] = useState("");
@@ -25,29 +25,26 @@ export default function Live({ live }: { live: LiveList }) {
   };
 
   return (
-    <Link href={"/live/" + live.stream_name} className="block w-full max-w-[250px] shrink-0 mr-2">
-      <div className="relative" onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave}>
+    <ContentCard
+      href={"/live/" + live.stream_name}
+      title={live.title}
+      thumbnailUrl={isHovered && isHoverImageLoaded ? hoverImageUrl : live.thumbnail_url}
+      channelName={live.ch_name}
+      channelIcon={live.ch_icon}
+      variant="live"
+      className={className}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      {hoverImageUrl && (
         <img
-          src={isHovered && isHoverImageLoaded ? hoverImageUrl : live.thumbnail_url}
-          className="w-full rounded-lg aspect-video object-cover"
+          src={hoverImageUrl}
+          alt=""
+          aria-hidden="true"
+          className="hidden"
+          onLoad={handleHoverImageLoad}
         />
-        <div className="absolute bg-red-600 w-[100px] h-[25px] top-[5px] left-[5px] rounded-md">
-          <p className="text-white text-center font-semibold">ライブ配信</p>
-        </div>
-        {hoverImageUrl && (
-          <img src={hoverImageUrl} className="hidden" onLoad={handleHoverImageLoad} />
-        )}
-      </div>
-      <div className="flex m-1 overflow-hidden">
-        <img
-          src={live.ch_icon}
-          className="w-[40px] h-[40px] rounded-full aspect-square mr-1 object-cover"
-        />
-        <div className="flex-1 min-w-0">
-          <p className="font-bold mb-0 truncate">{live.title}</p>
-          <p className="mt-0 text-sm">{live.ch_name}</p>
-        </div>
-      </div>
-    </Link>
+      )}
+    </ContentCard>
   );
 }

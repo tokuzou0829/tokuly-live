@@ -1,8 +1,8 @@
 import React from "react";
-import Link from "next/link";
 import { getChannel } from "@/requests/channel";
 import Live from "@/components/ui/live";
 import Video from "@/components/ui/video";
+import { ContentCard } from "@/components/ui/content-card";
 export const revalidate = 0;
 
 export async function generateMetadata({ params }: { params: { handle: string } }) {
@@ -60,28 +60,14 @@ export default async function LivePlayer({ params }: { params: { handle: string 
             <p className=" text-xl font-semibold">このクリエイターの予定</p>
             <div className="overflow-scroll	w-[100%] flex py-3">
               {channel.waiting.map((stream, index) => (
-                <Link
+                <ContentCard
                   key={index}
                   href={"/live/" + stream.stream_name}
-                  className="block w-[250px] shrink-0 mr-2"
-                >
-                  <div className="relative">
-                    <img
-                      src={stream.thumbnail_url}
-                      className="w-[250px] rounded-lg aspect-video object-cover bg-gray-500"
-                    />
-                  </div>
-                  <div className="flex m-1 mr-0">
-                    <img
-                      src={channel.icon_url}
-                      className="w-[40px] h-[40px] rounded-full aspect-square mr-1 object-cover bg-gray-500"
-                    />
-                    <div>
-                      <p className="font-bold mb-0 truncate w-[205px]">{stream.title}</p>
-                      <p className="mt-0 text-sm">{channel.name}</p>
-                    </div>
-                  </div>
-                </Link>
+                  title={stream.title}
+                  thumbnailUrl={stream.thumbnail_url}
+                  channelName={channel.name}
+                  channelIcon={channel.icon_url}
+                />
               ))}
             </div>
           </div>
