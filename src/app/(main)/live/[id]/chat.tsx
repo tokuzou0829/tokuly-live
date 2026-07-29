@@ -1,162 +1,141 @@
 "use client";
-import React, { useEffect, useState } from "react";
+
+import { useEffect, useMemo, useState } from "react";
 import io, { Socket } from "socket.io-client";
-import Image from "next/image";
-import NextAuth, { type Session } from "next-auth";
-import { Plane, Send } from "lucide-react";
+import { type Session } from "next-auth";
+import { Send } from "lucide-react";
+import { ChatItemView } from "@/components/chat-item";
+import { GiftPopover } from "@/components/gift-popover";
+import { mergeChatItems, normalizeChatItem, normalizeChatItems } from "@/lib/gifts";
+import type { ChatItem } from "@/types/gift";
 
 interface ChatProps {
   id: number;
+  channelId?: number;
   session: Session | null;
 }
 
-// Define the type for a chat message
-type ChatMessage = {
-  id: number | null;
-  image: string;
-  name: string;
-  text: string;
-};
-
-export default function Chat(props: ChatProps) {
-  const { id, session } = props;
-  const [socket, setSocket] = useState<Socket | null>(null); // Type the socket
+export default function Chat({ id, channelId, session }: ChatProps) {
+  const [socket, setSocket] = useState<Socket | null>(null);
   const [msg, setMsg] = useState("");
-  const [is_connection, setIs_connection] = useState<boolean>(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]); // Use the ChatMessage type
-  const [history_messages, setHistory_messages] = useState<ChatMessage[]>([]);
-  const [urlName, setUrlName] = useState<string | null | undefined>(null);
-  const [token, setToken] = useState<string | null | undefined>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [messages, setMessages] = useState<ChatItem[]>([]);
+  const [historyMessages, setHistoryMessages] = useState<ChatItem[]>([]);
+  const accessToken = session?.user?.access_token;
+
   useEffect(() => {
-    const data = new URLSearchParams();
-    data.append("stream_id", id.toString());
-    // リクエストを送信
+    const controller = new AbortController();
+    const data = new URLSearchParams({ stream_id: id.toString() });
     fetch("https://api.tokuly.com/live/stream/chat/get", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: data.toString(),
+      signal: controller.signal,
     })
       .then((response) => response.json())
-      .then((responseData) => {
-        const res: ChatMessage[] = responseData;
-        setHistory_messages(res);
-        // console.log('API Response:', responseData);
-      })
+      .then((responseData) => setHistoryMessages(normalizeChatItems(responseData)))
       .catch((error) => {
-        console.error("API Request Error:", error);
+        if (error instanceof Error && error.name !== "AbortError") {
+          console.error("API Request Error:", error);
+        }
       });
-  }, []);
+    return () => controller.abort();
+  }, [id]);
+
   useEffect(() => {
-    const socket = io("https://live-data.tokuly.com", {
-      path: "/chat/socket.io/",
-    });
-    setSocket(socket);
+    const chatSocket = io("https://live-data.tokuly.com", { path: "/chat/socket.io/" });
+    setSocket(chatSocket);
+
     async function connectChat() {
-      const roomId = id;
-      if (session?.user) {
-        const req = await fetch("https://live-data.tokuly.com/chat-auth/", {
+      if (session?.user && accessToken) {
+        const request = await fetch("https://live-data.tokuly.com/chat-auth/", {
           method: "POST",
-          body: `{"token":"${session?.user?.access_token}"}`,
+          body: JSON.stringify({ token: accessToken }),
           headers: { "Content-Type": "application/json" },
         });
-        const chatKey = await req.json();
-        const name = session.user.name;
-        const token = chatKey.authKey;
-        setUrlName(name);
-        setToken(token);
-        socket.emit("join", { roomId: roomId, name: name, token: token });
-        setIs_connection(true);
+        const chatKey = await request.json();
+        chatSocket.emit("join", {
+          roomId: id,
+          name: session.user.name,
+          token: chatKey.authKey,
+        });
+        setIsConnected(true);
       } else {
-        setUrlName("guest");
-        socket.on("connect", () => {
-          socket.emit("join", { roomId: roomId, name: "guest", token: "guest" });
-          setIs_connection(true);
+        chatSocket.on("connect", () => {
+          chatSocket.emit("join", { roomId: id, name: "guest", token: "guest" });
+          setIsConnected(true);
         });
       }
-      socket.on("message", (msg) => {
-        setMessages((prevMessages) => [msg, ...prevMessages]);
+
+      chatSocket.on("message", (rawMessage: unknown) => {
+        const item = normalizeChatItem(rawMessage);
+        if (item) setMessages((previous) => mergeChatItems([item], previous));
       });
     }
-    connectChat();
 
+    connectChat().catch(() => setIsConnected(false));
     return () => {
-      socket.disconnect();
+      chatSocket.disconnect();
     };
-  }, []);
+  }, [accessToken, id, session?.user]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    if (socket && session?.user) {
-      e.preventDefault();
+  const visibleMessages = useMemo(
+    () => mergeChatItems(messages, historyMessages),
+    [messages, historyMessages]
+  );
 
-      if (msg === "") {
-        return;
-      }
-
-      socket.emit("post", { text: msg });
-
-      setMsg("");
-    }
-  };
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!socket || !session?.user || !msg.trim()) return;
+    socket.emit("post", { text: msg.trim() });
+    setMsg("");
+  }
 
   return (
-    <div className="w-full min-h-[600px] bg-white rounded-lg border flex flex-col">
-      <div className="h-10 border-b">
+    <div className="flex h-[calc(100vh-6rem)] min-h-[360px] max-h-[600px] w-full flex-col overflow-hidden rounded-lg border bg-white">
+      <div className="h-10 shrink-0 border-b">
         <p className="pt-2 text-center">チャット</p>
       </div>
-
-      <div className="flex-1 bg-white overflow-y-auto flex flex-col-reverse m-2">
-        {messages.map((message, index) => (
-          <div className="m-1 flex items-center" key={index}>
-            <img
-              src={message.image}
-              className="w-5 h-5 object-cover rounded-full mr-1"
-              alt={message.name}
-            />
-            <span className="mr-2 text-gray-500 text-sm truncate max-w-[40%] shrink-0">
-              {message.name}
-            </span>
-            <span className="text-base">{message.text}</span>
-          </div>
+      <div className="m-2 flex min-h-0 flex-1 flex-col-reverse overflow-y-auto bg-white">
+        {visibleMessages.map((message, index) => (
+          <ChatItemView
+            key={
+              message.type === "gift"
+                ? `gift-${message.id}`
+                : `chat-${message.id ?? index}-${index}`
+            }
+            item={message}
+          />
         ))}
-
-        {is_connection && <p className="text-gray-600 m-2">チャットに接続しました</p>}
-        {history_messages.map((message, index) => (
-          <div className="m-1 flex items-center chat-message" key={index}>
-            <img
-              src={message.image}
-              className="w-[20px] h-[20px] object-cover rounded-full mr-1"
-            ></img>
-            <span className="mr-[10px] text-[grey] text-[14px] shrink-0 break-keep chat-message-name max-w-[40%] text-ellipsis-1">
-              {message.name}
-            </span>
-            <span className="text-[16px] chat-message-text"> {message.text}</span>
-          </div>
-        ))}
+        {isConnected && <p className="m-2 text-gray-600">チャットに接続しました</p>}
       </div>
       {session?.user ? (
-        <form onSubmit={handleSubmit} className="p-2 border-t">
+        <form onSubmit={handleSubmit} className="shrink-0 border-t p-2">
           <div className="flex items-center gap-2">
             <input
               type="text"
               id="msg"
+              aria-label="チャットメッセージ"
               autoComplete="off"
               value={msg}
-              onChange={(e) => setMsg(e.target.value)}
-              className="flex-1 max-h-[30px] px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              onChange={(event) => setMsg(event.target.value)}
+              className="max-h-[40px] flex-1 rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
+            {accessToken && channelId !== undefined && Number.isFinite(channelId) && (
+              <GiftPopover channelId={channelId} liveStreamId={id} token={accessToken} />
+            )}
             <button
               type="submit"
-              className="w-10 h-10 flex items-center justify-center hover:bg-gray-100 rounded-full"
+              aria-label="チャットを送信"
+              className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-gray-100"
             >
               <Send size={24} />
             </button>
           </div>
         </form>
       ) : (
-        <div className="h-10 border-t">
-          <p className="text-center pt-3">ログインしてチャットに参加</p>
+        <div className="h-10 shrink-0 border-t">
+          <p className="pt-3 text-center">ログインしてチャットに参加</p>
         </div>
       )}
     </div>

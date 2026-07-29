@@ -49,6 +49,9 @@ export default function AccountDropdownMenu(props: Props) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
+              <Link href="/gifts">
+                <DropdownMenuItem className="cursor-pointer">ギフト履歴</DropdownMenuItem>
+              </Link>
               <Link href="https://tokuly.com/studio" target="_blank">
                 <DropdownMenuItem className="cursor-pointer">配信する</DropdownMenuItem>
               </Link>
@@ -69,7 +72,7 @@ export default function AccountDropdownMenu(props: Props) {
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
-        <Button onClick={() => signIn("tokuly", { callbackUrl: pathname })}>ログイン</Button>
+        <Button onClick={() => signIn("tokuly", { callbackUrl: pathname ?? "/" })}>ログイン</Button>
       )}
     </>
   );

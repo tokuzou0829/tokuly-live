@@ -1,151 +1,115 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import io, { Socket } from "socket.io-client";
 import { type Session } from "next-auth";
+import { ChatItemView } from "@/components/chat-item";
+import { mergeChatItems, normalizeChatItem, normalizeChatItems } from "@/lib/gifts";
+import type { ChatItem } from "@/types/gift";
 
-interface ChatProps {
-  id: number;
-  session: Session | null;
-}
-
-// Define the type for a chat message
-type ChatMessage = {
-  id: number | null;
-  name: string;
-  text: string;
-};
-
-export default function Chat(props: ChatProps) {
-  const { id, session } = props;
-  const [socket, setSocket] = useState<Socket | null>(null); // Type the socket
+export default function Chat({ id, session }: { id: number; session: Session | null }) {
+  const [socket, setSocket] = useState<Socket | null>(null);
   const [msg, setMsg] = useState("");
-  const [is_connection, setIs_connection] = useState<boolean>(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]); // Use the ChatMessage type
-  const [history_messages, setHistory_messages] = useState<ChatMessage[]>([]);
-  const [urlRoomId, setUrlRoomId] = useState<number>(0);
-  const [urlName, setUrlName] = useState<string | null | undefined>(null);
-  const [token, setToken] = useState<string | null | undefined>(null);
+  const [isConnected, setIsConnected] = useState(false);
+  const [messages, setMessages] = useState<ChatItem[]>([]);
+  const [historyMessages, setHistoryMessages] = useState<ChatItem[]>([]);
+  const accessToken = session?.user?.access_token;
+
   useEffect(() => {
-    const data = new URLSearchParams();
-    data.append("stream_id", id.toString());
-    // リクエストを送信
+    const controller = new AbortController();
+    const data = new URLSearchParams({ stream_id: id.toString() });
     fetch("https://api.tokuly.com/live/stream/chat/get", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: data.toString(),
+      signal: controller.signal,
     })
       .then((response) => response.json())
-      .then((responseData) => {
-        const res: ChatMessage[] = responseData;
-        setHistory_messages(res);
-        //console.log("API Response:", responseData);
-      })
-      .catch((error) => {
-        //console.error("API Request Error:", error);
-      });
-  }, []);
+      .then((responseData) => setHistoryMessages(normalizeChatItems(responseData)))
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [id]);
+
   useEffect(() => {
-    const socket = io("https://live-data.tokuly.com", {
-      path: "/chat/socket.io/",
-    });
-    setSocket(socket);
+    const chatSocket = io("https://live-data.tokuly.com", { path: "/chat/socket.io/" });
+    setSocket(chatSocket);
     async function connectChat() {
-      const roomId = id;
-      if (session?.user) {
-        const req = await fetch("https://live-data.tokuly.com/chat-auth/", {
+      if (session?.user && accessToken) {
+        const request = await fetch("https://live-data.tokuly.com/chat-auth/", {
           method: "POST",
-          body: `{"token":"${session?.user?.access_token}"}`,
+          body: JSON.stringify({ token: accessToken }),
           headers: { "Content-Type": "application/json" },
         });
-        const chatKey = await req.json();
-        const name = session.user.name;
-        const token = chatKey.authKey;
-        setUrlName(name);
-        setToken(token);
-        socket.emit("join", { roomId: roomId, name: name, token: token });
-        setIs_connection(true);
+        const chatKey = await request.json();
+        chatSocket.emit("join", { roomId: id, name: session.user.name, token: chatKey.authKey });
+        setIsConnected(true);
       } else {
-        setUrlName("guest");
-        socket.on("connect", () => {
-          socket.emit("join", { roomId: roomId, name: "guest", token: "guest" });
-          setIs_connection(true);
+        chatSocket.on("connect", () => {
+          chatSocket.emit("join", { roomId: id, name: "guest", token: "guest" });
+          setIsConnected(true);
         });
       }
-      socket.on("message", (msg) => {
-        setMessages((prevMessages) => [msg, ...prevMessages]);
+      chatSocket.on("message", (rawMessage: unknown) => {
+        const item = normalizeChatItem(rawMessage);
+        if (item) setMessages((previous) => mergeChatItems([item], previous));
       });
     }
-    connectChat();
-
+    connectChat().catch(() => setIsConnected(false));
     return () => {
-      socket.disconnect();
+      chatSocket.disconnect();
     };
-  }, []);
+  }, [accessToken, id, session?.user]);
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    if (socket && session?.user) {
-      e.preventDefault();
+  const visibleMessages = useMemo(
+    () => mergeChatItems(messages, historyMessages),
+    [messages, historyMessages]
+  );
 
-      if (msg === "") {
-        return;
-      }
-
-      socket.emit("post", { text: msg });
-
-      setMsg("");
-    }
-  };
+  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!socket || !session?.user || !msg.trim()) return;
+    socket.emit("post", { text: msg.trim() });
+    setMsg("");
+  }
 
   return (
-    <div className="w-[100%] h-[100%] bg-[White] chat-body">
-      <div className="h-[5%] text-center border-b-[1px] flex justify-center items-center chat-label">
-        <p className="m-0">チャット</p>
+    <div className="h-full w-full bg-white chat-body">
+      <div className="flex h-[5%] items-center justify-center border-b text-center chat-label">
+        <p>チャット</p>
       </div>
-      <div className="h-[85%] overflow-y-scroll flex flex-col-reverse chat-message-box">
-        {messages.map((message, index) => (
-          <div className="m-1 flex items-center chat-message" key={index}>
-            <span className="mr-[10px] text-[grey] text-[14px] shrink-0 break-keep chat-message-name">
-              {message.name}
-            </span>
-            <span className="text-[16px] chat-message-text"> {message.text}</span>
-          </div>
+      <div className="flex h-[85%] flex-col-reverse overflow-y-auto chat-message-box">
+        {visibleMessages.map((message, index) => (
+          <ChatItemView
+            key={
+              message.type === "gift"
+                ? `gift-${message.id}`
+                : `chat-${message.id ?? index}-${index}`
+            }
+            item={message}
+            compact
+          />
         ))}
-        {is_connection && (
-          <p className="text-[#5f5f5f] m-[10px] chat-status">チャットに接続しました</p>
-        )}
-        {history_messages.map((message, index) => (
-          <div className="m-1 flex items-center chat-message" key={index}>
-            <span className="mr-[10px] text-[grey] text-[14px] shrink-0 break-keep chat-message-name">
-              {message.name}
-            </span>
-            <span className="text-[16px] chat-message-text"> {message.text}</span>
-          </div>
-        ))}
+        {isConnected && <p className="m-2 text-gray-600 chat-status">チャットに接続しました</p>}
       </div>
       {session?.user ? (
         <form onSubmit={handleSubmit} className="h-[10%] chat-input">
-          <div className="flex justify-center items-center">
+          <div className="flex items-center justify-center">
             <input
               type="text"
-              id="msg"
+              aria-label="チャットメッセージ"
               autoComplete="off"
               value={msg}
-              onChange={(e) => setMsg(e.target.value)}
-              className="w-[100%] m-[10px] block border-solid divide-inherit border-2 rounded-md	h-[30px]"
+              onChange={(event) => setMsg(event.target.value)}
+              className="m-2 h-8 w-full rounded-md border-2"
             />
-            <div className="text-right ml-[auto] mr-[10px] shrink-0">
-              <button type="submit" className="ml-[auto]">
-                送信
-              </button>
-            </div>
+            <button type="submit" className="mr-3 shrink-0">
+              送信
+            </button>
           </div>
         </form>
       ) : (
-        <div className="w-[100%] h-[60px] border-t-[1px] chat-input">
-          <p className=" w-[fit-content] pt-[25px] m-[auto]">ログインしてチャットに参加</p>
+        <div className="h-[60px] border-t chat-input">
+          <p className="m-auto w-fit pt-6">ログインしてチャットに参加</p>
         </div>
       )}
     </div>

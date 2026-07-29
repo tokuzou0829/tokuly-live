@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import LiveOverview from "./liveOverview";
 import { getLive } from "@/requests/live";
 import { MoreVideo } from "@/components/moreVideo";
+import { getChannel } from "@/requests/channel";
 
 interface LiveProps {
   id: string;
@@ -14,6 +15,7 @@ export const revalidate = 180;
 
 export default async function LivePlayer({ id }: LiveProps) {
   const [session, live] = await Promise.all([auth(), getLive({ id })]);
+  const channel = await getChannel({ handle: live.ch_handle });
 
   return (
     <div className="w-[100%] overflow-hidden">
@@ -44,7 +46,7 @@ export default async function LivePlayer({ id }: LiveProps) {
           <div>
             {live.status !== "video" && (
               <>
-                <Chat id={live.id} session={session}></Chat>
+                <Chat id={live.id} channelId={Number(channel.id)} session={session}></Chat>
                 <div className="mb-2" />
               </>
             )}

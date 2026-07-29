@@ -26,7 +26,7 @@ export default function WebEncoder({
   session: Session | null;
 }) {
   const searchParams = useSearchParams();
-  const [streamKey, setStreamKey] = useState(searchParams.get("stream_name") || "");
+  const [streamKey, setStreamKey] = useState(searchParams?.get("stream_name") || "");
   const [devices, setDevices] = useState<{
     audioInputs: MediaDeviceInfo[];
     videoInputs: MediaDeviceInfo[];
