@@ -13,6 +13,7 @@ export type Live = {
   archive: boolean;
   stream_start_time: string;
   publishing_setting: string;
+  gifts_enabled: boolean;
   ch_name: string;
   ch_icon: string;
   ch_handle: string;

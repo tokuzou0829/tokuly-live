@@ -12,10 +12,11 @@ import type { ChatItem } from "@/types/gift";
 interface ChatProps {
   id: number;
   channelId?: number;
+  giftsEnabled?: boolean;
   session: Session | null;
 }
 
-export default function Chat({ id, channelId, session }: ChatProps) {
+export default function Chat({ id, channelId, giftsEnabled = false, session }: ChatProps) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [msg, setMsg] = useState("");
   const [isConnected, setIsConnected] = useState(false);
@@ -121,9 +122,12 @@ export default function Chat({ id, channelId, session }: ChatProps) {
               onChange={(event) => setMsg(event.target.value)}
               className="max-h-[40px] flex-1 rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            {accessToken && channelId !== undefined && Number.isFinite(channelId) && (
-              <GiftPopover channelId={channelId} liveStreamId={id} token={accessToken} />
-            )}
+            {giftsEnabled &&
+              accessToken &&
+              channelId !== undefined &&
+              Number.isFinite(channelId) && (
+                <GiftPopover channelId={channelId} liveStreamId={id} token={accessToken} />
+              )}
             <button
               type="submit"
               aria-label="チャットを送信"

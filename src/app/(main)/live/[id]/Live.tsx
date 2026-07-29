@@ -46,7 +46,12 @@ export default async function LivePlayer({ id }: LiveProps) {
           <div>
             {live.status !== "video" && (
               <>
-                <Chat id={live.id} channelId={Number(channel.id)} session={session}></Chat>
+                <Chat
+                  id={live.id}
+                  channelId={Number(channel.id)}
+                  giftsEnabled={live.gifts_enabled}
+                  session={session}
+                ></Chat>
                 <div className="mb-2" />
               </>
             )}
