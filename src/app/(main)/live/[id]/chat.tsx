@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import io, { Socket } from "socket.io-client";
 import { type Session } from "next-auth";
 import { Send } from "lucide-react";

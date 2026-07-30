@@ -115,6 +115,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       //console.log(token)
       session.error = token.error;
+      if (token.sub) session.user.id = token.sub;
       session.user.access_token = token.access_token;
       session.user.refresh_token = token.refresh_token;
       session.user.expires_at = token.expires_at;
@@ -127,7 +128,7 @@ declare module "next-auth" {
   interface Session {
     error?: "RefreshTokenError";
     user?: {
-      id?: number;
+      id?: string;
       name?: string;
       email?: string;
       image?: string;

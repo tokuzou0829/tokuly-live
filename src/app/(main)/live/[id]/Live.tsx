@@ -6,6 +6,7 @@ import LiveOverview from "./liveOverview";
 import { getLive } from "@/requests/live";
 import { MoreVideo } from "@/components/moreVideo";
 import { getChannel } from "@/requests/channel";
+import { StreamComments } from "@/components/stream-comments";
 
 interface LiveProps {
   id: string;
@@ -19,10 +20,12 @@ export default async function LivePlayer({ id }: LiveProps) {
 
   return (
     <div className="w-[100%] overflow-hidden">
-      <div className="xl:flex">
-        <div className="w-full">
-          <Video live={live} />
-          <div className="px-2">
+      <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_430px] xl:items-start">
+        <div className="min-w-0 px-4 pt-3 xl:pr-3">
+          <div className="overflow-hidden rounded-lg">
+            <Video live={live} />
+          </div>
+          <div className="pt-2">
             <p className="mt-0 text-2xl font-bold">{live.title}</p>
             <div className="flex w-[100%]">
               <div className="relative w-[85px] h-[85px]">
@@ -42,7 +45,7 @@ export default async function LivePlayer({ id }: LiveProps) {
             <LiveOverview live={live} />
           </div>
         </div>
-        <div className="p-[10px] xl:min-w-[430px] max-w-[100%] xl:max-w-[430px] xl:pr-[20px]">
+        <div className="max-w-[100%] p-4 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:pl-3 xl:pr-5">
           <div>
             {live.status !== "video" && (
               <>
@@ -57,6 +60,13 @@ export default async function LivePlayer({ id }: LiveProps) {
             )}
             <MoreVideo stream={live}></MoreVideo>
           </div>
+        </div>
+        <div className="min-w-0 px-4 xl:col-start-1 xl:row-start-2 xl:pr-3">
+          <StreamComments
+            streamId={live.id}
+            session={session}
+            isChannelOwner={Number(session?.user?.id) === Number(channel.id)}
+          />
         </div>
       </div>
     </div>

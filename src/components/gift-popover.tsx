@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 import { Gift } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GiftSessionForm } from "@/components/gift-session-form";
