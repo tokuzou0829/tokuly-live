@@ -2,6 +2,14 @@ export type LiveProps = {
   id: string;
 };
 
+export type Subtitle = {
+  id: number;
+  language_code: string;
+  label: string;
+  format: "vtt";
+  url: string;
+};
+
 export type Live = {
   id: number;
   title: string;
@@ -17,6 +25,7 @@ export type Live = {
   ch_name: string;
   ch_icon: string;
   ch_handle: string;
+  subtitles: Subtitle[];
 };
 
 export type MoreVideoList = {

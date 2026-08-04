@@ -81,6 +81,7 @@ export default function LivePage({ params }: { params: { id: string } }) {
                   id={params.id}
                   poster_url={live.static_thumbnail_url}
                   isUploadVideo={live.status === "video"}
+                  subtitles={live.subtitles ?? []}
                 />
               ) : (
                 <div

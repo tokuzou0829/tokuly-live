@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect, useId, useMemo, useState } from "react";
 import { Copy, PictureInPicture2 } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -55,22 +55,177 @@ import { Button } from "@/components/ui/button";
 import { useSearchParams } from "next/navigation";
 import { useAtom } from "jotai";
 import { IsWatchWithFriend, VideoPlayerRef, IsPartyHost } from "@/atoms/watchWithFriendAtom";
+import type { Subtitle } from "@/types/live";
+import {
+  DEFAULT_SUBTITLE_DISPLAY_SETTINGS,
+  applySubtitleTrackSelection,
+  createSubtitleCueStyle,
+  parseWebVtt,
+  readSubtitleDisplaySettings,
+  readSubtitlePreference,
+  resolveInitialSubtitle,
+  writeSubtitleDisplaySettings,
+  writeSubtitlePreference,
+  type SubtitleDisplaySettings,
+  type SubtitleCue,
+} from "@/lib/subtitles";
 
 interface VideoProps {
   id: string;
   className?: string;
   poster_url?: string;
   isUploadVideo?: boolean;
+  subtitles?: Subtitle[];
 }
 declare global {
   interface HTMLVideoElement {
     webkitEnterFullScreen?(): void;
   }
 }
+
+function getSubtitleStorage(): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+type SubtitleSettingOption = {
+  value: string;
+  label: string;
+};
+
+function SubtitleSettingOptions({
+  label,
+  currentLabel,
+  value,
+  options,
+  onValueChange,
+}: {
+  label: string;
+  currentLabel: string;
+  value: string;
+  options: SubtitleSettingOption[];
+  onValueChange: (value: string) => void;
+}) {
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <span>{label}</span>
+        <span className="ml-2 text-xs text-muted-foreground">{currentLabel}</span>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent>
+        <DropdownMenuRadioGroup value={value} onValueChange={onValueChange}>
+          {options.map((option) => (
+            <DropdownMenuRadioItem key={option.value} value={option.value}>
+              {option.label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
+  );
+}
+
+function SubtitleDisplaySettingsMenu({
+  settings,
+  onChange,
+  onReset,
+}: {
+  settings: SubtitleDisplaySettings;
+  onChange: (updates: Partial<SubtitleDisplaySettings>) => void;
+  onReset: () => void;
+}) {
+  const colorLabels: Record<SubtitleDisplaySettings["color"], string> = {
+    white: "白",
+    yellow: "黄",
+    cyan: "シアン",
+  };
+  const edgeLabels: Record<SubtitleDisplaySettings["edgeStyle"], string> = {
+    none: "なし",
+    shadow: "影",
+    outline: "輪郭",
+    background: "黒背景",
+  };
+
+  return (
+    <DropdownMenuSub>
+      <DropdownMenuSubTrigger>
+        <span>字幕表示設定</span>
+      </DropdownMenuSubTrigger>
+      <DropdownMenuSubContent>
+        <SubtitleSettingOptions
+          label="文字サイズ"
+          currentLabel={`${settings.fontSize}%`}
+          value={String(settings.fontSize)}
+          options={[
+            { value: "75", label: "小 75%" },
+            { value: "100", label: "標準 100%" },
+            { value: "125", label: "大 125%" },
+            { value: "150", label: "特大 150%" },
+            { value: "200", label: "最大 200%" },
+          ]}
+          onValueChange={(value) =>
+            onChange({ fontSize: Number(value) as SubtitleDisplaySettings["fontSize"] })
+          }
+        />
+        <SubtitleSettingOptions
+          label="文字色"
+          currentLabel={colorLabels[settings.color]}
+          value={settings.color}
+          options={[
+            { value: "white", label: "白" },
+            { value: "yellow", label: "黄" },
+            { value: "cyan", label: "シアン" },
+          ]}
+          onValueChange={(value) => onChange({ color: value as SubtitleDisplaySettings["color"] })}
+        />
+        <SubtitleSettingOptions
+          label="背景の濃さ"
+          currentLabel={`${settings.backgroundOpacity}%`}
+          value={String(settings.backgroundOpacity)}
+          options={[0, 25, 50, 75, 100].map((opacity) => ({
+            value: String(opacity),
+            label: `${opacity}%`,
+          }))}
+          onValueChange={(value) =>
+            onChange({
+              backgroundOpacity: Number(value) as SubtitleDisplaySettings["backgroundOpacity"],
+            })
+          }
+        />
+        <SubtitleSettingOptions
+          label="表示スタイル"
+          currentLabel={edgeLabels[settings.edgeStyle]}
+          value={settings.edgeStyle}
+          options={[
+            { value: "none", label: "なし" },
+            { value: "shadow", label: "影" },
+            { value: "outline", label: "輪郭" },
+            { value: "background", label: "黒背景" },
+          ]}
+          onValueChange={(value) =>
+            onChange({ edgeStyle: value as SubtitleDisplaySettings["edgeStyle"] })
+          }
+        />
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={onReset}>デフォルトに戻す</DropdownMenuItem>
+      </DropdownMenuSubContent>
+    </DropdownMenuSub>
+  );
+}
+
 function Player(props: VideoProps) {
   const { id, className, poster_url, isUploadVideo } = props;
+  const subtitleStyleClassName = `subtitle-player-${useId().replace(/:/g, "")}`;
+  const subtitles = useMemo(
+    () => [...(props.subtitles ?? [])].sort((a, b) => a.id - b.id),
+    [props.subtitles]
+  );
   const playerRef = useRef<HTMLDivElement | null>(null);
   const myRef = useRef<HTMLVideoElement | null>(null);
+  const subtitleTrackRefs = useRef<Map<number, HTMLTrackElement>>(new Map());
   const overlayRef = useRef<HTMLDivElement | null>(null);
   const LinkText = useRef<HTMLInputElement | null>(null);
   const EmdedCode = useRef<HTMLTextAreaElement | null>(null);
@@ -109,6 +264,11 @@ function Player(props: VideoProps) {
     { id: number; name: string; lang: string; default: boolean }[]
   >([]);
   const [currentAudioTrack, setCurrentAudioTrack] = useState<number | null>(null);
+  const [currentSubtitleTrack, setCurrentSubtitleTrack] = useState<number | null>(null);
+  const [subtitleDisplaySettings, setSubtitleDisplaySettings] = useState<SubtitleDisplaySettings>(
+    DEFAULT_SUBTITLE_DISPLAY_SETTINGS
+  );
+  const [customSubtitleCues, setCustomSubtitleCues] = useState<SubtitleCue[] | null>(null);
 
   const [isWWF] = useAtom(IsWatchWithFriend);
   const [, setVideoPlayerRef] = useAtom(VideoPlayerRef);
@@ -126,6 +286,73 @@ function Player(props: VideoProps) {
       setIsMobile(/android|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent));
     }
   }, []);
+
+  const applySubtitleSelection = (subtitleId: number | null) => {
+    const tracks = Array.from(subtitleTrackRefs.current.entries(), ([trackId, element]) => ({
+      id: trackId,
+      track: element.track,
+    }));
+    const useCustomRenderer =
+      subtitleDisplaySettings.edgeStyle === "background" && customSubtitleCues !== null;
+    applySubtitleTrackSelection(tracks, subtitleId, useCustomRenderer ? "hidden" : "showing");
+    setCurrentSubtitleTrack(subtitleId);
+  };
+
+  useEffect(() => {
+    const preferredLanguages =
+      navigator.languages.length > 0 ? navigator.languages : [navigator.language].filter(Boolean);
+    const storage = getSubtitleStorage();
+    const preference = storage ? readSubtitlePreference(storage) : null;
+    const selectedSubtitle = resolveInitialSubtitle(subtitles, preferredLanguages, preference);
+    applySubtitleSelection(selectedSubtitle?.id ?? null);
+  }, [subtitles]);
+
+  useEffect(() => {
+    const storage = getSubtitleStorage();
+    if (storage) setSubtitleDisplaySettings(readSubtitleDisplaySettings(storage));
+  }, []);
+
+  useEffect(() => {
+    if (subtitleDisplaySettings.edgeStyle !== "background" || currentSubtitleTrack === null) {
+      setCustomSubtitleCues(null);
+      return;
+    }
+
+    const subtitle = subtitles.find(({ id: subtitleId }) => subtitleId === currentSubtitleTrack);
+    if (!subtitle) {
+      setCustomSubtitleCues(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setCustomSubtitleCues(null);
+    fetch(subtitle.url, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error(`Failed to load subtitles: ${response.status}`);
+        return response.text();
+      })
+      .then((webVtt) => setCustomSubtitleCues(parseWebVtt(webVtt)))
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setCustomSubtitleCues(null);
+      });
+
+    return () => controller.abort();
+  }, [currentSubtitleTrack, subtitleDisplaySettings.edgeStyle, subtitles]);
+
+  useEffect(() => {
+    const tracks = Array.from(subtitleTrackRefs.current.entries(), ([trackId, element]) => ({
+      id: trackId,
+      track: element.track,
+    }));
+    const useCustomRenderer =
+      subtitleDisplaySettings.edgeStyle === "background" && customSubtitleCues !== null;
+    applySubtitleTrackSelection(
+      tracks,
+      currentSubtitleTrack,
+      useCustomRenderer ? "hidden" : "showing"
+    );
+  }, [currentSubtitleTrack, customSubtitleCues, subtitleDisplaySettings.edgeStyle]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -405,7 +632,10 @@ function Player(props: VideoProps) {
   // ピクチャインピクチャがサポートされているかチェック
   const isPictureInPictureSupported = () => {
     return (
-      globalThis.document && document.pictureInPictureEnabled && myRef.current && myRef.current.requestPictureInPicture
+      globalThis.document &&
+      document.pictureInPictureEnabled &&
+      myRef.current &&
+      myRef.current.requestPictureInPicture
     );
   };
 
@@ -640,13 +870,70 @@ function Player(props: VideoProps) {
     }
   };
 
+  const handleSubtitleTrackChange = (subtitleId: number | null) => {
+    applySubtitleSelection(subtitleId);
+    const storage = getSubtitleStorage();
+    if (!storage) return;
+
+    if (subtitleId === null) {
+      writeSubtitlePreference(storage, { mode: "off" });
+      return;
+    }
+
+    const subtitle = subtitles.find(({ id: trackId }) => trackId === subtitleId);
+    if (subtitle) {
+      writeSubtitlePreference(storage, {
+        mode: "language",
+        languageCode: subtitle.language_code,
+      });
+    }
+  };
+
+  const updateSubtitleDisplaySettings = (updates: Partial<SubtitleDisplaySettings>) => {
+    setSubtitleDisplaySettings((currentSettings) => {
+      const nextSettings = { ...currentSettings, ...updates };
+      const storage = getSubtitleStorage();
+      if (storage) writeSubtitleDisplaySettings(storage, nextSettings);
+      return nextSettings;
+    });
+  };
+
+  const resetSubtitleDisplaySettings = () => {
+    setSubtitleDisplaySettings(DEFAULT_SUBTITLE_DISPLAY_SETTINGS);
+    const storage = getSubtitleStorage();
+    if (storage) writeSubtitleDisplaySettings(storage, DEFAULT_SUBTITLE_DISPLAY_SETTINGS);
+  };
+
+  const activeCustomSubtitleText =
+    customSubtitleCues
+      ?.filter(({ startTime, endTime }) => currentTime >= startTime && currentTime < endTime)
+      .map(({ text }) => text)
+      .join("\n") ?? "";
+
+  const customSubtitleFontSizes: Record<SubtitleDisplaySettings["fontSize"], string> = {
+    75: "18px",
+    100: "24px",
+    125: "30px",
+    150: "36px",
+    200: "48px",
+  };
+  const customSubtitleColors: Record<SubtitleDisplaySettings["color"], string> = {
+    white: "#ffffff",
+    yellow: "#ffff00",
+    cyan: "#00ffff",
+  };
+
   return (
     <div ref={playerRef} className={"w-full relative player " + className}>
+      <style>{`.${subtitleStyleClassName}::cue { ${createSubtitleCueStyle(
+        subtitleDisplaySettings
+      )}; }`}</style>
       <video
+        crossOrigin="anonymous"
         webkit-playsinline="true"
         playsInline
         ref={myRef}
-        className="w-full h-full bg-black aspect-w-16 aspect-video"
+        className={`${subtitleStyleClassName} w-full h-full bg-black aspect-w-16 aspect-video`}
         onMouseEnter={handleVideoHoverEnter}
         onPlay={handleVideoPlay}
         onPause={handleVideoPause}
@@ -655,7 +942,50 @@ function Player(props: VideoProps) {
           const videoElement = event.target as HTMLVideoElement;
           setDuration(videoElement.duration);
         }}
-      ></video>
+      >
+        {subtitles.map((subtitle) => (
+          <track
+            key={subtitle.id}
+            ref={(element) => {
+              if (element) {
+                subtitleTrackRefs.current.set(subtitle.id, element);
+              } else {
+                subtitleTrackRefs.current.delete(subtitle.id);
+              }
+            }}
+            kind="subtitles"
+            src={subtitle.url}
+            srcLang={subtitle.language_code}
+            label={subtitle.label}
+            default={currentSubtitleTrack === subtitle.id}
+            onLoad={() => {
+              const element = subtitleTrackRefs.current.get(subtitle.id);
+              if (element) {
+                const useCustomRenderer =
+                  subtitleDisplaySettings.edgeStyle === "background" && customSubtitleCues !== null;
+                element.track.mode =
+                  currentSubtitleTrack === subtitle.id
+                    ? useCustomRenderer
+                      ? "hidden"
+                      : "showing"
+                    : "disabled";
+              }
+            }}
+          />
+        ))}
+      </video>
+      {subtitleDisplaySettings.edgeStyle === "background" && activeCustomSubtitleText && (
+        <div className="pointer-events-none absolute bottom-[12%] left-1/2 z-10 w-fit max-w-[90%] -translate-x-1/2 whitespace-pre-line bg-black px-2 py-1 text-center leading-snug">
+          <span
+            style={{
+              color: customSubtitleColors[subtitleDisplaySettings.color],
+              fontSize: customSubtitleFontSizes[subtitleDisplaySettings.fontSize],
+            }}
+          >
+            {activeCustomSubtitleText}
+          </span>
+        </div>
+      )}
       <ContextMenu>
         <Dialog>
           <div
@@ -782,7 +1112,11 @@ function Player(props: VideoProps) {
                             togglePictureInPicture();
                           }}
                           className="text-white mr-3"
-                          title={isPictureInPicture ? "ピクチャインピクチャを終了" : "ピクチャインピクチャ"}
+                          title={
+                            isPictureInPicture
+                              ? "ピクチャインピクチャを終了"
+                              : "ピクチャインピクチャ"
+                          }
                         >
                           <PictureInPicture2 className="w-6 h-6" />
                         </button>
@@ -799,6 +1133,7 @@ function Player(props: VideoProps) {
                         }}
                       >
                         <DropdownMenuTrigger
+                          aria-label="再生設定"
                           onClick={(e) => {
                             e.stopPropagation();
                           }}
@@ -890,6 +1225,67 @@ function Player(props: VideoProps) {
                                     </div>
                                   </DropdownMenuItem>
                                 ))}
+                              </DropdownMenuSubContent>
+                            </DropdownMenuSub>
+                          )}
+
+                          {subtitles.length > 0 && (
+                            <DropdownMenuSub>
+                              <DropdownMenuSubTrigger>
+                                <span>字幕</span>
+                                <span className="ml-2 text-xs text-muted-foreground">
+                                  {currentSubtitleTrack === null
+                                    ? "オフ"
+                                    : subtitles.find(({ id }) => id === currentSubtitleTrack)
+                                        ?.label || "オフ"}
+                                </span>
+                              </DropdownMenuSubTrigger>
+                              <DropdownMenuSubContent>
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSubtitleTrackChange(null);
+                                    setShowControls(false);
+                                  }}
+                                >
+                                  <div className="flex items-center">
+                                    <div
+                                      className={`mr-2 h-2 w-2 rounded-full ${
+                                        currentSubtitleTrack === null
+                                          ? "bg-primary"
+                                          : "bg-transparent"
+                                      }`}
+                                    />
+                                    オフ
+                                  </div>
+                                </DropdownMenuItem>
+                                {subtitles.map((subtitle) => (
+                                  <DropdownMenuItem
+                                    key={subtitle.id}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSubtitleTrackChange(subtitle.id);
+                                      setShowControls(false);
+                                    }}
+                                  >
+                                    <div className="flex items-center">
+                                      <div
+                                        className={`mr-2 h-2 w-2 rounded-full ${
+                                          currentSubtitleTrack === subtitle.id
+                                            ? "bg-primary"
+                                            : "bg-transparent"
+                                        }`}
+                                      />
+                                      {subtitle.label}
+                                    </div>
+                                  </DropdownMenuItem>
+                                ))}
+                                <DropdownMenuSeparator />
+                                <SubtitleDisplaySettingsMenu
+                                  settings={subtitleDisplaySettings}
+                                  onChange={updateSubtitleDisplaySettings}
+                                  onReset={resetSubtitleDisplaySettings}
+                                />
                               </DropdownMenuSubContent>
                             </DropdownMenuSub>
                           )}

@@ -37,6 +37,7 @@ export default function Videoflame(props: Flameprops) {
           id={live.stream_name}
           poster_url={live.static_thumbnail_url}
           isUploadVideo={live.status === "video"}
+          subtitles={live.subtitles ?? []}
         />
       </div>
     </div>
