@@ -5,6 +5,8 @@ import {
   SUBTITLE_DISPLAY_SETTINGS_STORAGE_KEY,
   SUBTITLE_PREFERENCE_STORAGE_KEY,
   applySubtitleTrackSelection,
+  calculateSubtitleBottomOffset,
+  createCustomSubtitleStyle,
   createSubtitleCueStyle,
   findPreferredSubtitle,
   parseWebVtt,
@@ -118,6 +120,13 @@ describe("parseWebVtt", () => {
 });
 
 describe("subtitle display settings", () => {
+  it("uses an opaque black background by default", () => {
+    expect(DEFAULT_SUBTITLE_DISPLAY_SETTINGS.edgeStyle).toBe("background");
+    expect(createCustomSubtitleStyle(DEFAULT_SUBTITLE_DISPLAY_SETTINGS).backgroundColor).toBe(
+      "rgba(0, 0, 0, 1)"
+    );
+  });
+
   it("reads valid settings and fills invalid fields with defaults", () => {
     const settings = readSubtitleDisplaySettings({
       getItem: () =>
@@ -142,6 +151,17 @@ describe("subtitle display settings", () => {
       DEFAULT_SUBTITLE_DISPLAY_SETTINGS
     );
   });
+
+  it.each(["none", "shadow", "outline"] as const)(
+    "preserves a saved %s edge style",
+    (edgeStyle) => {
+      expect(
+        readSubtitleDisplaySettings({
+          getItem: () => JSON.stringify({ ...DEFAULT_SUBTITLE_DISPLAY_SETTINGS, edgeStyle }),
+        }).edgeStyle
+      ).toBe(edgeStyle);
+    }
+  );
 
   it("persists display settings", () => {
     const setItem = vi.fn();
@@ -172,5 +192,39 @@ describe("subtitle display settings", () => {
         edgeStyle: "background",
       })
     ).toContain("background: rgba(0, 0, 0, 1); text-shadow: none");
+  });
+
+  it.each([
+    ["none", "none"],
+    ["shadow", "2px 2px 3px #000000"],
+    [
+      "outline",
+      "-1px -1px 0 #000000, 1px -1px 0 #000000, -1px 1px 0 #000000, 1px 1px 0 #000000",
+    ],
+    ["background", "none"],
+  ] as const)("creates the custom %s style", (edgeStyle, textShadow) => {
+    const style = createCustomSubtitleStyle({
+      ...DEFAULT_SUBTITLE_DISPLAY_SETTINGS,
+      edgeStyle,
+    });
+    expect(style.textShadow).toBe(textShadow);
+    expect(style.backgroundColor).toBe(
+      edgeStyle === "background" ? "rgba(0, 0, 0, 1)" : "rgba(0, 0, 0, 0.75)"
+    );
+  });
+});
+
+describe("calculateSubtitleBottomOffset", () => {
+  it("places subtitles twelve pixels above the measured seekbar", () => {
+    expect(calculateSubtitleBottomOffset(720, 640)).toBe(92);
+  });
+
+  it("supports a custom gap", () => {
+    expect(calculateSubtitleBottomOffset(720, 640, 20)).toBe(100);
+  });
+
+  it("falls back when the measurement is invalid", () => {
+    expect(calculateSubtitleBottomOffset(Number.NaN, 640)).toBeNull();
+    expect(calculateSubtitleBottomOffset(640, 720)).toBeNull();
   });
 });

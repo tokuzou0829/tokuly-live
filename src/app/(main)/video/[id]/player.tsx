@@ -59,6 +59,8 @@ import type { Subtitle } from "@/types/live";
 import {
   DEFAULT_SUBTITLE_DISPLAY_SETTINGS,
   applySubtitleTrackSelection,
+  calculateSubtitleBottomOffset,
+  createCustomSubtitleStyle,
   createSubtitleCueStyle,
   parseWebVtt,
   readSubtitleDisplaySettings,
@@ -269,6 +271,8 @@ function Player(props: VideoProps) {
     DEFAULT_SUBTITLE_DISPLAY_SETTINGS
   );
   const [customSubtitleCues, setCustomSubtitleCues] = useState<SubtitleCue[] | null>(null);
+  const [subtitleBottomOffset, setSubtitleBottomOffset] = useState<number | null>(null);
+  const seekBarRef = useRef<HTMLDivElement>(null);
 
   const [isWWF] = useAtom(IsWatchWithFriend);
   const [, setVideoPlayerRef] = useAtom(VideoPlayerRef);
@@ -292,8 +296,7 @@ function Player(props: VideoProps) {
       id: trackId,
       track: element.track,
     }));
-    const useCustomRenderer =
-      subtitleDisplaySettings.edgeStyle === "background" && customSubtitleCues !== null;
+    const useCustomRenderer = customSubtitleCues !== null;
     applySubtitleTrackSelection(tracks, subtitleId, useCustomRenderer ? "hidden" : "showing");
     setCurrentSubtitleTrack(subtitleId);
   };
@@ -313,7 +316,7 @@ function Player(props: VideoProps) {
   }, []);
 
   useEffect(() => {
-    if (subtitleDisplaySettings.edgeStyle !== "background" || currentSubtitleTrack === null) {
+    if (currentSubtitleTrack === null) {
       setCustomSubtitleCues(null);
       return;
     }
@@ -331,28 +334,70 @@ function Player(props: VideoProps) {
         if (!response.ok) throw new Error(`Failed to load subtitles: ${response.status}`);
         return response.text();
       })
-      .then((webVtt) => setCustomSubtitleCues(parseWebVtt(webVtt)))
+      .then((webVtt) => {
+        const cues = parseWebVtt(webVtt);
+        if (cues.length === 0) throw new Error("Failed to parse subtitles");
+        setCustomSubtitleCues(cues);
+      })
       .catch((error) => {
         if (error instanceof DOMException && error.name === "AbortError") return;
         setCustomSubtitleCues(null);
       });
 
     return () => controller.abort();
-  }, [currentSubtitleTrack, subtitleDisplaySettings.edgeStyle, subtitles]);
+  }, [currentSubtitleTrack, subtitles]);
 
   useEffect(() => {
     const tracks = Array.from(subtitleTrackRefs.current.entries(), ([trackId, element]) => ({
       id: trackId,
       track: element.track,
     }));
-    const useCustomRenderer =
-      subtitleDisplaySettings.edgeStyle === "background" && customSubtitleCues !== null;
+    const useCustomRenderer = customSubtitleCues !== null;
     applySubtitleTrackSelection(
       tracks,
       currentSubtitleTrack,
       useCustomRenderer ? "hidden" : "showing"
     );
-  }, [currentSubtitleTrack, customSubtitleCues, subtitleDisplaySettings.edgeStyle]);
+  }, [currentSubtitleTrack, customSubtitleCues]);
+
+  useEffect(() => {
+    if (!showControls) {
+      setSubtitleBottomOffset(null);
+      return;
+    }
+
+    const updateSubtitlePosition = () => {
+      const player = playerRef.current;
+      const seekBar = seekBarRef.current;
+      if (!player || !seekBar) {
+        setSubtitleBottomOffset(null);
+        return;
+      }
+
+      setSubtitleBottomOffset(
+        calculateSubtitleBottomOffset(
+          player.getBoundingClientRect().bottom,
+          seekBar.getBoundingClientRect().top
+        )
+      );
+    };
+
+    const frameId = requestAnimationFrame(updateSubtitlePosition);
+    window.addEventListener("resize", updateSubtitlePosition);
+    document.addEventListener("fullscreenchange", updateSubtitlePosition);
+
+    const resizeObserver =
+      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateSubtitlePosition);
+    if (playerRef.current) resizeObserver?.observe(playerRef.current);
+    if (seekBarRef.current) resizeObserver?.observe(seekBarRef.current);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      window.removeEventListener("resize", updateSubtitlePosition);
+      document.removeEventListener("fullscreenchange", updateSubtitlePosition);
+      resizeObserver?.disconnect();
+    };
+  }, [showControls]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -909,19 +954,7 @@ function Player(props: VideoProps) {
       ?.filter(({ startTime, endTime }) => currentTime >= startTime && currentTime < endTime)
       .map(({ text }) => text)
       .join("\n") ?? "";
-
-  const customSubtitleFontSizes: Record<SubtitleDisplaySettings["fontSize"], string> = {
-    75: "18px",
-    100: "24px",
-    125: "30px",
-    150: "36px",
-    200: "48px",
-  };
-  const customSubtitleColors: Record<SubtitleDisplaySettings["color"], string> = {
-    white: "#ffffff",
-    yellow: "#ffff00",
-    cyan: "#00ffff",
-  };
+  const customSubtitleStyle = createCustomSubtitleStyle(subtitleDisplaySettings);
 
   return (
     <div ref={playerRef} className={"w-full relative player " + className}>
@@ -961,8 +994,7 @@ function Player(props: VideoProps) {
             onLoad={() => {
               const element = subtitleTrackRefs.current.get(subtitle.id);
               if (element) {
-                const useCustomRenderer =
-                  subtitleDisplaySettings.edgeStyle === "background" && customSubtitleCues !== null;
+                const useCustomRenderer = customSubtitleCues !== null;
                 element.track.mode =
                   currentSubtitleTrack === subtitle.id
                     ? useCustomRenderer
@@ -974,12 +1006,20 @@ function Player(props: VideoProps) {
           />
         ))}
       </video>
-      {subtitleDisplaySettings.edgeStyle === "background" && activeCustomSubtitleText && (
-        <div className="pointer-events-none absolute bottom-[12%] left-1/2 z-10 w-fit max-w-[90%] -translate-x-1/2 whitespace-pre-line bg-black px-2 py-1 text-center leading-snug">
+      {customSubtitleCues !== null && activeCustomSubtitleText && (
+        <div
+          data-testid="custom-subtitle-overlay"
+          className="pointer-events-none absolute left-1/2 z-10 w-fit max-w-[90%] -translate-x-1/2 whitespace-pre-line px-2 py-1 text-center leading-snug transition-[bottom] duration-200 ease-out"
+          style={{
+            bottom: subtitleBottomOffset === null ? "12%" : `${subtitleBottomOffset}px`,
+            backgroundColor: customSubtitleStyle.backgroundColor,
+          }}
+        >
           <span
             style={{
-              color: customSubtitleColors[subtitleDisplaySettings.color],
-              fontSize: customSubtitleFontSizes[subtitleDisplaySettings.fontSize],
+              color: customSubtitleStyle.color,
+              fontSize: customSubtitleStyle.fontSize,
+              textShadow: customSubtitleStyle.textShadow,
             }}
           >
             {activeCustomSubtitleText}
@@ -1009,7 +1049,11 @@ function Player(props: VideoProps) {
                   }}
                 >
                   <div className="flex items-center mb-4 relative">
-                    <div className="relative flex-grow">
+                    <div
+                      ref={seekBarRef}
+                      data-testid="seekbar-container"
+                      className="relative flex-grow"
+                    >
                       <SeekBar
                         playervalue={currentTime}
                         duration={duration}

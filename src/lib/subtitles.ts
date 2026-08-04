@@ -16,7 +16,14 @@ export const DEFAULT_SUBTITLE_DISPLAY_SETTINGS: SubtitleDisplaySettings = {
   fontSize: 100,
   color: "white",
   backgroundOpacity: 75,
-  edgeStyle: "shadow",
+  edgeStyle: "background",
+};
+
+export type CustomSubtitleStyle = {
+  fontSize: string;
+  color: string;
+  backgroundColor: string;
+  textShadow: string;
 };
 
 type StorageReader = Pick<Storage, "getItem">;
@@ -160,6 +167,19 @@ export function writeSubtitleDisplaySettings(
 }
 
 export function createSubtitleCueStyle(settings: SubtitleDisplaySettings): string {
+  const style = createCustomSubtitleStyle(settings);
+
+  return [
+    `font-size: ${style.fontSize}`,
+    `color: ${style.color}`,
+    `background: ${style.backgroundColor}`,
+    `text-shadow: ${style.textShadow}`,
+  ].join("; ");
+}
+
+export function createCustomSubtitleStyle(
+  settings: SubtitleDisplaySettings
+): CustomSubtitleStyle {
   const colors: Record<SubtitleDisplaySettings["color"], string> = {
     white: "#ffffff",
     yellow: "#ffff00",
@@ -179,14 +199,26 @@ export function createSubtitleCueStyle(settings: SubtitleDisplaySettings): strin
     200: "48px",
   };
 
-  return [
-    `font-size: ${fontSizes[settings.fontSize]}`,
-    `color: ${colors[settings.color]}`,
-    `background: rgba(0, 0, 0, ${
+  return {
+    fontSize: fontSizes[settings.fontSize],
+    color: colors[settings.color],
+    backgroundColor: `rgba(0, 0, 0, ${
       settings.edgeStyle === "background" ? 1 : settings.backgroundOpacity / 100
     })`,
-    `text-shadow: ${edgeStyles[settings.edgeStyle]}`,
-  ].join("; ");
+    textShadow: edgeStyles[settings.edgeStyle],
+  };
+}
+
+export function calculateSubtitleBottomOffset(
+  playerBottom: number,
+  seekBarTop: number,
+  gap = 12
+): number | null {
+  if (![playerBottom, seekBarTop, gap].every(Number.isFinite) || seekBarTop > playerBottom) {
+    return null;
+  }
+
+  return Math.max(0, playerBottom - seekBarTop + gap);
 }
 
 function parseVttTimestamp(timestamp: string): number | null {
