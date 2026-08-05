@@ -8,7 +8,7 @@ import { useArchivePlayback } from "./archive-playback-context";
 
 export default function Chat({ id }: { id: number }) {
   const [historyMessages, setHistoryMessages] = useState<ChatItem[]>([]);
-  const { currentTime } = useArchivePlayback();
+  const { currentTime, isEnded } = useArchivePlayback();
 
   useEffect(() => {
     const controller = new AbortController();
@@ -26,8 +26,8 @@ export default function Chat({ id }: { id: number }) {
   }, [id]);
 
   const visibleMessages = useMemo(
-    () => archiveChatItemsAtPlaybackTime(historyMessages, currentTime),
-    [currentTime, historyMessages]
+    () => archiveChatItemsAtPlaybackTime(historyMessages, currentTime, isEnded),
+    [currentTime, historyMessages, isEnded]
   );
 
   return (

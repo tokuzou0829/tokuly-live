@@ -241,7 +241,8 @@ function Player(props: VideoProps) {
   const [isPictureInPicture, setIsPictureInPicture] = useState<boolean>(false);
   const cursorHideTimeoutRef = useRef<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
-  const { setCurrentTime: setArchivePlaybackTime } = useArchivePlayback();
+  const { setCurrentTime: setArchivePlaybackTime, setIsEnded: setArchiveEnded } =
+    useArchivePlayback();
   const [duration, setDuration] = useState(0);
   const [buffer, setBuffer] = useState(0);
   const [isLoop, setIsLoop] = useState(false);
@@ -594,6 +595,7 @@ function Player(props: VideoProps) {
   };
   const handleVideoPlay = () => {
     setIsPlaying(true);
+    setArchiveEnded(false);
   };
 
   const handleVideoPause = () => {
@@ -852,6 +854,7 @@ function Player(props: VideoProps) {
   const handleSeek = (e: any) => {
     if (myRef.current) {
       const newTime = e;
+      setArchiveEnded(false);
       myRef.current.currentTime = newTime;
       updatePlaybackTime(newTime);
     }
@@ -985,6 +988,8 @@ function Player(props: VideoProps) {
         onPlay={handleVideoPlay}
         onPause={handleVideoPause}
         onTimeUpdate={handleTimeUpdate}
+        onSeeking={() => setArchiveEnded(false)}
+        onEnded={() => setArchiveEnded(true)}
         onLoadedMetadata={(event) => {
           const videoElement = event.target as HTMLVideoElement;
           setDuration(videoElement.duration);

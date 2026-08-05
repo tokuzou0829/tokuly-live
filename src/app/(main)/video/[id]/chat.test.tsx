@@ -5,11 +5,16 @@ import Chat from "./chat";
 import { ArchivePlaybackProvider, useArchivePlayback } from "./archive-playback-context";
 
 function ArchiveChatHarness() {
-  const { setCurrentTime } = useArchivePlayback();
+  const { setCurrentTime, setIsEnded } = useArchivePlayback();
+  const seek = (time: number) => {
+    setIsEnded(false);
+    setCurrentTime(time);
+  };
   return (
     <>
-      <button onClick={() => setCurrentTime(2)}>seek forward</button>
-      <button onClick={() => setCurrentTime(0)}>seek backward</button>
+      <button onClick={() => seek(2)}>seek forward</button>
+      <button onClick={() => seek(0)}>seek backward</button>
+      <button onClick={() => setIsEnded(true)}>finish playback</button>
       <Chat id={123} />
     </>
   );
@@ -46,6 +51,14 @@ describe("archive chat timeline", () => {
             playback_offset_ms: 1_000,
             occurred_at: "2026-08-05T12:00:02+09:00",
           },
+          {
+            id: 4,
+            type: "chat",
+            name: "Dave",
+            text: "after archive duration",
+            playback_offset_ms: 100_000,
+            occurred_at: "2026-08-05T12:02:00+09:00",
+          },
         ]),
       })
     );
@@ -63,6 +76,7 @@ describe("archive chat timeline", () => {
     await waitFor(() => expect(screen.getByText("at start")).toBeInTheDocument());
     expect(screen.getByText("without offset")).toBeInTheDocument();
     expect(screen.queryByText("after one second")).not.toBeInTheDocument();
+    expect(screen.queryByText("after archive duration")).not.toBeInTheDocument();
 
     const [, request] = vi.mocked(fetch).mock.calls[0];
     expect(request).toEqual(
@@ -77,5 +91,11 @@ describe("archive chat timeline", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "seek backward" }));
     expect(screen.queryByText("after one second")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "finish playback" }));
+    expect(screen.getByText("after archive duration")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "seek backward" }));
+    expect(screen.queryByText("after archive duration")).not.toBeInTheDocument();
   });
 });

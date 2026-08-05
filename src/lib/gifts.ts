@@ -143,11 +143,12 @@ export function normalizeChatItems(value: unknown): ChatItem[] {
 
 export function archiveChatItemsAtPlaybackTime(
   items: ChatItem[],
-  currentTimeSeconds: number
+  currentTimeSeconds: number,
+  isPlaybackEnded = false
 ): ChatItem[] {
   const currentTimeMs = Math.max(0, currentTimeSeconds) * 1000;
   return items
-    .filter((item) => (item.playback_offset_ms ?? 0) <= currentTimeMs)
+    .filter((item) => isPlaybackEnded || (item.playback_offset_ms ?? 0) <= currentTimeMs)
     .slice()
     .reverse();
 }

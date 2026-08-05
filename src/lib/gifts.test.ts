@@ -118,6 +118,9 @@ describe("chat normalization", () => {
     expect(archiveChatItemsAtPlaybackTime(messages, 0).map(({ id }) => id)).toEqual([2, 1]);
     expect(archiveChatItemsAtPlaybackTime(messages, 2).map(({ id }) => id)).toEqual([3, 2, 1]);
     expect(archiveChatItemsAtPlaybackTime(messages, 1).map(({ id }) => id)).toEqual([2, 1]);
+    expect(archiveChatItemsAtPlaybackTime(messages, 2, true).map(({ id }) => id)).toEqual([
+      4, 3, 2, 1,
+    ]);
   });
 });
 
