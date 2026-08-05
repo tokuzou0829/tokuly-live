@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect, useId, useMemo, useState } from "react";
+import React, { useRef, useEffect, useId, useMemo, useState, useCallback } from "react";
 import { Copy, PictureInPicture2 } from "lucide-react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -71,6 +71,7 @@ import {
   type SubtitleDisplaySettings,
   type SubtitleCue,
 } from "@/lib/subtitles";
+import { useArchivePlayback } from "./archive-playback-context";
 
 interface VideoProps {
   id: string;
@@ -240,6 +241,7 @@ function Player(props: VideoProps) {
   const [isPictureInPicture, setIsPictureInPicture] = useState<boolean>(false);
   const cursorHideTimeoutRef = useRef<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
+  const { setCurrentTime: setArchivePlaybackTime } = useArchivePlayback();
   const [duration, setDuration] = useState(0);
   const [buffer, setBuffer] = useState(0);
   const [isLoop, setIsLoop] = useState(false);
@@ -277,6 +279,14 @@ function Player(props: VideoProps) {
   const [isWWF] = useAtom(IsWatchWithFriend);
   const [, setVideoPlayerRef] = useAtom(VideoPlayerRef);
   const [isHost] = useAtom(IsPartyHost);
+
+  const updatePlaybackTime = useCallback(
+    (time: number) => {
+      setCurrentTime(time);
+      setArchivePlaybackTime(time);
+    },
+    [setArchivePlaybackTime]
+  );
 
   useEffect(() => {
     if (isWWF && myRef.current) {
@@ -767,7 +777,11 @@ function Player(props: VideoProps) {
               setVideoQualityList(availableQualities);
 
               if (share_time) {
-                myRef.current!.currentTime = parseFloat(share_time);
+                const sharedTime = parseFloat(share_time);
+                if (Number.isFinite(sharedTime)) {
+                  myRef.current!.currentTime = sharedTime;
+                  updatePlaybackTime(sharedTime);
+                }
               }
             });
 
@@ -815,7 +829,7 @@ function Player(props: VideoProps) {
         hls.destroy(); // HLS.js インスタンスを破棄
       }
     };
-  }, []);
+  }, [id, searchParams, updatePlaybackTime]);
 
   useEffect(() => {
     if (myRef.current) {
@@ -831,7 +845,7 @@ function Player(props: VideoProps) {
 
   const handleTimeUpdate = () => {
     if (myRef.current) {
-      setCurrentTime(myRef.current.currentTime);
+      updatePlaybackTime(myRef.current.currentTime);
     }
   };
 
@@ -839,7 +853,7 @@ function Player(props: VideoProps) {
     if (myRef.current) {
       const newTime = e;
       myRef.current.currentTime = newTime;
-      setCurrentTime(newTime);
+      updatePlaybackTime(newTime);
     }
   };
 

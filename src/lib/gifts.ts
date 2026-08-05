@@ -82,6 +82,12 @@ export function normalizeChatItem(value: unknown): ChatItem | null {
   const name = typeof item.name === "string" ? item.name : "匿名ユーザー";
   const text = typeof item.text === "string" ? item.text : "";
   const image = typeof item.image === "string" ? item.image : null;
+  const timelineFields = {
+    ...(typeof item.playback_offset_ms === "number" || item.playback_offset_ms === null
+      ? { playback_offset_ms: item.playback_offset_ms }
+      : {}),
+    ...(typeof item.occurred_at === "string" ? { occurred_at: item.occurred_at } : {}),
+  };
 
   if (item.type === "gift") {
     if (
@@ -107,6 +113,7 @@ export function normalizeChatItem(value: unknown): ChatItem | null {
         ? (item.display_style as GiftDisplayStyle)
         : "yellow";
     return {
+      ...timelineFields,
       type: "gift",
       id: item.id,
       name,
@@ -120,6 +127,7 @@ export function normalizeChatItem(value: unknown): ChatItem | null {
   }
 
   return {
+    ...timelineFields,
     type: "chat",
     id: typeof item.id === "number" || typeof item.id === "string" ? item.id : null,
     name,
@@ -131,6 +139,17 @@ export function normalizeChatItem(value: unknown): ChatItem | null {
 export function normalizeChatItems(value: unknown): ChatItem[] {
   if (!Array.isArray(value)) return [];
   return value.map(normalizeChatItem).filter((item): item is ChatItem => item !== null);
+}
+
+export function archiveChatItemsAtPlaybackTime(
+  items: ChatItem[],
+  currentTimeSeconds: number
+): ChatItem[] {
+  const currentTimeMs = Math.max(0, currentTimeSeconds) * 1000;
+  return items
+    .filter((item) => (item.playback_offset_ms ?? 0) <= currentTimeMs)
+    .slice()
+    .reverse();
 }
 
 export function mergeChatItems(...groups: ChatItem[][]): ChatItem[] {

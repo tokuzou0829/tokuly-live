@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   GIFT_TIERS,
+  archiveChatItemsAtPlaybackTime,
   amazonGiftCardUrl,
   getGiftTier,
   giftAttemptFailureReason,
@@ -77,6 +78,22 @@ describe("chat normalization", () => {
     });
   });
 
+  it("keeps archive timeline fields, including a null playback offset", () => {
+    expect(
+      normalizeChatItem({
+        id: 12,
+        name: "Bob",
+        text: "archive",
+        playback_offset_ms: null,
+        occurred_at: "2026-08-05T12:00:45+09:00",
+      })
+    ).toMatchObject({
+      id: 12,
+      playback_offset_ms: null,
+      occurred_at: "2026-08-05T12:00:45+09:00",
+    });
+  });
+
   it("normalizes gifts and falls back from unknown display styles", () => {
     expect(normalizeChatItem({ ...gift, display_style: "unknown" })).toMatchObject({
       type: "gift",
@@ -88,6 +105,19 @@ describe("chat normalization", () => {
   it("deduplicates gifts while retaining ordinary messages", () => {
     const chat = { type: "chat" as const, id: null, name: "Bob", text: "hello" };
     expect(mergeChatItems([gift, chat], [gift, chat])).toEqual([gift, chat, chat]);
+  });
+
+  it("filters archive messages by playback time and reverses them for the chat layout", () => {
+    const messages = [
+      { type: "chat" as const, id: 1, name: "A", text: "unknown", playback_offset_ms: null },
+      { type: "chat" as const, id: 2, name: "B", text: "start", playback_offset_ms: 0 },
+      { type: "chat" as const, id: 3, name: "C", text: "middle", playback_offset_ms: 1_500 },
+      { type: "chat" as const, id: 4, name: "D", text: "future", playback_offset_ms: 3_000 },
+    ];
+
+    expect(archiveChatItemsAtPlaybackTime(messages, 0).map(({ id }) => id)).toEqual([2, 1]);
+    expect(archiveChatItemsAtPlaybackTime(messages, 2).map(({ id }) => id)).toEqual([3, 2, 1]);
+    expect(archiveChatItemsAtPlaybackTime(messages, 1).map(({ id }) => id)).toEqual([2, 1]);
   });
 });
 

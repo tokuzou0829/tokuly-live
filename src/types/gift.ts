@@ -16,6 +16,11 @@ export type GiftTier = {
   maxCommentLength: number;
 };
 
+export type ChatTimelineFields = {
+  playback_offset_ms?: number | null;
+  occurred_at?: string;
+};
+
 export type CreateGiftSessionInput = {
   channel_id: number;
   sender_channel_id?: number;
@@ -34,7 +39,7 @@ export type CreatedGiftSession = {
   valid_while_stream_online: boolean;
 };
 
-export type ChatItemNormal = {
+export type ChatItemNormal = ChatTimelineFields & {
   type: "chat";
   id: number | string | null;
   image?: string | null;
@@ -42,7 +47,7 @@ export type ChatItemNormal = {
   text: string;
 };
 
-export type ChatItemGift = {
+export type ChatItemGift = ChatTimelineFields & {
   type: "gift";
   id: number | string;
   image?: string | null;

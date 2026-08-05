@@ -1,26 +1,18 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import io from "socket.io-client";
-import { type Session } from "next-auth";
 import { ChatItemView } from "@/components/chat-item";
-import { mergeChatItems, normalizeChatItem, normalizeChatItems } from "@/lib/gifts";
+import { archiveChatItemsAtPlaybackTime, normalizeChatItems } from "@/lib/gifts";
 import type { ChatItem } from "@/types/gift";
-import { notifyTokulyUnauthorized } from "@/lib/auth-session-events";
+import { useArchivePlayback } from "./archive-playback-context";
 
-export default function Chat({ id, session }: { id: number; session: Session | null }) {
-  const [isConnected, setIsConnected] = useState(false);
-  const [messages, setMessages] = useState<ChatItem[]>([]);
+export default function Chat({ id }: { id: number }) {
   const [historyMessages, setHistoryMessages] = useState<ChatItem[]>([]);
-  const accessToken = session?.user?.access_token;
-  const postingIdentity = session?.activePostingIdentity;
-  const postingChannelId =
-    postingIdentity?.type === "channel" ? postingIdentity.channelId : undefined;
-  const postingName = postingIdentity?.name ?? session?.user?.name;
+  const { currentTime } = useArchivePlayback();
 
   useEffect(() => {
     const controller = new AbortController();
-    const data = new URLSearchParams({ stream_id: id.toString() });
+    const data = new URLSearchParams({ stream_id: id.toString(), archive: "true" });
     fetch("https://api.tokuly.com/live/stream/chat/get", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -33,46 +25,9 @@ export default function Chat({ id, session }: { id: number; session: Session | n
     return () => controller.abort();
   }, [id]);
 
-  useEffect(() => {
-    const socket = io("https://live-data.tokuly.com", { path: "/chat/socket.io/" });
-    async function connectChat() {
-      if (session?.user && accessToken) {
-        const request = await fetch("https://live-data.tokuly.com/chat-auth/", {
-          method: "POST",
-          body: JSON.stringify({
-            token: accessToken,
-            ...(postingChannelId === undefined ? {} : { channel_id: postingChannelId }),
-          }),
-          headers: { "Content-Type": "application/json" },
-        });
-        if (request.status === 401) {
-          notifyTokulyUnauthorized();
-          return;
-        }
-        if (!request.ok) throw new Error("チャット認証に失敗しました");
-        const chatKey = await request.json();
-        socket.emit("join", { roomId: id, name: postingName, token: chatKey.authKey });
-        setIsConnected(true);
-      } else {
-        socket.on("connect", () => {
-          socket.emit("join", { roomId: id, name: "guest", token: "guest" });
-          setIsConnected(true);
-        });
-      }
-      socket.on("message", (rawMessage: unknown) => {
-        const item = normalizeChatItem(rawMessage);
-        if (item) setMessages((previous) => mergeChatItems([item], previous));
-      });
-    }
-    connectChat().catch(() => setIsConnected(false));
-    return () => {
-      socket.disconnect();
-    };
-  }, [accessToken, id, postingChannelId, postingName, session?.user]);
-
   const visibleMessages = useMemo(
-    () => mergeChatItems(messages, historyMessages),
-    [messages, historyMessages]
+    () => archiveChatItemsAtPlaybackTime(historyMessages, currentTime),
+    [currentTime, historyMessages]
   );
 
   return (
@@ -82,16 +37,8 @@ export default function Chat({ id, session }: { id: number; session: Session | n
       </div>
       <div className="flex h-[80%] flex-col-reverse overflow-y-auto">
         {visibleMessages.map((message, index) => (
-          <ChatItemView
-            key={
-              message.type === "gift"
-                ? `gift-${message.id}`
-                : `chat-${message.id ?? index}-${index}`
-            }
-            item={message}
-          />
+          <ChatItemView key={`${message.type}-${message.id ?? index}`} item={message} />
         ))}
-        {isConnected && <p className="m-2 text-gray-600">チャットに接続しました</p>}
       </div>
       <div className="h-[60px] border-t">
         <p className="m-auto w-fit pt-6">アーカイブのため参加できません</p>
