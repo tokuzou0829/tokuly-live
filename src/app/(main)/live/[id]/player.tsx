@@ -36,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import SeekBar from "../../video/[id]/player-seekbar";
+import { useListenerAnalytics } from "./listener-analytics";
 
 interface VideoProps {
   id: string;
@@ -47,6 +48,7 @@ const MAX_TIMESHIFT_DURATION = 3600;
 
 function Player(props: VideoProps) {
   const { id, className } = props;
+  const { startListening, stopListening } = useListenerAnalytics();
   const playerRef = useRef<HTMLDivElement | null>(null);
   const myRef = useRef<HTMLVideoElement | null>(null);
   const overlayRef = useRef<HTMLDivElement | null>(null);
@@ -118,6 +120,9 @@ function Player(props: VideoProps) {
   const liveElapsedTimeRef = useRef<number>(0);
   // 配信開始時間の推定値
   const estimatedStreamStartTimeRef = useRef<number>(Date.now());
+
+  // 配信終了などでvideo要素だけが破棄された場合も、聴取状態を確実に終了する。
+  useEffect(() => () => stopListening(), [stopListening]);
 
   // デバイス・ブラウザの検出（初期化時に一度だけ実行）
   useEffect(() => {
@@ -1593,6 +1598,8 @@ function Player(props: VideoProps) {
         onMouseEnter={handleVideoHoverEnter}
         onPlay={handleVideoPlay}
         onPause={handleVideoPause}
+        onPlaying={startListening}
+        onEnded={stopListening}
       ></video>
 
       {/* シンプル化したローディングインジケータ - 初期化とライブストリーム読み込み */}
