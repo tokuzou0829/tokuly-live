@@ -42,6 +42,30 @@ describe("gift requests", () => {
     });
   });
 
+  it("keeps recipient and sender channel ids separate", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ gift_id: "01J", gift_email: "01j@gift.tokuly.com" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+    await createGiftSession(
+      {
+        channel_id: 2,
+        sender_channel_id: 7,
+        live_stream_id: 3,
+        amount: 1000,
+        comment: "応援",
+      },
+      "token"
+    );
+    const init = vi.mocked(fetch).mock.calls[0][1];
+    expect(JSON.parse(String(init?.body))).toMatchObject({
+      channel_id: 2,
+      sender_channel_id: 7,
+    });
+  });
+
   it("normalizes sent gift pagination", async () => {
     vi.mocked(fetch).mockResolvedValue(
       new Response(JSON.stringify({ data: [], current_page: 2, last_page: 4, total: 12 }), {

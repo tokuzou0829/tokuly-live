@@ -5,6 +5,7 @@ import type {
   ReturnGiftResponse,
   SentGiftPage,
 } from "@/types/gift";
+import { notifyTokulyUnauthorized } from "@/lib/auth-session-events";
 
 export class GiftApiError extends Error {
   status: number;
@@ -44,6 +45,7 @@ async function giftRequest<T>(path: string, token: string, init: RequestInit = {
   });
   const payload = await response.json().catch(() => null);
   if (!response.ok) {
+    if (response.status === 401) notifyTokulyUnauthorized();
     const body = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
     throw new GiftApiError(
       response.status,

@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import LayoutContent from "./layout-content";
 import Header from "@/components/header";
 import { getRecommendChannel } from "@/requests/channel";
+import NextAuthProvider from "@/providers/NextAuth";
 
 export const revalidate = 0;
 
@@ -24,9 +25,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const [session, channels] = await Promise.all([auth(), getRecommendChannel()]);
 
   return (
-    <div>
-      <Header session={session} />
-      <LayoutContent channels={channels}>{children}</LayoutContent>
-    </div>
+    <NextAuthProvider session={session}>
+      <div>
+        <Header />
+        <LayoutContent channels={channels}>{children}</LayoutContent>
+      </div>
+    </NextAuthProvider>
   );
 }

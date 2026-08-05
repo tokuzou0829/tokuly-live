@@ -86,7 +86,36 @@ describe("StreamComments", () => {
     fireEvent.click(screen.getByRole("button", { name: "コメント" }));
 
     expect(await screen.findByText("新しいコメント")).toBeInTheDocument();
-    expect(createStreamComment).toHaveBeenCalledWith(3, "新しいコメント", "token");
+    expect(createStreamComment).toHaveBeenCalledWith(3, "新しいコメント", "token", undefined);
+  });
+
+  it("posts with the selected channel identity", async () => {
+    vi.mocked(createStreamComment).mockResolvedValue({ ...ownComment, id: 11 });
+    const channelSession = {
+      ...session,
+      activePostingIdentity: {
+        type: "channel",
+        accountId: "1",
+        channelId: 7,
+        name: "Channel",
+        handle: "channel",
+        profilePhotoUrl: "https://example.test/channel.jpg",
+      },
+    } as Session;
+    const { container } = render(<StreamComments streamId={3} session={channelSession} />);
+
+    fireEvent.change(screen.getByRole("textbox", { name: "コメント" }), {
+      target: { value: "チャンネル投稿" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "コメント" }));
+
+    await waitFor(() =>
+      expect(createStreamComment).toHaveBeenCalledWith(3, "チャンネル投稿", "token", 7)
+    );
+    expect(container.querySelector("form img")).toHaveAttribute(
+      "src",
+      "https://example.test/channel.jpg"
+    );
   });
 
   it("allows the author to edit and delete their comment", async () => {

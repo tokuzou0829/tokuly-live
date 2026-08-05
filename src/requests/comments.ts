@@ -1,4 +1,5 @@
 import type { StreamComment, StreamCommentPage } from "@/types/comment";
+import { notifyTokulyUnauthorized } from "@/lib/auth-session-events";
 
 export class CommentApiError extends Error {
   status: number;
@@ -39,6 +40,7 @@ async function commentRequest<T>(path: string, init: RequestInit = {}): Promise<
   const payload = response.status === 204 ? null : await response.json().catch(() => null);
 
   if (!response.ok) {
+    if (response.status === 401) notifyTokulyUnauthorized();
     const body = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
     throw new CommentApiError(
       response.status,
@@ -71,12 +73,16 @@ export function getStreamComments(
 export function createStreamComment(
   streamId: number | string,
   content: string,
-  token: string
+  token: string,
+  channelId?: number
 ): Promise<StreamComment> {
   return commentRequest<StreamComment>(streamPath(streamId), {
     method: "POST",
     headers: authenticated(token),
-    body: JSON.stringify({ content }),
+    body: JSON.stringify({
+      content,
+      ...(channelId === undefined ? {} : { channel_id: channelId }),
+    }),
   });
 }
 

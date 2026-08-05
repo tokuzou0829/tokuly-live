@@ -1,6 +1,9 @@
 export type StreamCommentAuthor = {
   id: number | null;
+  type?: "user" | "channel";
+  channel_id?: number | null;
   name: string;
+  handle?: string;
   profile_photo_url: string;
 };
 

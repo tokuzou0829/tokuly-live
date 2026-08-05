@@ -8,6 +8,7 @@ import { ChatItemView } from "@/components/chat-item";
 import { GiftPopover } from "@/components/gift-popover";
 import { mergeChatItems, normalizeChatItem, normalizeChatItems } from "@/lib/gifts";
 import type { ChatItem } from "@/types/gift";
+import { notifyTokulyUnauthorized } from "@/lib/auth-session-events";
 
 interface ChatProps {
   id: number;
@@ -23,6 +24,10 @@ export default function Chat({ id, channelId, giftsEnabled = false, session }: C
   const [messages, setMessages] = useState<ChatItem[]>([]);
   const [historyMessages, setHistoryMessages] = useState<ChatItem[]>([]);
   const accessToken = session?.user?.access_token;
+  const postingIdentity = session?.activePostingIdentity;
+  const postingChannelId =
+    postingIdentity?.type === "channel" ? postingIdentity.channelId : undefined;
+  const postingName = postingIdentity?.name ?? session?.user?.name;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -51,13 +56,21 @@ export default function Chat({ id, channelId, giftsEnabled = false, session }: C
       if (session?.user && accessToken) {
         const request = await fetch("https://live-data.tokuly.com/chat-auth/", {
           method: "POST",
-          body: JSON.stringify({ token: accessToken }),
+          body: JSON.stringify({
+            token: accessToken,
+            ...(postingChannelId === undefined ? {} : { channel_id: postingChannelId }),
+          }),
           headers: { "Content-Type": "application/json" },
         });
+        if (request.status === 401) {
+          notifyTokulyUnauthorized();
+          return;
+        }
+        if (!request.ok) throw new Error("チャット認証に失敗しました");
         const chatKey = await request.json();
         chatSocket.emit("join", {
           roomId: id,
-          name: session.user.name,
+          name: postingName,
           token: chatKey.authKey,
         });
         setIsConnected(true);
@@ -78,7 +91,7 @@ export default function Chat({ id, channelId, giftsEnabled = false, session }: C
     return () => {
       chatSocket.disconnect();
     };
-  }, [accessToken, id, session?.user]);
+  }, [accessToken, id, postingChannelId, postingName, session?.user]);
 
   const visibleMessages = useMemo(
     () => mergeChatItems(messages, historyMessages),
@@ -126,7 +139,12 @@ export default function Chat({ id, channelId, giftsEnabled = false, session }: C
               accessToken &&
               channelId !== undefined &&
               Number.isFinite(channelId) && (
-                <GiftPopover channelId={channelId} liveStreamId={id} token={accessToken} />
+                <GiftPopover
+                  channelId={channelId}
+                  liveStreamId={id}
+                  token={accessToken}
+                  senderChannelId={postingChannelId}
+                />
               )}
             <button
               type="submit"

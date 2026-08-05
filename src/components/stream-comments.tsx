@@ -60,6 +60,9 @@ export function StreamComments({ streamId, session, isChannelOwner = false }: Pr
   const [error, setError] = useState("");
   const token = session?.user?.access_token;
   const currentUserId = session?.user?.id;
+  const postingIdentity = session?.activePostingIdentity;
+  const postingChannelId =
+    postingIdentity?.type === "channel" ? postingIdentity.channelId : undefined;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -106,7 +109,7 @@ export function StreamComments({ streamId, session, isChannelOwner = false }: Pr
     setSubmitting(true);
     setError("");
     try {
-      const created = await createStreamComment(streamId, value, token);
+      const created = await createStreamComment(streamId, value, token, postingChannelId);
       setComments((previous) => mergeUnique(previous, [created]));
       setContent("");
     } catch (caught) {
@@ -169,9 +172,9 @@ export function StreamComments({ streamId, session, isChannelOwner = false }: Pr
       {session?.user && token ? (
         <form onSubmit={submitComment} className="mb-6">
           <div className="flex items-start gap-3">
-            {session.user.image ? (
+            {postingIdentity?.profilePhotoUrl ? (
               <img
-                src={session.user.image}
+                src={postingIdentity.profilePhotoUrl}
                 alt=""
                 className="mt-1 h-9 w-9 shrink-0 rounded-full object-cover"
               />

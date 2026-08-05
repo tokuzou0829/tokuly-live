@@ -11,9 +11,10 @@ type Props = {
   channelId: number;
   liveStreamId: number;
   token: string;
+  senderChannelId?: number;
 };
 
-export function GiftPopover({ channelId, liveStreamId, token }: Props) {
+export function GiftPopover({ channelId, liveStreamId, token, senderChannelId }: Props) {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -27,7 +28,13 @@ export function GiftPopover({ channelId, liveStreamId, token }: Props) {
         collisionPadding={12}
         className="max-h-[min(70vh,620px)] w-[min(390px,calc(100vw-24px))] overflow-y-auto p-0"
       >
-        <GiftSessionForm channelId={channelId} liveStreamId={liveStreamId} token={token} compact />
+        <GiftSessionForm
+          channelId={channelId}
+          liveStreamId={liveStreamId}
+          token={token}
+          senderChannelId={senderChannelId}
+          compact
+        />
       </PopoverContent>
     </Popover>
   );

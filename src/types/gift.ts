@@ -18,6 +18,7 @@ export type GiftTier = {
 
 export type CreateGiftSessionInput = {
   channel_id: number;
+  sender_channel_id?: number;
   live_stream_id: number;
   amount: number;
   comment: string;

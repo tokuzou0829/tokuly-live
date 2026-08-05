@@ -69,6 +69,19 @@ describe("stream comment requests", () => {
     );
   });
 
+  it("adds channel_id only for channel posting", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify(comment), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    await createStreamComment(3, "チャンネル投稿", "token", 7);
+    const init = vi.mocked(fetch).mock.calls[0][1];
+    expect(JSON.parse(String(init?.body))).toEqual({ content: "チャンネル投稿", channel_id: 7 });
+  });
+
   it("maps validation errors", async () => {
     vi.mocked(fetch).mockResolvedValue(
       new Response(JSON.stringify({ message: "入力エラー", errors: { content: ["必須です"] } }), {

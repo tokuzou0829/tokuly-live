@@ -15,10 +15,17 @@ type Props = {
   channelId: number;
   liveStreamId: number;
   token: string;
+  senderChannelId?: number;
   compact?: boolean;
 };
 
-export function GiftSessionForm({ channelId, liveStreamId, token, compact = false }: Props) {
+export function GiftSessionForm({
+  channelId,
+  liveStreamId,
+  token,
+  senderChannelId,
+  compact = false,
+}: Props) {
   const [amountText, setAmountText] = useState("1000");
   const [comment, setComment] = useState("");
   const [created, setCreated] = useState<CreatedGiftSession | null>(null);
@@ -45,6 +52,7 @@ export function GiftSessionForm({ channelId, liveStreamId, token, compact = fals
       const result = await createGiftSession(
         {
           channel_id: channelId,
+          ...(senderChannelId === undefined ? {} : { sender_channel_id: senderChannelId }),
           live_stream_id: liveStreamId,
           amount,
           comment: tier.maxCommentLength === 0 ? "" : comment,

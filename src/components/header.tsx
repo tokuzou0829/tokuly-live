@@ -1,9 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import AccountDropdownMenu from "@/app/(main)/menu";
-import { type Session } from "next-auth";
 
-export default function Header({ session }: { session: Session | null }) {
+export default function Header() {
   return (
     <header className="bg-white top-0 z-50 sticky border-b border-gtay-200">
       <div className="h-16 mx-auto px-4 flex itmes-center justify-between">
@@ -22,7 +21,7 @@ export default function Header({ session }: { session: Session | null }) {
             配信を開始
           </Link>
           <div style={{ marginRight: "10px", marginLeft: "auto" }}>
-            <AccountDropdownMenu session={session}></AccountDropdownMenu>
+            <AccountDropdownMenu />
           </div>
         </div>
       </div>
