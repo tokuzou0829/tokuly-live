@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signIn, signOut, useSession } from "next-auth/react";
-import { Check, Loader2, RefreshCw } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -24,6 +24,28 @@ import type { OwnedChannel, PostingIdentity } from "@/types/identity";
 
 function initials(name: string): string {
   return name.trim().slice(0, 2) || "T";
+}
+
+function useNarrowViewport(): boolean {
+  const [isNarrow, setIsNarrow] = useState(false);
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") {
+      const updateViewport = () => setIsNarrow(window.innerWidth < 640);
+      updateViewport();
+      window.addEventListener("resize", updateViewport);
+      return () => window.removeEventListener("resize", updateViewport);
+    }
+
+    const mediaQuery = window.matchMedia("(max-width: 639px)");
+    const updateViewport = () => setIsNarrow(mediaQuery.matches);
+
+    updateViewport();
+    mediaQuery.addEventListener("change", updateViewport);
+    return () => mediaQuery.removeEventListener("change", updateViewport);
+  }, []);
+
+  return isNarrow;
 }
 
 function IdentityRow({
@@ -61,8 +83,10 @@ export default function AccountDropdownMenu() {
   const [channels, setChannels] = useState<OwnedChannel[]>([]);
   const [loading, setLoading] = useState(false);
   const [switching, setSwitching] = useState(false);
+  const [mobileSwitcherOpen, setMobileSwitcherOpen] = useState(false);
   const [error, setError] = useState("");
   const [errorStatus, setErrorStatus] = useState<number | null>(null);
+  const isNarrowViewport = useNarrowViewport();
   const activeIdentity = session?.activePostingIdentity;
   const accessToken = session?.user?.access_token;
 
@@ -128,8 +152,82 @@ export default function AccountDropdownMenu() {
     profilePhotoUrl: session.user.image ?? null,
   };
 
+  const identityOptions = (
+    <>
+      <DropdownMenuLabel className="text-xs text-muted-foreground">
+        Tokulyアカウント
+      </DropdownMenuLabel>
+      <IdentityRow
+        identity={userIdentity}
+        selected={activeIdentity.type === "user"}
+        disabled={switching}
+        onSelect={() => void switchIdentity(null)}
+      />
+      <DropdownMenuSeparator />
+      <DropdownMenuLabel className="text-xs text-muted-foreground">
+        あなたのチャンネル
+      </DropdownMenuLabel>
+      {loading ? (
+        <div className="flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> 読み込み中
+        </div>
+      ) : error ? (
+        <div className="space-y-2 px-2 py-3">
+          <p role="alert" className="text-xs text-destructive">
+            {error}
+          </p>
+          {errorStatus === 401 || errorStatus === 403 ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => signIn("tokuly", { callbackUrl: pathname ?? "/" })}
+            >
+              再ログイン
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-full"
+              onClick={() => void loadChannels()}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" /> 再試行
+            </Button>
+          )}
+        </div>
+      ) : channels.length === 0 ? (
+        <p className="px-2 py-3 text-xs text-muted-foreground">チャンネルはありません</p>
+      ) : (
+        channels.map((channel) => {
+          const identity: PostingIdentity = {
+            type: "channel",
+            accountId: userIdentity.accountId,
+            channelId: channel.id,
+            name: channel.name,
+            handle: channel.handle,
+            profilePhotoUrl: channel.profile_photo_url,
+          };
+          return (
+            <IdentityRow
+              key={channel.id}
+              identity={identity}
+              selected={
+                activeIdentity.type === "channel" && activeIdentity.channelId === channel.id
+              }
+              disabled={switching}
+              onSelect={() => void switchIdentity(channel.id)}
+            />
+          );
+        })
+      )}
+    </>
+  );
+
   return (
-    <DropdownMenu>
+    <DropdownMenu onOpenChange={(open) => !open && setMobileSwitcherOpen(false)}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
@@ -143,7 +241,12 @@ export default function AccountDropdownMenu() {
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-64" align="end" forceMount>
+      <DropdownMenuContent
+        className="max-h-[var(--radix-dropdown-menu-content-available-height)] w-64 max-w-[calc(100vw-16px)] overflow-x-hidden overflow-y-auto"
+        align="end"
+        collisionPadding={8}
+        forceMount
+      >
         <DropdownMenuLabel className="font-normal">
           <div className="flex items-center gap-2">
             <Avatar className="h-9 w-9">
@@ -161,82 +264,44 @@ export default function AccountDropdownMenu() {
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        <DropdownMenuSub onOpenChange={(open) => open && void loadChannels()}>
-          <DropdownMenuSubTrigger className="cursor-pointer">
-            アカウントを切り替え
-          </DropdownMenuSubTrigger>
-          <DropdownMenuSubContent className="w-72">
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              Tokulyアカウント
-            </DropdownMenuLabel>
-            <IdentityRow
-              identity={userIdentity}
-              selected={activeIdentity.type === "user"}
-              disabled={switching}
-              onSelect={() => void switchIdentity(null)}
-            />
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-xs text-muted-foreground">
-              あなたのチャンネル
-            </DropdownMenuLabel>
-            {loading ? (
-              <div className="flex items-center gap-2 px-2 py-3 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> 読み込み中
+        {isNarrowViewport ? (
+          <>
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onFocus={() => void loadChannels()}
+              onSelect={(event) => {
+                event.preventDefault();
+                setMobileSwitcherOpen((open) => !open);
+                void loadChannels();
+              }}
+            >
+              アカウントを切り替え
+              {mobileSwitcherOpen ? (
+                <ChevronDown className="ml-auto h-4 w-4" />
+              ) : (
+                <ChevronRight className="ml-auto h-4 w-4" />
+              )}
+            </DropdownMenuItem>
+            {mobileSwitcherOpen && (
+              <div className="mt-1 border-t pt-1" data-testid="mobile-identity-options">
+                {identityOptions}
               </div>
-            ) : error ? (
-              <div className="space-y-2 px-2 py-3">
-                <p role="alert" className="text-xs text-destructive">
-                  {error}
-                </p>
-                {errorStatus === 401 || errorStatus === 403 ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => signIn("tokuly", { callbackUrl: pathname ?? "/" })}
-                  >
-                    再ログイン
-                  </Button>
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => void loadChannels()}
-                  >
-                    <RefreshCw className="mr-2 h-4 w-4" /> 再試行
-                  </Button>
-                )}
-              </div>
-            ) : channels.length === 0 ? (
-              <p className="px-2 py-3 text-xs text-muted-foreground">チャンネルはありません</p>
-            ) : (
-              channels.map((channel) => {
-                const identity: PostingIdentity = {
-                  type: "channel",
-                  accountId: userIdentity.accountId,
-                  channelId: channel.id,
-                  name: channel.name,
-                  handle: channel.handle,
-                  profilePhotoUrl: channel.profile_photo_url,
-                };
-                return (
-                  <IdentityRow
-                    key={channel.id}
-                    identity={identity}
-                    selected={
-                      activeIdentity.type === "channel" && activeIdentity.channelId === channel.id
-                    }
-                    disabled={switching}
-                    onSelect={() => void switchIdentity(channel.id)}
-                  />
-                );
-              })
             )}
-          </DropdownMenuSubContent>
-        </DropdownMenuSub>
+          </>
+        ) : (
+          <DropdownMenuSub onOpenChange={(open) => open && void loadChannels()}>
+            <DropdownMenuSubTrigger className="cursor-pointer">
+              アカウントを切り替え
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent
+              sideOffset={4}
+              collisionPadding={8}
+              className="w-72 max-w-[calc(100vw-16px)] overflow-x-hidden"
+            >
+              {identityOptions}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <Link href="/gifts">

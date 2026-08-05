@@ -8,6 +8,23 @@ import { getOwnedChannels } from "@/requests/owned-channels";
 const update = vi.fn();
 const refresh = vi.fn();
 
+function mockNarrowViewport(matches: boolean) {
+  Object.defineProperty(window, "matchMedia", {
+    configurable: true,
+    writable: true,
+    value: vi.fn().mockImplementation(() => ({
+      matches,
+      media: "(max-width: 639px)",
+      onchange: null,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  });
+}
+
 const session = {
   expires: "2099-01-01",
   user: {
@@ -43,6 +60,7 @@ vi.mock("@/requests/owned-channels", async (importOriginal) => {
 describe("account dropdown menu", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockNarrowViewport(false);
     vi.stubGlobal("PointerEvent", MouseEvent);
     Object.defineProperty(HTMLElement.prototype, "hasPointerCapture", {
       configurable: true,
@@ -84,5 +102,25 @@ describe("account dropdown menu", () => {
     expect(await screen.findByText("あなたのチャンネル")).toBeInTheDocument();
     expect(await screen.findByText("Channel")).toBeInTheDocument();
     expect(screen.getByText("@channel")).toBeInTheDocument();
+  });
+
+  it("expands account choices inside the main menu on narrow viewports", async () => {
+    mockNarrowViewport(true);
+    render(<AccountDropdownMenu />);
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Userのアカウントメニュー" }), {
+      button: 0,
+      ctrlKey: false,
+    });
+    const switcher = await screen.findByText("アカウントを切り替え");
+
+    expect(screen.queryByTestId("mobile-identity-options")).not.toBeInTheDocument();
+    fireEvent.focus(switcher);
+    await waitFor(() => expect(getOwnedChannels).toHaveBeenCalledWith("token"));
+    fireEvent.click(switcher);
+
+    expect(await screen.findByTestId("mobile-identity-options")).toBeInTheDocument();
+    expect(await screen.findByText("Channel")).toBeInTheDocument();
+    expect(screen.getAllByRole("menu")).toHaveLength(1);
   });
 });
