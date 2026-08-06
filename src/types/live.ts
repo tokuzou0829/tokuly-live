@@ -26,6 +26,7 @@ export type Live = {
   ch_icon: string;
   ch_handle: string;
   subtitles: Subtitle[];
+  duration_seconds: number | null;
 };
 
 export type MoreVideoList = {
@@ -42,6 +43,7 @@ export type MoreVideoList = {
   ch_name: string;
   ch_icon: string;
   ch_handle: string;
+  duration_seconds: number | null;
 };
 
 export type LiveList = {
@@ -53,4 +55,5 @@ export type LiveList = {
   ch_name: string;
   ch_icon: string;
   ch_handle: string;
+  duration_seconds: number | null;
 };

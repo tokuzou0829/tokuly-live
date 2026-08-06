@@ -1,8 +1,10 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import type { MouseEventHandler, ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { formatDuration } from "@/lib/duration";
 
 type ContentCardProps = {
   href: string;
@@ -10,6 +12,7 @@ type ContentCardProps = {
   thumbnailUrl: string;
   channelName: string;
   channelIcon: string;
+  durationSeconds?: number | null;
   variant?: "live" | "archive";
   className?: string;
   children?: ReactNode;
@@ -23,6 +26,7 @@ export function ContentCard({
   thumbnailUrl,
   channelName,
   channelIcon,
+  durationSeconds,
   variant,
   className,
   children,
@@ -32,18 +36,16 @@ export function ContentCard({
   const isLive = variant === "live";
   const displayThumbnail = isDisplayableImageUrl(thumbnailUrl);
   const displayChannelIcon = isDisplayableImageUrl(channelIcon);
+  const durationLabel = formatDuration(durationSeconds);
 
   return (
     <Link
       href={href}
-      className={cn(
-        "block w-[230px] shrink-0 mr-3 focus-visible:outline-none",
-        className
-      )}
+      className={cn("block w-[230px] shrink-0 mr-3 focus-visible:outline-none", className)}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      >
-        <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
+    >
+      <div className="relative aspect-video overflow-hidden rounded-lg bg-muted">
         {displayThumbnail && (
           <img
             key={thumbnailUrl}
@@ -67,6 +69,14 @@ export function ContentCard({
               {isLive ? "ライブ配信" : "アーカイブ"}
             </span>
           </div>
+        )}
+        {durationLabel && (
+          <span
+            aria-label={`動画の長さ ${durationLabel}`}
+            className="absolute bottom-1.5 right-1.5 inline-flex h-5 items-center rounded-md bg-neutral-900/75 px-1.5 text-[11px] font-semibold tabular-nums leading-none text-white"
+          >
+            {durationLabel}
+          </span>
         )}
       </div>
       <div className="mt-2 min-w-0">

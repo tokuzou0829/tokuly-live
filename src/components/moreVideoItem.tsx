@@ -1,13 +1,16 @@
 "use client";
 
+import React from "react";
 import Link from "next/link";
 import type { MoreVideoList } from "@/types/live";
+import { formatDuration } from "@/lib/duration";
 
 export function MoreVideoItem({ video }: { video: MoreVideoList }) {
   const href = `/${video.type === "live" ? "live" : "video"}/${video.stream_name}`;
   const badge = getBadge(video.type);
   const displayThumbnail = isDisplayableImageUrl(video.thumbnail_url);
   const displayChannelIcon = isDisplayableImageUrl(video.ch_icon);
+  const durationLabel = video.type === "live" ? null : formatDuration(video.duration_seconds);
 
   return (
     <Link
@@ -28,6 +31,14 @@ export function MoreVideoItem({ video }: { video: MoreVideoList }) {
         {badge && (
           <span className="absolute left-1.5 top-1.5 inline-flex h-5 items-center rounded-md bg-neutral-900/55 px-2 text-[10px] font-semibold leading-none text-white">
             {badge}
+          </span>
+        )}
+        {durationLabel && (
+          <span
+            aria-label={`動画の長さ ${durationLabel}`}
+            className="absolute bottom-1.5 right-1.5 inline-flex h-5 items-center rounded-md bg-neutral-900/75 px-1.5 text-[11px] font-semibold tabular-nums leading-none text-white"
+          >
+            {durationLabel}
           </span>
         )}
       </div>
