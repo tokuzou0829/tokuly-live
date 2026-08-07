@@ -98,7 +98,7 @@ function GiftInformationOverlay({ open, onClose }: { open: boolean; onClose: () 
               存在しないセッションに送信したギフトの返還についてはサポートにお問い合わせください。
             </li>
             <li>
-              Tokulyはギフトカードについて発生した全ての問題について私たちは責任を負いません。
+              Tokulyはギフト機能において発生した全ての問題について責任を負いません。
             </li>
           </ul>
         </aside>
