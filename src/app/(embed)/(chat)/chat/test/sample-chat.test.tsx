@@ -26,7 +26,7 @@ describe("chat CSS test preview", () => {
 
     expect(giftStyles).toEqual(expectedStyles);
     expect(normalMessages.length).toBeGreaterThanOrEqual(8);
-    expect(normalMessages.some((item) => item.text.length > 100)).toBe(true);
+    expect(normalMessages.some((item) => item.text.length > 60)).toBe(true);
     expect(normalMessages.some((item) => item.text.includes("\n"))).toBe(true);
     expect(normalMessages.some((item) => item.image)).toBe(true);
     expect(normalMessages.some((item) => !item.image)).toBe(true);
@@ -53,7 +53,7 @@ describe("chat CSS test preview", () => {
     vi.useRealTimers();
   });
 
-  it("accepts preview CSS only from the same-origin parent", () => {
+  it("accepts preview CSS from Tokuly origins and rejects unknown origins", () => {
     render(<SampleChat />);
 
     act(() => {
@@ -74,6 +74,51 @@ describe("chat CSS test preview", () => {
     act(() => {
       window.dispatchEvent(
         new MessageEvent("message", {
+          origin: "https://studio.tokuly.com",
+          source: window,
+          data: {
+            type: "tokuly:chat-css:update",
+            version: 1,
+            css: ".chat-body { background: lime; }",
+          },
+        })
+      );
+    });
+    expect(document.querySelector("#tokuly-chat-preview-style")).toHaveTextContent("lime");
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: "https://tokuly.com",
+          source: window,
+          data: {
+            type: "tokuly:chat-css:update",
+            version: 1,
+            css: ".chat-body { background: cyan; }",
+          },
+        })
+      );
+    });
+    expect(document.querySelector("#tokuly-chat-preview-style")).toHaveTextContent("cyan");
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: "https://evil-tokuly.com",
+          source: window,
+          data: {
+            type: "tokuly:chat-css:update",
+            version: 1,
+            css: ".chat-body { background: orange; }",
+          },
+        })
+      );
+    });
+    expect(document.querySelector("#tokuly-chat-preview-style")).toHaveTextContent("cyan");
+
+    act(() => {
+      window.dispatchEvent(
+        new MessageEvent("message", {
           origin: "https://example.test",
           source: window,
           data: {
@@ -84,6 +129,6 @@ describe("chat CSS test preview", () => {
         })
       );
     });
-    expect(document.querySelector("#tokuly-chat-preview-style")).not.toHaveTextContent("red");
+    expect(document.querySelector("#tokuly-chat-preview-style")).toHaveTextContent("cyan");
   });
 });

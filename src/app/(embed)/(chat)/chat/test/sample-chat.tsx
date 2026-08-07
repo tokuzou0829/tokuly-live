@@ -109,6 +109,40 @@ type ChatCssMessage = {
   css: string;
 };
 
+function isAllowedPreviewOrigin(origin: string) {
+  try {
+    const url = new URL(origin);
+    const hostname = url.hostname.toLowerCase();
+
+    if (hostname === "localhost" || hostname === "127.0.0.1") return true;
+    if (url.protocol !== "https:") return false;
+
+    return hostname === "tokuly.com" || hostname.endsWith(".tokuly.com");
+  } catch {
+    return false;
+  }
+}
+
+function getPreviewParentOrigin() {
+  const candidates = [
+    document.referrer,
+    new URLSearchParams(window.location.search).get("parentOrigin"),
+    window.location.origin,
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      const origin = new URL(candidate).origin;
+      if (isAllowedPreviewOrigin(origin)) return origin;
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
 function isChatCssMessage(value: unknown): value is ChatCssMessage {
   if (!value || typeof value !== "object") return false;
   const message = value as Partial<ChatCssMessage>;
@@ -151,7 +185,7 @@ export default function SampleChat() {
 
   useEffect(() => {
     function applyPreviewCss(event: MessageEvent) {
-      if (event.origin !== window.location.origin) return;
+      if (!isAllowedPreviewOrigin(event.origin)) return;
       if (event.source !== window.parent) return;
       if (!isChatCssMessage(event.data)) return;
 
@@ -165,11 +199,9 @@ export default function SampleChat() {
     }
 
     window.addEventListener("message", applyPreviewCss);
-    if (window.parent !== window) {
-      window.parent.postMessage(
-        { type: "tokuly:chat-css:ready", version: 1 },
-        window.location.origin
-      );
+    const parentOrigin = getPreviewParentOrigin();
+    if (window.parent !== window && parentOrigin) {
+      window.parent.postMessage({ type: "tokuly:chat-css:ready", version: 1 }, parentOrigin);
     }
 
     return () => {
