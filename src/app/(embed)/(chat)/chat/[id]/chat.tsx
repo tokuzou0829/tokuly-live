@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import io, { Socket } from "socket.io-client";
 import { type Session } from "next-auth";
+import { Send } from "lucide-react";
 import { ChatItemView } from "@/components/chat-item";
+import { ChatComposerAvatar } from "@/components/chat-composer-avatar";
 import { mergeChatItems, normalizeChatItem, normalizeChatItems } from "@/lib/gifts";
 import type { ChatItem } from "@/types/gift";
 import { notifyTokulyUnauthorized } from "@/lib/auth-session-events";
@@ -19,6 +21,8 @@ export default function Chat({ id, session }: { id: number; session: Session | n
   const postingChannelId =
     postingIdentity?.type === "channel" ? postingIdentity.channelId : undefined;
   const postingName = postingIdentity?.name ?? session?.user?.name;
+  const postingImage = postingIdentity?.profilePhotoUrl ?? session?.user?.image;
+  const hasMessage = msg.trim().length > 0;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -86,11 +90,11 @@ export default function Chat({ id, session }: { id: number; session: Session | n
   }
 
   return (
-    <div className="h-full w-full bg-white chat-body">
-      <div className="flex h-[5%] items-center justify-center border-b text-center chat-label">
+    <section className="chat-body h-full w-full">
+      <div className="chat-label">
         <p>チャット</p>
       </div>
-      <div className="flex h-[85%] flex-col-reverse overflow-y-auto chat-message-box">
+      <div className="chat-message-box">
         {visibleMessages.map((message, index) => (
           <ChatItemView
             key={
@@ -102,29 +106,37 @@ export default function Chat({ id, session }: { id: number; session: Session | n
             compact
           />
         ))}
-        {isConnected && <p className="m-2 text-gray-600 chat-status">チャットに接続しました</p>}
+        {isConnected && (
+          <p className="chat-status" role="status" aria-live="polite">
+            チャットに接続しました
+          </p>
+        )}
       </div>
       {session?.user ? (
-        <form onSubmit={handleSubmit} className="h-[10%] chat-input">
-          <div className="flex items-center justify-center">
+        <form onSubmit={handleSubmit} className="chat-input">
+          <div className="chat-input-row">
+            <ChatComposerAvatar image={postingImage} name={postingName} />
             <input
               type="text"
               aria-label="チャットメッセージ"
               autoComplete="off"
+              placeholder="チャット"
               value={msg}
               onChange={(event) => setMsg(event.target.value)}
-              className="m-2 h-8 w-full rounded-md border-2"
+              className="chat-input-field"
             />
-            <button type="submit" className="mr-3 shrink-0">
-              送信
-            </button>
+            {hasMessage && (
+              <button type="submit" aria-label="チャットを送信" className="chat-send-button">
+                <Send aria-hidden="true" size={20} />
+              </button>
+            )}
           </div>
         </form>
       ) : (
-        <div className="h-[60px] border-t chat-input">
-          <p className="m-auto w-fit pt-6">ログインしてチャットに参加</p>
+        <div className="chat-input chat-footer-message chat-login-message">
+          <p>ログインしてチャットに参加</p>
         </div>
       )}
-    </div>
+    </section>
   );
 }

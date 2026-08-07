@@ -1,9 +1,11 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
 import io, { Socket } from "socket.io-client";
-import NextAuth, { type Session } from "next-auth";
-import { Crown, Plane, Send } from "lucide-react";
+import { type Session } from "next-auth";
+import { Crown, Send } from "lucide-react";
 import { AvatarGroup } from "@/components/ui/avatarGroup";
+import { ChatItemView } from "@/components/chat-item";
+import { ChatComposerAvatar } from "@/components/chat-composer-avatar";
 import { useAtom } from "jotai";
 import { WatchWinFriendRooomId, IsPartyHost, VideoPlayerRef } from "@/atoms/watchWithFriendAtom";
 
@@ -40,6 +42,7 @@ export default function Chat(props: ChatProps) {
   const [me, setMe] = useState<User | null>(null);
   const VideoTimeInterval = useRef<NodeJS.Timeout>();
   const [VideoRef] = useAtom<HTMLVideoElement | null>(VideoPlayerRef);
+  const hasMessage = msg.trim().length > 0;
 
   useEffect(() => {
     let me_data: User;
@@ -177,57 +180,65 @@ export default function Chat(props: ChatProps) {
   };
 
   return (
-    <div className="w-[100%] h-[600px] bg-[White] rounded-[10px] border-[1px] mb-[10px]">
-      <div className="text-center border-b-[1px]">
-        <p className=" pt-2">一緒に観る</p>
-        <div className="flex items-center m-[5px]">
+    <section className="chat-body mb-[10px] h-[600px] w-full">
+      <div className="chat-label chat-party-label">
+        <p>一緒に観る</p>
+        <div className="flex items-center">
           <AvatarGroup avatarDataList={Users} max={4} />
-          <div className="flex ml-auto items-center m-[5px] ounded-[10px] border-[1px] px-[10px] py-[3px] rounded-[10px]">
+          <div className="ml-auto flex items-center rounded-full border px-[10px] py-[3px]">
             <Crown className="mr-[5px]" color="gold" />
             <img
-              className="w-[30px] h-[30px] aspect-square object-cover rounded-full"
+              alt="ホスト"
+              className="h-[30px] w-[30px] rounded-full object-cover"
               src={Users.find((user) => user.role === "admin")?.image ?? ""}
-            ></img>
+            />
           </div>
         </div>
       </div>
-      <div className="h-[75%] bg-[#ffffff] overflow-y-scroll flex flex-col-reverse">
+      <div className="chat-message-box">
         {messages.map((message, index) => (
-          <div className="m-1 flex items-center chat-message" key={index}>
-            <img
-              src={message.image}
-              className="w-[20px] h-[20px] object-cover rounded-full mr-1"
-            ></img>
-            <span className="mr-[10px] text-[grey] text-[14px] shrink-0 break-keep chat-message-name max-w-[40%] text-ellipsis-1">
-              {message.name}
-            </span>
-            <span className="text-[16px] chat-message-text"> {message.text}</span>
-          </div>
+          <ChatItemView
+            key={message.id ?? `${message.name}-${index}`}
+            item={{ ...message, type: "chat" }}
+          />
         ))}
         {is_connection && (
           <>
             {!session?.user && (
-              <p className="text-[#5f5f5f] ml-[10px] chat-status">ゲストとして参加中</p>
+              <p className="chat-status" role="status">
+                ゲストとして参加中
+              </p>
             )}
-            <p className="text-[#5f5f5f] m-[10px] chat-status">パーティーに接続しました</p>
+            <p className="chat-status" role="status" aria-live="polite">
+              パーティーに接続しました
+            </p>
           </>
         )}
       </div>
-      <form onSubmit={handleSubmit}>
-        <div className="flex justify-center w-[100%] items-center">
+      <form onSubmit={handleSubmit} className="chat-input">
+        <div className="chat-input-row">
+          <ChatComposerAvatar image={session?.user?.image} name={session?.user?.name ?? urlName} />
           <input
             type="text"
             id="msg"
+            aria-label="パーティーメッセージ"
             autoComplete="off"
+            placeholder="チャット"
             value={msg}
             onChange={(e) => setMsg(e.target.value)}
-            className="w-full ml-[10px] my-[10px] block border-solid divide-inherit border-2 rounded-md	h-[30px]"
+            className="chat-input-field"
           />
-          <button type="submit" className="w-[40px] h-[40px] p-1 pr-3 ml-2">
-            <Send className="m-auto" size={24} />
-          </button>
+          {hasMessage && (
+            <button
+              type="submit"
+              aria-label="パーティーメッセージを送信"
+              className="chat-send-button"
+            >
+              <Send aria-hidden="true" size={20} />
+            </button>
+          )}
         </div>
       </form>
-    </div>
+    </section>
   );
 }

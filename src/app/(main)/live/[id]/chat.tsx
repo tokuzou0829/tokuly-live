@@ -5,6 +5,7 @@ import io, { Socket } from "socket.io-client";
 import { type Session } from "next-auth";
 import { Send } from "lucide-react";
 import { ChatItemView } from "@/components/chat-item";
+import { ChatComposerAvatar } from "@/components/chat-composer-avatar";
 import { GiftPopover } from "@/components/gift-popover";
 import { mergeChatItems, normalizeChatItem, normalizeChatItems } from "@/lib/gifts";
 import type { ChatItem } from "@/types/gift";
@@ -28,6 +29,8 @@ export default function Chat({ id, channelId, giftsEnabled = false, session }: C
   const postingChannelId =
     postingIdentity?.type === "channel" ? postingIdentity.channelId : undefined;
   const postingName = postingIdentity?.name ?? session?.user?.name;
+  const postingImage = postingIdentity?.profilePhotoUrl ?? session?.user?.image;
+  const hasMessage = msg.trim().length > 0;
 
   useEffect(() => {
     const controller = new AbortController();
@@ -106,11 +109,11 @@ export default function Chat({ id, channelId, giftsEnabled = false, session }: C
   }
 
   return (
-    <div className="flex h-[calc(100vh-6rem)] min-h-[360px] max-h-[600px] w-full flex-col overflow-hidden rounded-lg border bg-white">
-      <div className="h-10 shrink-0 border-b">
-        <p className="pt-2 text-center">チャット</p>
+    <section className="chat-body h-[calc(100vh-6rem)] min-h-[360px] max-h-[600px] w-full">
+      <div className="chat-label">
+        <p>チャット</p>
       </div>
-      <div className="m-2 flex min-h-0 flex-1 flex-col-reverse overflow-y-auto bg-white">
+      <div className="chat-message-box">
         {visibleMessages.map((message, index) => (
           <ChatItemView
             key={
@@ -121,21 +124,28 @@ export default function Chat({ id, channelId, giftsEnabled = false, session }: C
             item={message}
           />
         ))}
-        {isConnected && <p className="m-2 text-gray-600">チャットに接続しました</p>}
+        {isConnected && (
+          <p className="chat-status" role="status" aria-live="polite">
+            チャットに接続しました
+          </p>
+        )}
       </div>
       {session?.user ? (
-        <form onSubmit={handleSubmit} className="shrink-0 border-t p-2">
-          <div className="flex items-center gap-2">
+        <form onSubmit={handleSubmit} className="chat-input">
+          <div className="chat-input-row">
+            <ChatComposerAvatar image={postingImage} name={postingName} />
             <input
               type="text"
               id="msg"
               aria-label="チャットメッセージ"
               autoComplete="off"
+              placeholder="チャット"
               value={msg}
               onChange={(event) => setMsg(event.target.value)}
-              className="max-h-[40px] flex-1 rounded-md border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="chat-input-field"
             />
-            {giftsEnabled &&
+            {!hasMessage &&
+              giftsEnabled &&
               accessToken &&
               channelId !== undefined &&
               Number.isFinite(channelId) && (
@@ -144,22 +154,22 @@ export default function Chat({ id, channelId, giftsEnabled = false, session }: C
                   liveStreamId={id}
                   token={accessToken}
                   senderChannelId={postingChannelId}
+                  senderName={postingName}
+                  senderImage={postingImage}
                 />
               )}
-            <button
-              type="submit"
-              aria-label="チャットを送信"
-              className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-gray-100"
-            >
-              <Send size={24} />
-            </button>
+            {hasMessage && (
+              <button type="submit" aria-label="チャットを送信" className="chat-send-button">
+                <Send aria-hidden="true" size={20} />
+              </button>
+            )}
           </div>
         </form>
       ) : (
-        <div className="h-10 shrink-0 border-t">
-          <p className="pt-3 text-center">ログインしてチャットに参加</p>
+        <div className="chat-input chat-footer-message chat-login-message">
+          <p>ログインしてチャットに参加</p>
         </div>
       )}
-    </div>
+    </section>
   );
 }

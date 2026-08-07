@@ -1,5 +1,5 @@
 import React from "react";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Session } from "next-auth";
 import Chat from "./chat";
@@ -46,6 +46,21 @@ describe("live chat gift availability", () => {
   it("shows the gift button when gifts are enabled", () => {
     render(<Chat id={146} channelId={5} giftsEnabled session={session} />);
     expect(screen.getByRole("button", { name: "ギフト付きメッセージを送る" })).toBeInTheDocument();
+  });
+
+  it("switches the gift action to send after a message is entered", () => {
+    render(<Chat id={146} channelId={5} giftsEnabled session={session} />);
+
+    const input = screen.getByPlaceholderText("チャット");
+    expect(screen.getByLabelText("Aliceとして送信")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "チャットを送信" })).not.toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "こんにちは" } });
+
+    expect(
+      screen.queryByRole("button", { name: "ギフト付きメッセージを送る" })
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "チャットを送信" })).toBeInTheDocument();
   });
 
   it("authenticates chat and gifts with the selected channel", async () => {

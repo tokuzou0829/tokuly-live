@@ -31,18 +31,18 @@ export default function Chat({ id }: { id: number }) {
   );
 
   return (
-    <div className="mb-2 h-[600px] w-full rounded-lg border bg-white">
-      <div className="h-10 border-b text-center">
-        <p className="pt-2">チャット</p>
+    <section className="chat-body mb-2 h-[600px] w-full">
+      <div className="chat-label">
+        <p>チャット</p>
       </div>
-      <div className="flex h-[80%] flex-col-reverse overflow-y-auto">
+      <div className="chat-message-box">
         {visibleMessages.map((message, index) => (
           <ChatItemView key={`${message.type}-${message.id ?? index}`} item={message} />
         ))}
       </div>
-      <div className="h-[60px] border-t">
-        <p className="m-auto w-fit pt-6">アーカイブのため参加できません</p>
+      <div className="chat-footer-message chat-archive-message">
+        <p>アーカイブのため参加できません</p>
       </div>
-    </div>
+    </section>
   );
 }

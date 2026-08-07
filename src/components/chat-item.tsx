@@ -3,40 +3,73 @@ import { Gift } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatYen, giftStyleClass } from "@/lib/gifts";
 import type { ChatItem } from "@/types/gift";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-export function ChatItemView({ item, compact = false }: { item: ChatItem; compact?: boolean }) {
+function avatarFallback(name: string) {
+  return Array.from(name.trim())[0]?.toUpperCase() ?? "?";
+}
+
+export function ChatItemView({
+  item,
+  compact = false,
+  messageEditor,
+}: {
+  item: ChatItem;
+  compact?: boolean;
+  messageEditor?: React.ReactNode;
+}) {
   if (item.type === "gift") {
     return (
       <article
         className={cn(
-          "m-1 rounded-lg border-l-4 px-3 py-2 shadow-sm",
+          "chat-message chat-gift-message border-l-4 shadow-sm",
+          compact && "chat-message-compact",
           giftStyleClass(item.display_style)
         )}
         data-testid={`gift-message-${item.id}`}
       >
-        <div className="flex items-center gap-2">
-          {item.image && !compact ? (
-            <img src={item.image} alt="" className="h-6 w-6 rounded-full object-cover" />
-          ) : (
-            <Gift aria-hidden="true" className="h-5 w-5 shrink-0" />
-          )}
-          <span className="min-w-0 truncate text-sm font-semibold">{item.name}</span>
-          <strong className="ml-auto whitespace-nowrap text-base">{formatYen(item.amount)}</strong>
+        <div className="chat-gift-header">
+          <Avatar
+            className="chat-avatar"
+            style={{
+              width: "var(--chat-avatar-size)",
+              height: "var(--chat-avatar-size)",
+              flexBasis: "var(--chat-avatar-size)",
+            }}
+          >
+            {item.image && <AvatarImage src={item.image} alt="" />}
+            <AvatarFallback className="chat-avatar-fallback">
+              <Gift aria-hidden="true" className="h-4 w-4" />
+            </AvatarFallback>
+          </Avatar>
+          <span className="chat-message-name">{item.name}</span>
+          <strong className="chat-gift-amount">{formatYen(item.amount)}</strong>
         </div>
-        {item.text && <p className="mt-1 break-words text-sm">{item.text}</p>}
+        {messageEditor ??
+          (item.text && <p className="chat-message-text chat-gift-text">{item.text}</p>)}
       </article>
     );
   }
 
   return (
-    <div className="m-1 flex items-center chat-message">
-      {item.image && !compact && (
-        <img src={item.image} alt="" className="mr-1 h-5 w-5 rounded-full object-cover" />
-      )}
-      <span className="mr-2 max-w-[40%] shrink-0 truncate text-sm text-gray-500 chat-message-name">
-        {item.name}
-      </span>
-      <span className="break-words text-base chat-message-text">{item.text}</span>
-    </div>
+    <article className={cn("chat-message", compact && "chat-message-compact")}>
+      <Avatar
+        className="chat-avatar"
+        style={{
+          width: "var(--chat-avatar-size)",
+          height: "var(--chat-avatar-size)",
+          flexBasis: "var(--chat-avatar-size)",
+        }}
+      >
+        {item.image && <AvatarImage src={item.image} alt="" />}
+        <AvatarFallback className="chat-avatar-fallback">
+          {avatarFallback(item.name)}
+        </AvatarFallback>
+      </Avatar>
+      <div className="chat-message-content">
+        <span className="chat-message-name">{item.name}</span>
+        <span className="chat-message-text">{item.text}</span>
+      </div>
+    </article>
   );
 }
