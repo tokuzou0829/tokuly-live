@@ -66,4 +66,36 @@ describe("video duration badges", () => {
 
     expect(screen.queryByLabelText(/動画の長さ/)).not.toBeInTheDocument();
   });
+
+  it("shows the concurrent viewer count on a live card", () => {
+    render(
+      <ContentCard
+        href="/live/test-live"
+        title="テストライブ"
+        thumbnailUrl="https://example.test/thumbnail.jpg"
+        channelName="テストチャンネル"
+        channelIcon="https://example.test/icon.jpg"
+        viewerCount={1234}
+        variant="live"
+      />
+    );
+
+    expect(screen.getByLabelText("同時視聴者数 1234人")).toHaveTextContent("1,234人が視聴中");
+  });
+
+  it("shows zero viewers when no snapshot has been recorded", () => {
+    render(
+      <ContentCard
+        href="/live/test-live"
+        title="テストライブ"
+        thumbnailUrl="https://example.test/thumbnail.jpg"
+        channelName="テストチャンネル"
+        channelIcon="https://example.test/icon.jpg"
+        viewerCount={0}
+        variant="live"
+      />
+    );
+
+    expect(screen.getByLabelText("同時視聴者数 0人")).toHaveTextContent("0人が視聴中");
+  });
 });

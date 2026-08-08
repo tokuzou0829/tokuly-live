@@ -3,7 +3,7 @@ import { useState } from "react";
 import Link from "next/link";
 import "./in.css";
 import Player from "./live/[id]/player";
-import type { LiveList } from "@/types/live";
+import type { OnlineLiveList } from "@/types/live";
 
 interface OptionProps {
   image: string;
@@ -13,14 +13,26 @@ interface OptionProps {
   video_id: string;
   active: boolean;
   handle: string;
+  viewerCount: number;
   onClick: () => void;
   style: { [key: string]: string };
 }
 
 type LiveProps = {
-  lives: LiveList[];
+  lives: OnlineLiveList[];
 };
-function Option({ image, icon, main, sub, active, onClick, style, video_id, handle }: OptionProps) {
+function Option({
+  image,
+  icon,
+  main,
+  sub,
+  active,
+  onClick,
+  style,
+  video_id,
+  handle,
+  viewerCount,
+}: OptionProps) {
   const optionClass = active ? "option active" : "option";
 
   return (
@@ -32,7 +44,7 @@ function Option({ image, icon, main, sub, active, onClick, style, video_id, hand
             href={"/live/" + video_id}
             className="absolute bottom-0 right-0 text-white m-[10px] font-bold p-[10px] rounded-full bg-opacity-60 bg-black"
           >
-            配信を見る
+            {viewerCount.toLocaleString("ja-JP")}人が視聴中 · 配信を見る
           </Link>
         </>
       )}
@@ -74,6 +86,7 @@ function TopLive(props: LiveProps) {
           sub={option.title}
           video_id={option.stream_name}
           handle={option.ch_handle}
+          viewerCount={option.viewer_count}
           active={index === activeOption}
           onClick={() => handleOptionClick(index)}
           style={{ "--optionBackground": `url(${option.thumbnail_url})` }}

@@ -1,13 +1,13 @@
 import * as fetch from "@/utils/fetch";
 import { notFound } from "next/navigation";
-import type { Live, LiveList, MoreVideoList } from "@/types/live";
+import type { Live, LiveList, MoreVideoList, OnlineLiveList } from "@/types/live";
 
 type OnlineCheckParams = {
   id: string;
 };
 
 type Lives = {
-  lives: LiveList[];
+  lives: OnlineLiveList[];
 };
 type Archives = {
   archives: LiveList[];

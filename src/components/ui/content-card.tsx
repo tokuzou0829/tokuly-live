@@ -13,6 +13,7 @@ type ContentCardProps = {
   channelName: string;
   channelIcon: string;
   durationSeconds?: number | null;
+  viewerCount?: number;
   variant?: "live" | "archive";
   className?: string;
   children?: ReactNode;
@@ -27,6 +28,7 @@ export function ContentCard({
   channelName,
   channelIcon,
   durationSeconds,
+  viewerCount,
   variant,
   className,
   children,
@@ -76,6 +78,14 @@ export function ContentCard({
             className="absolute bottom-1.5 right-1.5 inline-flex h-5 items-center rounded-md bg-neutral-900/75 px-1.5 text-[11px] font-semibold tabular-nums leading-none text-white"
           >
             {durationLabel}
+          </span>
+        )}
+        {isLive && viewerCount !== undefined && (
+          <span
+            aria-label={`同時視聴者数 ${viewerCount}人`}
+            className="absolute bottom-1.5 right-1.5 inline-flex h-5 items-center rounded-md bg-neutral-900/75 px-1.5 text-[11px] font-semibold tabular-nums leading-none text-white"
+          >
+            {viewerCount.toLocaleString("ja-JP")}人が視聴中
           </span>
         )}
       </div>

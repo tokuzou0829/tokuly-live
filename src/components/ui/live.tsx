@@ -1,9 +1,15 @@
 "use client";
 import { useState } from "react";
 import { ContentCard } from "@/components/ui/content-card";
-import type { LiveList } from "@/types/live";
+import type { LiveList, OnlineLiveList } from "@/types/live";
 
-export default function Live({ live, className }: { live: LiveList; className?: string }) {
+export default function Live({
+  live,
+  className,
+}: {
+  live: LiveList | OnlineLiveList;
+  className?: string;
+}) {
   const [isHovered, setIsHovered] = useState(false);
   const [isHoverImageLoaded, setIsHoverImageLoaded] = useState(false);
   const [hoverImageUrl, setHoverImageUrl] = useState("");
@@ -31,6 +37,7 @@ export default function Live({ live, className }: { live: LiveList; className?: 
       thumbnailUrl={isHovered && isHoverImageLoaded ? hoverImageUrl : live.thumbnail_url}
       channelName={live.ch_name}
       channelIcon={live.ch_icon}
+      viewerCount={"viewer_count" in live ? live.viewer_count : undefined}
       variant="live"
       className={className}
       onMouseEnter={handleMouseEnter}

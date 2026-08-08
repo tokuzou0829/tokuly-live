@@ -57,3 +57,7 @@ export type LiveList = {
   ch_handle: string;
   duration_seconds: number | null;
 };
+
+export type OnlineLiveList = LiveList & {
+  viewer_count: number;
+};
