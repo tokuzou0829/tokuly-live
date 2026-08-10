@@ -46,7 +46,9 @@ async function request<T>(path: string, token: string, init: RequestInit = {}): 
     headers: {
       Accept: "application/json",
       Authorization: `Bearer ${token}`,
-      ...(!(init.body instanceof FormData) && init.body ? { "Content-Type": "application/json" } : {}),
+      ...(!(init.body instanceof FormData) && init.body
+        ? { "Content-Type": "application/json" }
+        : {}),
       ...init.headers,
     },
   });
@@ -68,7 +70,9 @@ async function request<T>(path: string, token: string, init: RequestInit = {}): 
 const data = <T>(payload: { data: T }) => payload.data;
 const query = (params: Record<string, string | number | undefined>) => {
   const value = new URLSearchParams();
-  Object.entries(params).forEach(([key, entry]) => entry !== undefined && value.set(key, String(entry)));
+  Object.entries(params).forEach(
+    ([key, entry]) => entry !== undefined && value.set(key, String(entry))
+  );
   const encoded = value.toString();
   return encoded ? `?${encoded}` : "";
 };
@@ -153,7 +157,10 @@ export function getStudioSubtitles(id: number, token: string): Promise<StudioSub
 }
 
 export function addStudioSubtitle(id: number, form: FormData, token: string) {
-  return request<{ data: unknown }>(`/streams/${id}/subtitles`, token, { method: "POST", body: form });
+  return request<{ data: unknown }>(`/streams/${id}/subtitles`, token, {
+    method: "POST",
+    body: form,
+  });
 }
 
 export function updateStudioSubtitle(
@@ -194,28 +201,35 @@ export function getSentGifts(token: string, page = 1) {
 
 export async function claimGift(id: number, token: string): Promise<string> {
   const result = data(
-    await request<{ data: { claim_url: string; accessed_at: string } }>(`/gifts/${id}/claim`, token, {
-      method: "POST",
-    })
+    await request<{ data: { claim_url: string; accessed_at: string } }>(
+      `/gifts/${id}/claim`,
+      token,
+      {
+        method: "POST",
+      }
+    )
   );
   return result.claim_url;
 }
 
 export async function returnGift(id: number, token: string): Promise<string> {
   const result = data(
-    await request<{ data: { claim_url: string; accessed_at: string } }>(`/gifts/${id}/return`, token, {
-      method: "POST",
-    })
+    await request<{ data: { claim_url: string; accessed_at: string } }>(
+      `/gifts/${id}/return`,
+      token,
+      {
+        method: "POST",
+      }
+    )
   );
   return result.claim_url;
 }
 
 export async function searchGames(term: string, token: string): Promise<GameResult[]> {
-  return data(
-    await request<{ data: GameResult[] }>(`/games${query({ query: term })}`, token)
-  ).map((game) => ({
-    ...game,
-    cover_url: game.cover_url?.startsWith("//") ? `https:${game.cover_url}` : game.cover_url,
-  }));
+  return data(await request<{ data: GameResult[] }>(`/games${query({ query: term })}`, token)).map(
+    (game) => ({
+      ...game,
+      cover_url: game.cover_url?.startsWith("//") ? `https:${game.cover_url}` : game.cover_url,
+    })
+  );
 }
-

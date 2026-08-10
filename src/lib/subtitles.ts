@@ -177,9 +177,7 @@ export function createSubtitleCueStyle(settings: SubtitleDisplaySettings): strin
   ].join("; ");
 }
 
-export function createCustomSubtitleStyle(
-  settings: SubtitleDisplaySettings
-): CustomSubtitleStyle {
+export function createCustomSubtitleStyle(settings: SubtitleDisplaySettings): CustomSubtitleStyle {
   const colors: Record<SubtitleDisplaySettings["color"], string> = {
     white: "#ffffff",
     yellow: "#ffff00",

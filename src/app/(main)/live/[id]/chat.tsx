@@ -37,10 +37,12 @@ export default function Chat({
   const [historyMessages, setHistoryMessages] = useState<ChatItem[]>([]);
   const accessToken = session?.user?.access_token;
   const postingIdentity = session?.activePostingIdentity;
-  const postingChannelId = postingIdentityOverride?.channelId ??
+  const postingChannelId =
+    postingIdentityOverride?.channelId ??
     (postingIdentity?.type === "channel" ? postingIdentity.channelId : undefined);
   const postingName = postingIdentityOverride?.name ?? postingIdentity?.name ?? session?.user?.name;
-  const postingImage = postingIdentityOverride?.image ?? postingIdentity?.profilePhotoUrl ?? session?.user?.image;
+  const postingImage =
+    postingIdentityOverride?.image ?? postingIdentity?.profilePhotoUrl ?? session?.user?.image;
   const hasMessage = msg.trim().length > 0;
 
   useEffect(() => {

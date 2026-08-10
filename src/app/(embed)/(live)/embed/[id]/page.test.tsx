@@ -13,9 +13,7 @@ vi.mock("@/app/(main)/live/[id]/player", () => ({
 }));
 
 vi.mock("@/app/(main)/video/[id]/player", async () => {
-  const { useArchivePlayback } = await import(
-    "@/app/(main)/video/[id]/archive-playback-context"
-  );
+  const { useArchivePlayback } = await import("@/app/(main)/video/[id]/archive-playback-context");
   return {
     default: function MockVideoPlayer({
       id,
@@ -76,18 +74,14 @@ describe("stream embed", () => {
     mockStream("end", true);
     renderEmbed();
 
-    expect(
-      await screen.findByText("archive-player:stream-name:upload=false")
-    ).toBeInTheDocument();
+    expect(await screen.findByText("archive-player:stream-name:upload=false")).toBeInTheDocument();
   });
 
   it("renders an uploaded video inside the playback provider", async () => {
     mockStream("video", true);
     renderEmbed();
 
-    expect(
-      await screen.findByText("archive-player:stream-name:upload=true")
-    ).toBeInTheDocument();
+    expect(await screen.findByText("archive-player:stream-name:upload=true")).toBeInTheDocument();
   });
 
   it("keeps the waiting thumbnail when an archive is unavailable", async () => {

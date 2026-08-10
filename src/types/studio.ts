@@ -151,4 +151,3 @@ export type GameResult = {
   cover_url: string | null;
   cover_image_id: string | null;
 };
-

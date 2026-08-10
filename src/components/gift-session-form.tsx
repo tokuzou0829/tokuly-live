@@ -88,18 +88,14 @@ function GiftInformationOverlay({ open, onClose }: { open: boolean; onClose: () 
             注意事項
           </h3>
           <ul className="mt-2 grid gap-2 text-xs leading-5 text-[#0f0f0f]">
-            <li>
-              ギフトメッセージ送信時の送り主の名前は、配信者に表示されます。
-            </li>
+            <li>ギフトメッセージ送信時の送り主の名前は、配信者に表示されます。</li>
             <li>
               間違った金額や無効なセッションに送信したギフトは、ギフト履歴画面から返還されます。
             </li>
             <li>
               存在しないセッションに送信したギフトの返還についてはサポートにお問い合わせください。
             </li>
-            <li>
-              Tokulyはギフト機能において発生した全ての問題について責任を負いません。
-            </li>
+            <li>Tokulyはギフト機能において発生した全ての問題について責任を負いません。</li>
           </ul>
         </aside>
         <Button

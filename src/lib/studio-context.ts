@@ -24,4 +24,3 @@ export async function requireStudioContext(): Promise<StudioContext> {
   const channel = channels.find((item) => item.id === stored) ?? channels[0];
   return { token, channels, channel };
 }
-

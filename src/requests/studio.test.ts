@@ -1,10 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import {
-  getStudioChannels,
-  getStudioStreams,
-  StudioApiError,
-  updateStudioStream,
-} from "./studio";
+import { getStudioChannels, getStudioStreams, StudioApiError, updateStudioStream } from "./studio";
 
 describe("Studio API client", () => {
   beforeEach(() => vi.stubGlobal("fetch", vi.fn()));
@@ -67,7 +62,10 @@ describe("Studio API client", () => {
     );
     const error = await getStudioChannels("token").catch((caught) => caught);
     expect(error).toBeInstanceOf(StudioApiError);
-    expect(error).toMatchObject({ status: 422, message: "Invalid", fields: { title: ["Required"] } });
+    expect(error).toMatchObject({
+      status: 422,
+      message: "Invalid",
+      fields: { title: ["Required"] },
+    });
   });
 });
-

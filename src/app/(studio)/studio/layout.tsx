@@ -16,8 +16,9 @@ export default async function StudioLayout({ children }: { children: React.React
   const [session, context] = await Promise.all([auth(), requireStudioContext()]);
   return (
     <NextAuthProvider session={session}>
-      <StudioShell channels={context.channels} channel={context.channel}>{children}</StudioShell>
+      <StudioShell channels={context.channels} channel={context.channel}>
+        {children}
+      </StudioShell>
     </NextAuthProvider>
   );
 }
-

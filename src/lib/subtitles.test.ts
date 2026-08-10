@@ -197,10 +197,7 @@ describe("subtitle display settings", () => {
   it.each([
     ["none", "none"],
     ["shadow", "2px 2px 3px #000000"],
-    [
-      "outline",
-      "-1px -1px 0 #000000, 1px -1px 0 #000000, -1px 1px 0 #000000, 1px 1px 0 #000000",
-    ],
+    ["outline", "-1px -1px 0 #000000, 1px -1px 0 #000000, -1px 1px 0 #000000, 1px 1px 0 #000000"],
     ["background", "none"],
   ] as const)("creates the custom %s style", (edgeStyle, textShadow) => {
     const style = createCustomSubtitleStyle({

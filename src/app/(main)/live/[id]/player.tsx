@@ -514,7 +514,10 @@ function Player(props: VideoProps) {
   // ピクチャインピクチャがサポートされているかチェック
   const isPictureInPictureSupported = () => {
     return (
-      globalThis.document && document.pictureInPictureEnabled && myRef.current && myRef.current.requestPictureInPicture
+      globalThis.document &&
+      document.pictureInPictureEnabled &&
+      myRef.current &&
+      myRef.current.requestPictureInPicture
     );
   };
 
@@ -854,7 +857,10 @@ function Player(props: VideoProps) {
     }, 3000);
   };
 
-  const handleLiveHlsError = (hls: Hls, data: { fatal: boolean; type: string; details?: string }) => {
+  const handleLiveHlsError = (
+    hls: Hls,
+    data: { fatal: boolean; type: string; details?: string }
+  ) => {
     console.error("HLS error:", data);
     if (hlsRef.current !== hls) return;
 

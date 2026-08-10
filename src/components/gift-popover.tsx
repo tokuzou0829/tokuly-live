@@ -42,8 +42,7 @@ export function GiftPopover({
     };
     updateSize();
 
-    const observer =
-      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateSize);
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateSize);
     observer?.observe(boundary);
     window.addEventListener("resize", updateSize);
     return () => {
