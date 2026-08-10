@@ -15,6 +15,7 @@ import {
   ChevronDown,
   Gift,
   LayoutDashboard,
+  List,
   Menu,
   MessageSquare,
   Settings,
@@ -25,8 +26,9 @@ import { signOut } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import React, { useState } from "react";
 import { selectStudioChannel } from "./actions";
+import ChannelCreateDialog from "./components/channel-create-dialog";
 import StudioCreateMenu from "./components/studio-create-menu";
 
 const links = [
@@ -97,6 +99,13 @@ function StudioAccountMenu({
         ))}
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
+          <Link href="/studio/channels">
+            <List className="mr-2 h-4 w-4" />
+            すべてのチャンネルを表示
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
           <Link href="/">Studioを閉じる</Link>
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => void signOut({ callbackUrl: "/" })}>
@@ -111,15 +120,19 @@ export default function StudioShell({
   children,
   channels,
   channel,
+  token,
+  defaultIconUrl,
 }: {
   children: React.ReactNode;
   channels: StudioChannel[];
-  channel: StudioChannel;
+  channel: StudioChannel | null;
+  token: string;
+  defaultIconUrl: string | null;
 }) {
   const pathname = usePathname() ?? "/studio";
   const [open, setOpen] = useState(false);
 
-  if (pathname.startsWith("/studio/stream/browser-encoder")) return <>{children}</>;
+  if (pathname.startsWith("/studio/stream/browser-encoder") && channel) return <>{children}</>;
 
   return (
     <div className="studio-theme min-h-screen bg-[var(--studio-bg)] text-[var(--studio-fg)]">
@@ -138,8 +151,8 @@ export default function StudioShell({
           <span className="hidden text-lg font-bold tracking-tight sm:inline">Tokuly Studio</span>
         </Link>
         <div className="ml-auto flex items-center gap-2">
-          <StudioCreateMenu variant="icon" />
-          <StudioAccountMenu channels={channels} channel={channel} />
+          {channel && <StudioCreateMenu variant="icon" />}
+          {channel && <StudioAccountMenu channels={channels} channel={channel} />}
         </div>
       </header>
 
@@ -156,7 +169,9 @@ export default function StudioShell({
         <nav className="space-y-1">
           {links.map((link) => {
             const active =
-              link.href === "/studio" ? pathname === link.href : pathname.startsWith(link.href);
+              link.href === "/studio" || link.href === "/studio/channel"
+                ? pathname === link.href
+                : pathname.startsWith(link.href);
             return (
               <Link
                 key={link.href}
@@ -174,6 +189,13 @@ export default function StudioShell({
       <main className="min-h-screen pt-16 lg:pl-64">
         <div className="mx-auto max-w-[1800px] p-4 md:p-6 xl:p-8">{children}</div>
       </main>
+      <ChannelCreateDialog
+        token={token}
+        defaultIconUrl={defaultIconUrl}
+        open={!channel}
+        onOpenChange={() => undefined}
+        blocking
+      />
     </div>
   );
 }

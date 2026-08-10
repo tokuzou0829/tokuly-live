@@ -80,6 +80,34 @@ export async function getStudioChannels(token: string): Promise<StudioChannel[]>
   return data(await request<{ data: StudioChannel[] }>("/channels", token));
 }
 
+export type CreateStudioChannelInput = {
+  name: string;
+  handle: string;
+  icon?: File;
+};
+
+export async function createStudioChannel(
+  input: CreateStudioChannelInput,
+  token: string
+): Promise<StudioChannel> {
+  let body: FormData | string;
+  if (input.icon) {
+    const form = new FormData();
+    form.set("name", input.name);
+    form.set("handle", input.handle);
+    form.set("icon", input.icon);
+    body = form;
+  } else {
+    body = JSON.stringify({ name: input.name, handle: input.handle });
+  }
+  return data(
+    await request<{ data: StudioChannel }>("/channels", token, {
+      method: "POST",
+      body,
+    })
+  );
+}
+
 export async function getStudioChannel(id: number, token: string): Promise<StudioChannel> {
   return data(await request<{ data: StudioChannel }>(`/channels/${id}`, token));
 }

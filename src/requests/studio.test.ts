@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { getStudioChannels, getStudioStreams, StudioApiError, updateStudioStream } from "./studio";
+import {
+  createStudioChannel,
+  getStudioChannels,
+  getStudioStreams,
+  StudioApiError,
+  updateStudioStream,
+} from "./studio";
 
 describe("Studio API client", () => {
   beforeEach(() => vi.stubGlobal("fetch", vi.fn()));
@@ -21,6 +27,71 @@ describe("Studio API client", () => {
         headers: expect.objectContaining({ Authorization: "Bearer secret-token" }),
       })
     );
+  });
+
+  it("creates a Studio channel as JSON when no icon is selected", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ data: { id: 12, name: "New Channel" } }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    await expect(
+      createStudioChannel({ name: "New Channel", handle: "new-channel" }, "token")
+    ).resolves.toEqual(expect.objectContaining({ id: 12, name: "New Channel" }));
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.example.test/v1/live/studio/channels",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ name: "New Channel", handle: "new-channel" }),
+        headers: expect.objectContaining({
+          Authorization: "Bearer token",
+          "Content-Type": "application/json",
+        }),
+      })
+    );
+  });
+
+  it("creates a Studio channel as multipart data when an icon is selected", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ data: { id: 13, name: "Icon Channel" } }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+    const icon = new File(["icon"], "icon.webp", { type: "image/webp" });
+
+    await createStudioChannel({ name: "Icon Channel", handle: "icon-channel", icon }, "token");
+
+    const init = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    const body = init.body as FormData;
+    expect(init.method).toBe("POST");
+    expect(body.get("name")).toBe("Icon Channel");
+    expect(body.get("handle")).toBe("icon-channel");
+    expect(body.get("icon")).toBe(icon);
+    expect((init.headers as Record<string, string>)["Content-Type"]).toBeUndefined();
+  });
+
+  it("preserves the channel limit conflict response", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ message: "A maximum of 5 Studio channels is allowed." }), {
+        status: 409,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    const error = await createStudioChannel(
+      { name: "Sixth Channel", handle: "sixth-channel" },
+      "token"
+    ).catch((caught) => caught);
+
+    expect(error).toBeInstanceOf(StudioApiError);
+    expect(error).toMatchObject({
+      status: 409,
+      message: "A maximum of 5 Studio channels is allowed.",
+    });
   });
 
   it("uses numeric channel IDs and encodes list filters", async () => {

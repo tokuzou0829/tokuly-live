@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { auth } from "@/auth";
-import { requireStudioContext } from "@/lib/studio-context";
+import { getStudioContext } from "@/lib/studio-context";
 import NextAuthProvider from "@/providers/NextAuth";
 import StudioShell from "./studio-shell";
 import "./studio.css";
@@ -13,10 +13,15 @@ export const metadata: Metadata = {
 export const dynamic = "force-dynamic";
 
 export default async function StudioLayout({ children }: { children: React.ReactNode }) {
-  const [session, context] = await Promise.all([auth(), requireStudioContext()]);
+  const [session, context] = await Promise.all([auth(), getStudioContext()]);
   return (
     <NextAuthProvider session={session}>
-      <StudioShell channels={context.channels} channel={context.channel}>
+      <StudioShell
+        channels={context.channels}
+        channel={context.channel}
+        token={context.token}
+        defaultIconUrl={session?.user?.image ?? null}
+      >
         {children}
       </StudioShell>
     </NextAuthProvider>

@@ -1,7 +1,7 @@
 import Chat from "@/app/(main)/live/[id]/chat";
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
-import { requireStudioContext } from "@/lib/studio-context";
+import { getStudioContext } from "@/lib/studio-context";
 import { getListenerAnalytics, getStudioStreams } from "@/requests/studio";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
@@ -13,7 +13,8 @@ import StreamStatus from "./components/stream-status";
 export const metadata = { title: "ダッシュボード" };
 
 export default async function StudioDashboard() {
-  const [{ token, channel }, session] = await Promise.all([requireStudioContext(), auth()]);
+  const [{ token, channel }, session] = await Promise.all([getStudioContext(), auth()]);
+  if (!channel) return null;
   const page = await getStudioStreams(channel.id, token, { per_page: 20 });
   const active =
     page.data.find((stream) => stream.status === "online") ??
