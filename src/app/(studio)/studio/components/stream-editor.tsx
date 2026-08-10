@@ -110,7 +110,7 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
 
   return (
     <div className="space-y-4">
-      {stream.type === "live" && (
+      {stream.type === "live" && stream.status !== "end" && (
         <section className="studio-card min-w-0 overflow-hidden p-5">
           <h2 className="font-bold">配信方法</h2>
           <div className="mt-4 grid min-w-0 gap-3 md:grid-cols-2">

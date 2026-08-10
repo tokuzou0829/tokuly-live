@@ -68,4 +68,13 @@ describe("StreamEditor streaming credentials", () => {
       "true"
     );
   });
+
+  it("treats an ended live stream as archived content without streaming controls", () => {
+    render(<StreamEditor stream={{ ...stream, status: "end" }} token="token" />);
+
+    expect(screen.queryByRole("heading", { name: "配信方法" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("配信URL")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("ストリームキー")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "コンテンツ設定" })).toBeInTheDocument();
+  });
 });

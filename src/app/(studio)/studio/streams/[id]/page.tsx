@@ -20,6 +20,24 @@ export default async function StreamPage({ params }: { params: { id: string } })
     getListenerAnalytics(id, token).catch(() => ({ summary: null, timeline: [] })),
     getStudioSubtitles(id, token).catch(() => ({ data: [], can_upload: false })),
   ]);
+
+  if (stream.status === "end") {
+    return (
+      <div className="space-y-6">
+        <h1 className="studio-title">{stream.title}</h1>
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(380px,.8fr)]">
+          <div className="space-y-5">
+            <StudioMonitor streamKey={stream.stream_key} />
+            <StudioAnalytics streamId={id} token={token} initial={analytics} />
+            <SubtitleManager streamId={id} token={token} initial={subtitles} />
+          </div>
+          <StreamEditor stream={stream} token={token} />
+        </div>
+        <ContentDeleteSection stream={stream} token={token} />
+      </div>
+    );
+  }
+
   return (
     <div className="grid min-w-0 items-start gap-4 lg:grid-cols-[minmax(0,1fr)_400px] lg:gap-5 xl:grid-cols-[minmax(0,1fr)_440px]">
       <div className="min-w-0 lg:col-start-1 lg:row-start-1">
