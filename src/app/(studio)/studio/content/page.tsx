@@ -68,12 +68,12 @@ export default async function ContentPage({
                       }
                       className="flex items-center gap-3"
                     >
-                      <div className="aspect-video w-28 overflow-hidden rounded-lg bg-black">
+                      <div className="relative aspect-video w-28 shrink-0 overflow-hidden rounded-lg bg-black">
                         {stream.thumbnail_url && (
                           <img
                             src={stream.thumbnail_url}
                             alt=""
-                            className="h-full w-full object-cover"
+                            className="absolute inset-0 block h-full w-full object-cover object-center"
                           />
                         )}
                       </div>

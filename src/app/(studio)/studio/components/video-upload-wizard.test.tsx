@@ -84,7 +84,7 @@ describe("Studio video upload wizard", () => {
       options?.onProgress?.(100);
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "枠を作成してアップロード" }));
+    fireEvent.click(screen.getByRole("button", { name: "続ける" }));
 
     await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/studio/videos/81"));
     expect(createStudioStream).toHaveBeenCalledWith(
@@ -115,7 +115,7 @@ describe("Studio video upload wizard", () => {
     });
     fireEvent.change(await screen.findByLabelText("タイトル"), { target: { value: "再試行" } });
     await screen.findByAltText("サムネイルプレビュー");
-    fireEvent.click(screen.getByRole("button", { name: "枠を作成してアップロード" }));
+    fireEvent.click(screen.getByRole("button", { name: "続ける" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "サーバーがこのファイルを拒否しました。"
@@ -139,7 +139,7 @@ describe("Studio video upload wizard", () => {
     });
     await screen.findByText(/サムネイルを自動生成できませんでした/);
 
-    fireEvent.click(screen.getByRole("button", { name: "枠を作成してアップロード" }));
+    fireEvent.click(screen.getByRole("button", { name: "続ける" }));
 
     await waitFor(() => expect(navigation.replace).toHaveBeenCalledWith("/studio/videos/81"));
     expect(createStudioStream).toHaveBeenCalledWith(

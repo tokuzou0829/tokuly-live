@@ -82,9 +82,13 @@ export default async function StudioDashboard() {
               }
               className="grid grid-cols-[112px_minmax(0,1fr)_auto] items-center gap-4 p-4 hover:bg-[var(--studio-subtle)]"
             >
-              <div className="aspect-video overflow-hidden rounded-lg bg-black">
+              <div className="relative aspect-video overflow-hidden rounded-lg bg-black">
                 {stream.thumbnail_url && (
-                  <img src={stream.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                  <img
+                    src={stream.thumbnail_url}
+                    alt=""
+                    className="absolute inset-0 block h-full w-full object-cover object-center"
+                  />
                 )}
               </div>
               <div className="min-w-0">

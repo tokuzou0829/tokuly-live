@@ -7,9 +7,9 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { searchGames, StudioApiError, updateStudioStream } from "@/requests/studio";
 import type { GameResult, StudioStream } from "@/types/studio";
-import { Check, Copy, ExternalLink, Loader2, Search } from "lucide-react";
+import { Check, Copy, ExternalLink, Eye, EyeOff, Loader2, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 export default function StreamEditor({ stream, token }: { stream: StudioStream; token: string }) {
   const router = useRouter();
@@ -22,6 +22,7 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
   const [game, setGame] = useState(stream.game);
   const [thumbnailPreview, setThumbnailPreview] = useState(stream.thumbnail_url);
   const [hasNewThumbnail, setHasNewThumbnail] = useState(false);
+  const [isStreamKeyVisible, setIsStreamKeyVisible] = useState(false);
   const thumbnailInput = useRef<HTMLInputElement>(null);
   const thumbnailObjectUrl = useRef<string | null>(null);
 
@@ -110,12 +111,12 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
   return (
     <div className="space-y-4">
       {stream.type === "live" && (
-        <section className="studio-card p-5">
+        <section className="studio-card min-w-0 overflow-hidden p-5">
           <h2 className="font-bold">配信方法</h2>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <div className="rounded-xl bg-[var(--studio-subtle)] p-4">
+          <div className="mt-4 grid min-w-0 gap-3 md:grid-cols-2">
+            <div className="min-w-0 rounded-xl bg-[var(--studio-subtle)] p-4">
               <p className="studio-label">配信URL</p>
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-2 flex min-w-0 items-center gap-2">
                 <code className="min-w-0 flex-1 truncate text-sm">
                   rtmp://rtmp.live.tokuly.com/live2
                 </code>
@@ -123,27 +124,55 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
                   type="button"
                   size="icon"
                   variant="ghost"
+                  className="shrink-0"
                   onClick={() => copy("rtmp://rtmp.live.tokuly.com/live2")}
+                  aria-label="配信URLをコピー"
                 >
                   <Copy className="h-4 w-4" />
                 </Button>
               </div>
             </div>
-            <div className="rounded-xl bg-[var(--studio-subtle)] p-4">
+            <div className="min-w-0 rounded-xl bg-[var(--studio-subtle)] p-4">
               <p className="studio-label">ストリームキー</p>
-              <div className="mt-2 flex items-center gap-2">
-                <code className="min-w-0 flex-1 truncate text-sm">
-                  {stream.stream_key_secret ?? "詳細を再取得してください"}
-                </code>
+              <div className="mt-2 flex min-w-0 items-center gap-1">
+                <Input
+                  type={isStreamKeyVisible ? "text" : "password"}
+                  value={stream.stream_key_secret ?? "詳細を再取得してください"}
+                  readOnly
+                  autoComplete="off"
+                  aria-label="ストリームキー"
+                  className="min-w-0 flex-1 border-0 bg-transparent px-2 font-mono shadow-none focus-visible:ring-1"
+                />
                 {stream.stream_key_secret && (
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => copy(stream.stream_key_secret!)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
+                  <>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="shrink-0"
+                      onClick={() => copy(stream.stream_key_secret!)}
+                      aria-label="ストリームキーをコピー"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="shrink-0"
+                      onClick={() => setIsStreamKeyVisible((visible) => !visible)}
+                      aria-label={
+                        isStreamKeyVisible ? "ストリームキーを隠す" : "ストリームキーを表示"
+                      }
+                      aria-pressed={isStreamKeyVisible}
+                    >
+                      {isStreamKeyVisible ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </>
                 )}
               </div>
             </div>

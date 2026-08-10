@@ -373,7 +373,7 @@ export default function VideoUploadWizard({
                 busy || !title.trim() || (thumbnailState === "generating" && !manualThumbnail)
               }
             >
-              枠を作成してアップロード
+              続ける
             </Button>
           </div>
         </form>

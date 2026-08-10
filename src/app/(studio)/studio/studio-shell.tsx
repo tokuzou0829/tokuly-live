@@ -17,9 +17,7 @@ import {
   LayoutDashboard,
   Menu,
   MessageSquare,
-  Radio,
   Settings,
-  Upload,
   Video,
   X,
 } from "lucide-react";
@@ -34,8 +32,6 @@ import StudioCreateMenu from "./components/studio-create-menu";
 const links = [
   { href: "/studio", label: "ダッシュボード", icon: LayoutDashboard },
   { href: "/studio/content", label: "コンテンツ", icon: Video },
-  { href: "/studio/streams/new", label: "ライブ配信を作成", icon: Radio },
-  { href: "/studio/videos/new", label: "動画をアップロード", icon: Upload },
   { href: "/studio/gifts", label: "ギフト", icon: Gift },
   { href: "/studio/chat-embed", label: "チャット埋め込み", icon: MessageSquare },
   { href: "/studio/channel", label: "チャンネル設定", icon: Settings },
