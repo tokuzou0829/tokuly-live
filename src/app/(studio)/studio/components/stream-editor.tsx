@@ -7,6 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { searchGames, StudioApiError, updateStudioStream } from "@/requests/studio";
 import type { GameResult, StudioStream } from "@/types/studio";
+import { studioPublishingSettings } from "@/lib/studio-publishing-settings";
 import {
   AlertTriangle,
   Check,
@@ -257,10 +258,11 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
               defaultValue={stream.publishing_setting}
               className="mt-2 h-10 w-full rounded-md border border-[var(--studio-border)] bg-[var(--studio-surface)] px-3 text-sm"
             >
-              <option value="public">公開</option>
-              <option value="hidden_from_feed">フィードに表示しない</option>
-              <option value="link">リンク限定</option>
-              <option value="friend">フレンド限定</option>
+              {studioPublishingSettings.map(({ value, label }) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
             </select>
           </div>
           <div>

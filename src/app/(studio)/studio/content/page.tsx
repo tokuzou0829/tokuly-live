@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { requireStudioContext } from "@/lib/studio-context";
+import { studioPublishingSettingLabels } from "@/lib/studio-publishing-settings";
 import { getStudioStreams } from "@/requests/studio";
 import Link from "next/link";
 import StudioCreateMenu from "../components/studio-create-menu";
@@ -81,7 +82,9 @@ export default async function ContentPage({
                     </Link>
                   </td>
                   <td className="px-4 py-3">{stream.type === "video" ? "動画" : "ライブ"}</td>
-                  <td className="px-4 py-3">{stream.publishing_setting}</td>
+                  <td className="px-4 py-3">
+                    {studioPublishingSettingLabels[stream.publishing_setting]}
+                  </td>
                   <td className="px-4 py-3">
                     <StreamStatus status={stream.status} />
                   </td>
