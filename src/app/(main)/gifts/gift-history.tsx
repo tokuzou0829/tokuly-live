@@ -101,8 +101,9 @@ export function GiftHistory({ token }: { token: string }) {
             更新
           </Button>
           <Button asChild variant="outline">
-            <a href="https://tokuly.com/studio/gifts" target="_blank" rel="noopener noreferrer">
-              受け取ったギフト <ExternalLink className="ml-2 h-4 w-4" />
+            <a href="/studio/gifts">
+              受け取ったギフトを見る
+              <ExternalLink className="ml-2 h-4 w-4" aria-hidden="true" />
             </a>
           </Button>
         </div>

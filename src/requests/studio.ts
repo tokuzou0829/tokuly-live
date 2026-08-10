@@ -3,7 +3,6 @@ import type {
   GameResult,
   ListenerAnalytics,
   ReceivedStudioGift,
-  SentStudioGift,
   StudioChannel,
   StudioPage,
   StudioStream,
@@ -193,10 +192,6 @@ export async function getUploadSession(id: number, token: string): Promise<Uploa
 
 export function getReceivedGifts(token: string, page = 1) {
   return request<StudioPage<ReceivedStudioGift>>(`/gifts/received?per_page=20&page=${page}`, token);
-}
-
-export function getSentGifts(token: string, page = 1) {
-  return request<StudioPage<SentStudioGift>>(`/gifts/sent?per_page=20&page=${page}`, token);
 }
 
 export async function claimGift(id: number, token: string): Promise<string> {

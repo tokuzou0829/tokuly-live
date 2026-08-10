@@ -3,6 +3,7 @@ import { FetchError } from "./custom-errors";
 interface Options<T = object> {
   params?: T;
   headers?: HeadersInit;
+  signal?: AbortSignal;
   validateStatus?: (status: number) => boolean;
 }
 
@@ -97,6 +98,7 @@ export async function get<T, U = object>(path: string, options?: Options<U>): Pr
     buildPathWithSearchParams(path, options?.params),
     {
       headers: buildHeaders(options?.headers),
+      signal: options?.signal,
     },
     options?.validateStatus
   );
@@ -113,6 +115,7 @@ export async function post<T, U, V = object>(
       method: "POST",
       headers: buildHeaders(options?.headers),
       body: buildRequestBody(body),
+      signal: options?.signal,
     },
     options?.validateStatus
   );
@@ -125,6 +128,7 @@ export async function put<T, U = object>(path: string, body: T, options?: Option
       method: "PUT",
       body: buildRequestBody(body),
       headers: buildHeaders(options?.headers),
+      signal: options?.signal,
     },
     options?.validateStatus
   );
@@ -137,6 +141,7 @@ export async function destroy<T = object>(path: string, options?: Options<T>): P
     {
       method: "DELETE",
       headers: buildHeaders(options?.headers),
+      signal: options?.signal,
     },
     options?.validateStatus
   );

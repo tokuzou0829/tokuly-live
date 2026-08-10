@@ -1,5 +1,6 @@
 import * as fetch from "@/utils/fetch";
 import { notFound } from "next/navigation";
+import { cache } from "react";
 import type { Live, LiveList, MoreVideoList, OnlineLiveList } from "@/types/live";
 
 type OnlineCheckParams = {
@@ -31,14 +32,29 @@ export async function getRecommendVideo(): Promise<Archives> {
   });
 }
 
-export async function getLive(param: OnlineCheckParams): Promise<Live> {
+async function requestLive(id: string, signal?: AbortSignal): Promise<Live> {
   const formData = new FormData();
-  formData.append("name", param.id);
+  formData.append("name", id);
 
+  return await fetch.post<FormData, Live>(`/live/stream/data`, formData, {
+    headers: {},
+    signal,
+  });
+}
+
+const getLiveForRender = cache(requestLive);
+
+export async function fetchLive(
+  param: OnlineCheckParams,
+  options?: { signal?: AbortSignal }
+): Promise<Live> {
+  if (options?.signal) return await requestLive(param.id, options.signal);
+  return await getLiveForRender(param.id);
+}
+
+export async function getLive(param: OnlineCheckParams): Promise<Live> {
   try {
-    return await fetch.post<FormData, Live>(`/live/stream/data`, formData, {
-      headers: {},
-    });
+    return await fetchLive(param);
   } catch (e) {
     notFound();
   }
@@ -74,12 +90,8 @@ export async function getMoreVideo(param: OnlineCheckParams): Promise<MoreVideoL
   }
 }
 export async function VideoCheck(param: OnlineCheckParams): Promise<any> {
-  const formData = new FormData();
-  formData.append("name", param.id);
   try {
-    const res = await fetch.post<FormData, Live>(`/live/stream/data`, formData, {
-      headers: {},
-    });
+    const res = await fetchLive(param);
     if ((res.status !== "end" && res.status !== "video") || res.publishing_setting == "friend") {
       notFound();
     }

@@ -120,31 +120,6 @@ export type ReceivedStudioGift = {
   received_at: string;
 };
 
-export type SentStudioGiftAttempt = {
-  id: number;
-  amount: number;
-  status: string | null;
-  accessed_at: string | null;
-  received_at: string | null;
-  returnable: boolean;
-};
-
-export type SentStudioGift = {
-  id: number;
-  gift_id: string;
-  recipient_channel: { id: number; name: string; handle: string };
-  live_stream: Pick<StudioStream, "id" | "title" | "stream_key" | "status"> | null;
-  provider: string;
-  expected_amount: number;
-  comment: string | null;
-  display_style: string;
-  status: string;
-  expires_at: string | null;
-  completed_at: string | null;
-  created_at: string;
-  attempts: SentStudioGiftAttempt[];
-};
-
 export type GameResult = {
   id: number;
   name: string;
