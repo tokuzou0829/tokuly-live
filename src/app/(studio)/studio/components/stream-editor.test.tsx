@@ -54,6 +54,7 @@ describe("StreamEditor streaming credentials", () => {
   it("hides the stream key by default, reveals it on demand, and copies it while hidden", async () => {
     render(<StreamEditor stream={stream} token="token" />);
 
+    expect(screen.getByLabelText("配信URL")).toHaveValue("rtmp://rtmp.live.tokuly.com/live2");
     const streamKey = screen.getByLabelText("ストリームキー");
     expect(streamKey).toHaveAttribute("type", "password");
 

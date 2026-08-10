@@ -117,9 +117,13 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
             <div className="min-w-0 rounded-xl bg-[var(--studio-subtle)] p-4">
               <p className="studio-label">配信URL</p>
               <div className="mt-2 flex min-w-0 items-center gap-2">
-                <code className="min-w-0 flex-1 truncate text-sm">
-                  rtmp://rtmp.live.tokuly.com/live2
-                </code>
+                <Input
+                  type="text"
+                  value="rtmp://rtmp.live.tokuly.com/live2"
+                  readOnly
+                  aria-label="配信URL"
+                  className="min-w-0 flex-1 border-0 bg-transparent px-2 font-mono shadow-none focus-visible:ring-1"
+                />
                 <Button
                   type="button"
                   size="icon"
