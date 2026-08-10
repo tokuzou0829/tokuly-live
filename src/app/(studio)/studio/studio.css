@@ -29,39 +29,6 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  .studio-theme {
-    --studio-bg: #101114;
-    --studio-surface: #181a1f;
-    --studio-subtle: #23262d;
-    --studio-border: #30343c;
-    --studio-fg: #f5f6f8;
-    --studio-muted: #a4a9b3;
-    --studio-accent: #ffffff;
-    --studio-active: #292929;
-    --background: 225 11% 10%;
-    --foreground: 220 18% 96%;
-    --card: 225 11% 10%;
-    --card-foreground: 220 18% 96%;
-    --popover: 225 11% 10%;
-    --popover-foreground: 220 18% 96%;
-    --primary: 0 0% 100%;
-    --primary-foreground: 225 11% 10%;
-    --secondary: 220 12% 16%;
-    --secondary-foreground: 220 18% 96%;
-    --muted: 220 12% 16%;
-    --muted-foreground: 220 8% 67%;
-    --accent: 220 12% 16%;
-    --accent-foreground: 220 18% 96%;
-    --border: 220 11% 24%;
-    --input: 220 11% 24%;
-    --destructive: 0 0% 100%;
-    --destructive-foreground: 0 0% 0%;
-    --ring: 0 0% 100%;
-    color-scheme: dark;
-  }
-}
-
 .studio-card {
   border: 1px solid var(--studio-border);
   border-radius: 14px;
