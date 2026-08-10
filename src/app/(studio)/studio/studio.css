@@ -1,0 +1,86 @@
+.studio-theme {
+  --studio-bg: #f7f7f8;
+  --studio-surface: #ffffff;
+  --studio-subtle: #f1f2f4;
+  --studio-border: #e2e4e8;
+  --studio-fg: #16181d;
+  --studio-muted: #646a76;
+  --studio-accent: #000000;
+  --studio-active: #e8e8e8;
+  --background: 0 0% 100%;
+  --foreground: 225 14% 10%;
+  --card: 0 0% 100%;
+  --card-foreground: 225 14% 10%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 225 14% 10%;
+  --primary: 0 0% 0%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 10% 95%;
+  --secondary-foreground: 225 14% 10%;
+  --muted: 220 10% 95%;
+  --muted-foreground: 220 8% 42%;
+  --accent: 220 10% 95%;
+  --accent-foreground: 225 14% 10%;
+  --border: 220 10% 89%;
+  --input: 220 10% 89%;
+  --destructive: 0 0% 0%;
+  --destructive-foreground: 0 0% 100%;
+  --ring: 0 0% 0%;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  .studio-theme {
+    --studio-bg: #101114;
+    --studio-surface: #181a1f;
+    --studio-subtle: #23262d;
+    --studio-border: #30343c;
+    --studio-fg: #f5f6f8;
+    --studio-muted: #a4a9b3;
+    --studio-accent: #ffffff;
+    --studio-active: #292929;
+    --background: 225 11% 10%;
+    --foreground: 220 18% 96%;
+    --card: 225 11% 10%;
+    --card-foreground: 220 18% 96%;
+    --popover: 225 11% 10%;
+    --popover-foreground: 220 18% 96%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 225 11% 10%;
+    --secondary: 220 12% 16%;
+    --secondary-foreground: 220 18% 96%;
+    --muted: 220 12% 16%;
+    --muted-foreground: 220 8% 67%;
+    --accent: 220 12% 16%;
+    --accent-foreground: 220 18% 96%;
+    --border: 220 11% 24%;
+    --input: 220 11% 24%;
+    --destructive: 0 0% 100%;
+    --destructive-foreground: 0 0% 0%;
+    --ring: 0 0% 100%;
+    color-scheme: dark;
+  }
+}
+
+.studio-card {
+  border: 1px solid var(--studio-border);
+  border-radius: 14px;
+  background: var(--studio-surface);
+}
+
+.studio-theme input:not([type="range"]):not([type="checkbox"]):not([type="radio"]),
+.studio-theme select,
+.studio-theme textarea {
+  background-color: var(--studio-surface);
+}
+
+.studio-label {
+  color: var(--studio-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+.studio-title {
+  font-size: clamp(1.45rem, 2vw, 2rem);
+  font-weight: 750;
+  letter-spacing: -0.025em;
+}

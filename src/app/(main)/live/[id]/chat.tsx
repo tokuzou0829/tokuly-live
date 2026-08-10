@@ -16,9 +16,20 @@ interface ChatProps {
   channelId?: number;
   giftsEnabled?: boolean;
   session: Session | null;
+  postingIdentityOverride?: {
+    channelId: number;
+    name: string;
+    image: string | null;
+  };
 }
 
-export default function Chat({ id, channelId, giftsEnabled = false, session }: ChatProps) {
+export default function Chat({
+  id,
+  channelId,
+  giftsEnabled = false,
+  session,
+  postingIdentityOverride,
+}: ChatProps) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [msg, setMsg] = useState("");
   const [isConnected, setIsConnected] = useState(false);
@@ -26,10 +37,10 @@ export default function Chat({ id, channelId, giftsEnabled = false, session }: C
   const [historyMessages, setHistoryMessages] = useState<ChatItem[]>([]);
   const accessToken = session?.user?.access_token;
   const postingIdentity = session?.activePostingIdentity;
-  const postingChannelId =
-    postingIdentity?.type === "channel" ? postingIdentity.channelId : undefined;
-  const postingName = postingIdentity?.name ?? session?.user?.name;
-  const postingImage = postingIdentity?.profilePhotoUrl ?? session?.user?.image;
+  const postingChannelId = postingIdentityOverride?.channelId ??
+    (postingIdentity?.type === "channel" ? postingIdentity.channelId : undefined);
+  const postingName = postingIdentityOverride?.name ?? postingIdentity?.name ?? session?.user?.name;
+  const postingImage = postingIdentityOverride?.image ?? postingIdentity?.profilePhotoUrl ?? session?.user?.image;
   const hasMessage = msg.trim().length > 0;
 
   useEffect(() => {

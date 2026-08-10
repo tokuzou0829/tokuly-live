@@ -93,7 +93,7 @@ export default function LayoutContent({
                   },
                   {
                     title: "配信を開始",
-                    href: "https://tokuly.com/studio",
+                    href: "/studio",
                     variant: "ghost",
                     label: "",
                     icon: Radio,
