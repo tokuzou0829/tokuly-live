@@ -7,14 +7,14 @@ type Flameprops = {
 };
 import { useSearchParams } from "next/navigation";
 import { useAtom } from "jotai";
-import { IsPartyHost, IsWatchWithFriend, WatchWinFriendRooomId } from "@/atoms/watchWithFriendAtom";
+import { IsPartyHost, IsWatchWithFriend, WatchWithFriendRoomId } from "@/atoms/watchWithFriendAtom";
 
 export default function Videoflame(props: Flameprops) {
   const { live } = props;
   const searchParams = useSearchParams();
   const [isHost, setIsHost] = useAtom(IsPartyHost);
   const [isWatchWithFriend, setIsWatchWithFriend] = useAtom(IsWatchWithFriend);
-  const [WFrooomId, setWFRooomId] = useAtom(WatchWinFriendRooomId);
+  const [, setWFRooomId] = useAtom(WatchWithFriendRoomId);
 
   //一緒に観るための処理
   useEffect(() => {
@@ -28,7 +28,7 @@ export default function Videoflame(props: Flameprops) {
       setIsHost(false);
       setWFRooomId(null);
     }
-  }, []);
+  }, [searchParams, setIsHost, setIsWatchWithFriend, setWFRooomId]);
 
   return (
     <div className="w-[100%] min-w-[100%]">

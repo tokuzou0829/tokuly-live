@@ -293,6 +293,7 @@ function Player(props: VideoProps) {
     if (isWWF && myRef.current) {
       setVideoPlayerRef(myRef.current);
     }
+    return () => setVideoPlayerRef(null);
   }, [isWWF, setVideoPlayerRef, myRef]);
 
   useEffect(() => {
@@ -1120,10 +1121,7 @@ function Player(props: VideoProps) {
                     <button
                       onClick={(e) => {
                         //e.stopPropagation();
-                        console.log(IsWatchWithFriend);
-                        console.log(isHost);
                         if (!isWWF || isHost) {
-                          console.log("test");
                           toggleControls();
                         }
                       }}

@@ -1,12 +1,18 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import React from "react";
+import { useCallback, useEffect, useState } from "react";
 import formatDistanceToNowStrict from "date-fns/formatDistanceToNowStrict";
 import { ja } from "date-fns/locale";
 import { utcToZonedTime } from "date-fns-tz";
 import type { Live } from "@/types/live";
 import { useAtom } from "jotai";
-import { IsWatchWithFriend, WatchWinFriendRooomId } from "@/atoms/watchWithFriendAtom";
+import {
+  IsPartyHost,
+  IsWatchWithFriend,
+  WatchPartyConnectionStatus,
+  WatchWithFriendRoomId,
+} from "@/atoms/watchWithFriendAtom";
 import { LogOut, PartyPopper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,17 +31,14 @@ import { Copy } from "lucide-react";
 
 export default function LiveOverview({ live }: { live: Live }) {
   const [isWWF, setIsWWF] = useAtom<boolean>(IsWatchWithFriend);
-  const [WWFRoomId, setWWFRoomId] = useAtom<string | null>(WatchWinFriendRooomId);
-  const [isHost, setIsHost] = useAtom<boolean>(IsWatchWithFriend);
-  const LinkText = useRef<HTMLInputElement | null>(null);
-  const [roomid, setRoomId] = useState<string | null>(null);
+  const [WWFRoomId, setWWFRoomId] = useAtom<string | null>(WatchWithFriendRoomId);
+  const [, setIsHost] = useAtom<boolean>(IsPartyHost);
+  const [partyConnectionStatus, setPartyConnectionStatus] = useAtom(WatchPartyConnectionStatus);
+  const [partyUrl, setPartyUrl] = useState("");
 
   //console.log(live);
   function copyLink() {
-    if (LinkText.current) {
-      const link = LinkText.current.value;
-      return navigator.clipboard.writeText(link);
-    }
+    if (partyUrl) return navigator.clipboard.writeText(partyUrl);
   }
   const [status, setStatus] = useState<string>("offline");
   const [streamOverview, setStreamOverview] = useState<string>(live.stream_overview);
@@ -76,11 +79,16 @@ export default function LiveOverview({ live }: { live: Live }) {
   }
 
   useEffect(() => {
-    const id = setInterval(ChecksStatus, 10000);
-    return () => clearInterval(id);
-  }, []);
+    if (!WWFRoomId) {
+      setPartyUrl("");
+      return;
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.set("room_id", WWFRoomId);
+    setPartyUrl(url.toString());
+  }, [WWFRoomId]);
 
-  async function ChecksStatus() {
+  const checksStatus = useCallback(async () => {
     if (status !== "online") {
       const res = await fetch("https://api.tokuly.com/live/stream/data", {
         next: { revalidate: 10 },
@@ -95,28 +103,28 @@ export default function LiveOverview({ live }: { live: Live }) {
       setStreamOverview(newLivedata.stream_overview);
       setStreamStartTime(newLivedata.stream_start_time);
     }
-  }
+  }, [live.stream_name, status]);
+
+  useEffect(() => {
+    const intervalId = setInterval(checksStatus, 10000);
+    return () => clearInterval(intervalId);
+  }, [checksStatus]);
   return (
     <div className="p-[10px] bg-slate-100 mt-3 rounded-lg">
       <p className="font-bold text-slate-900	">{formatDate(StreamStartTime)}</p>
       <p className="mb-0">{linkify(streamOverview)}</p>
       <div className="mt-5">
-        <input
-          ref={LinkText}
-          className="hidden"
-          readOnly
-          value={"https://live.tokuly.com/video/" + live.stream_name + "?room_id=" + roomid}
-        />
         <Dialog>
           <DialogTrigger asChild>
             {live.status == "video" && !isWWF && (
               <button
                 className="flex items-center text-gray-600 p-1 rounded-lg hover:bg-gray-200"
                 onClick={() => {
-                  const room_id = Math.random().toString(32).substring(2);
-                  setRoomId(room_id);
+                  const room_id = crypto.randomUUID();
                   setWWFRoomId(room_id);
                   setIsWWF(true);
+                  setIsHost(false);
+                  setPartyConnectionStatus("connecting");
                   const url = new URL(window.location.href);
                   url.searchParams.set("room_id", room_id);
                   window.history.pushState({}, "", url.toString());
@@ -139,22 +147,24 @@ export default function LiveOverview({ live }: { live: Live }) {
                 <Label htmlFor="link" className="sr-only">
                   Link
                 </Label>
-                <Input
-                  id="link"
-                  defaultValue={
-                    "https://live.tokuly.com/video/" + live.stream_name + "?room_id=" + roomid
-                  }
-                  readOnly
-                />
+                <Input id="link" value={partyUrl} readOnly />
               </div>
-              <Button type="submit" size="sm" className="px-3" onClick={copyLink}>
+              <Button
+                type="button"
+                size="sm"
+                className="px-3"
+                onClick={copyLink}
+                disabled={partyConnectionStatus !== "connected"}
+              >
                 <span className="sr-only">Copy</span>
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="submit">始める</Button>
+                <Button type="button" disabled={partyConnectionStatus !== "connected"}>
+                  {partyConnectionStatus === "connected" ? "始める" : "接続中…"}
+                </Button>
               </DialogClose>
             </DialogFooter>
           </DialogContent>
@@ -163,10 +173,10 @@ export default function LiveOverview({ live }: { live: Live }) {
           <button
             className="flex items-center text-gray-600 p-1 rounded-lg hover:bg-gray-200"
             onClick={() => {
-              setRoomId(null);
               setIsWWF(false);
               setIsHost(false);
               setWWFRoomId(null);
+              setPartyConnectionStatus("idle");
               const url = new URL(window.location.href);
               url.searchParams.delete("room_id");
               window.history.pushState({}, "", url.toString());

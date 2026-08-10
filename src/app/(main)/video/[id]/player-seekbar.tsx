@@ -28,10 +28,6 @@ const SeekBar = ({
   const [isWatchWithFriend] = useAtom(IsWatchWithFriend);
   const [isHost] = useAtom(IsPartyHost);
 
-  useEffect(() => {
-    console.log(isHost);
-  }, [isHost]);
-
   const updateValue = useCallback(
     (clientX: number) => {
       if (seekBarRef.current && (!isWatchWithFriend || isHost)) {
@@ -41,7 +37,7 @@ const SeekBar = ({
         onChange((newValue / 100) * duration);
       }
     },
-    [onChange, duration]
+    [duration, isHost, isWatchWithFriend, onChange]
   );
 
   const handleStart = (clientX: number) => {
@@ -80,13 +76,13 @@ const SeekBar = ({
   const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => handleStart(e.clientX);
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) =>
     !isDragging && handleMove(e.clientX);
-  const handleMouseUp = () => handleEnd();
+  const handleMouseUp = useCallback(() => handleEnd(), [handleEnd]);
 
   // Touch event handlers
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) =>
     handleStart(e.touches[0].clientX);
   const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => handleMove(e.touches[0].clientX);
-  const handleTouchEnd = () => handleEnd();
+  const handleTouchEnd = useCallback(() => handleEnd(), [handleEnd]);
 
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => isDragging && handleMove(e.clientX);
