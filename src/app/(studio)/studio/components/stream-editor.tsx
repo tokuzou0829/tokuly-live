@@ -7,7 +7,16 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { searchGames, StudioApiError, updateStudioStream } from "@/requests/studio";
 import type { GameResult, StudioStream } from "@/types/studio";
-import { Check, Copy, ExternalLink, Eye, EyeOff, Loader2, Search } from "lucide-react";
+import {
+  AlertTriangle,
+  Check,
+  Copy,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  Loader2,
+  Search,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 
@@ -113,42 +122,42 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
       {stream.type === "live" && stream.status !== "end" && (
         <section className="studio-card min-w-0 overflow-hidden p-5">
           <h2 className="font-bold">配信方法</h2>
-          <div className="mt-4 grid min-w-0 gap-3 md:grid-cols-2">
-            <div className="min-w-0 rounded-xl bg-[var(--studio-subtle)] p-4">
-              <p className="studio-label">配信URL</p>
-              <div className="mt-2 flex min-w-0 items-center gap-2">
-                <Input
-                  type="text"
-                  value="rtmp://rtmp.live.tokuly.com/live2"
-                  readOnly
-                  aria-label="配信URL"
-                  className="min-w-0 flex-1 border-0 bg-transparent px-2 font-mono shadow-none focus-visible:ring-1"
-                />
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  className="shrink-0"
-                  onClick={() => copy("rtmp://rtmp.live.tokuly.com/live2")}
-                  aria-label="配信URLをコピー"
-                >
-                  <Copy className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="min-w-0 rounded-xl bg-[var(--studio-subtle)] p-4">
-              <p className="studio-label">ストリームキー</p>
-              <div className="mt-2 flex min-w-0 items-center gap-1">
-                <Input
-                  type={isStreamKeyVisible ? "text" : "password"}
-                  value={stream.stream_key_secret ?? "詳細を再取得してください"}
-                  readOnly
-                  autoComplete="off"
-                  aria-label="ストリームキー"
-                  className="min-w-0 flex-1 border-0 bg-transparent px-2 font-mono shadow-none focus-visible:ring-1"
-                />
-                {stream.stream_key_secret && (
-                  <>
+          {stream.stream_key_secret ? (
+            <>
+              <div className="mt-4 grid min-w-0 gap-3 md:grid-cols-2">
+                <div className="min-w-0 rounded-xl bg-[var(--studio-subtle)] p-4">
+                  <p className="studio-label">配信URL</p>
+                  <div className="mt-2 flex min-w-0 items-center gap-2">
+                    <Input
+                      type="text"
+                      value="rtmp://rtmp.live.tokuly.com/live2"
+                      readOnly
+                      aria-label="配信URL"
+                      className="min-w-0 flex-1 border-0 bg-transparent px-2 font-mono shadow-none focus-visible:ring-1"
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="shrink-0"
+                      onClick={() => copy("rtmp://rtmp.live.tokuly.com/live2")}
+                      aria-label="配信URLをコピー"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <div className="min-w-0 rounded-xl bg-[var(--studio-subtle)] p-4">
+                  <p className="studio-label">ストリームキー</p>
+                  <div className="mt-2 flex min-w-0 items-center gap-1">
+                    <Input
+                      type={isStreamKeyVisible ? "text" : "password"}
+                      value={stream.stream_key_secret}
+                      readOnly
+                      autoComplete="off"
+                      aria-label="ストリームキー"
+                      className="min-w-0 flex-1 border-0 bg-transparent px-2 font-mono shadow-none focus-visible:ring-1"
+                    />
                     <Button
                       type="button"
                       size="icon"
@@ -176,23 +185,39 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
                         <Eye className="h-4 w-4" />
                       )}
                     </Button>
-                  </>
-                )}
+                  </div>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button asChild variant="outline">
+                  <a href={stream.urls.browser_encoder}>
+                    ブラウザから配信 <ExternalLink className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+                <Button asChild variant="outline">
+                  <a href={stream.urls.public} target="_blank" rel="noreferrer">
+                    公開ページ <ExternalLink className="ml-2 h-4 w-4" />
+                  </a>
+                </Button>
+              </div>
+            </>
+          ) : (
+            <div
+              role="alert"
+              className="mt-4 flex items-start gap-3 rounded-xl border border-[var(--studio-fg)] p-4"
+            >
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+              <div>
+                <p className="font-semibold">この配信は古い配信方式のため使用できません。</p>
+                <p className="mt-1 text-sm">
+                  配信を開始するには、新しいライブ配信を作成してください。
+                </p>
+                <Button asChild className="mt-3">
+                  <a href="/studio/streams/new">新しいライブ配信を作成</a>
+                </Button>
               </div>
             </div>
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <a href={stream.urls.browser_encoder}>
-                ブラウザから配信 <ExternalLink className="ml-2 h-4 w-4" />
-              </a>
-            </Button>
-            <Button asChild variant="outline">
-              <a href={stream.urls.public} target="_blank" rel="noreferrer">
-                公開ページ <ExternalLink className="ml-2 h-4 w-4" />
-              </a>
-            </Button>
-          </div>
+          )}
         </section>
       )}
       <form onSubmit={submit} className="studio-card space-y-5 p-5">

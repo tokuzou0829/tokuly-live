@@ -77,4 +77,19 @@ describe("StreamEditor streaming credentials", () => {
     expect(screen.queryByLabelText("ストリームキー")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "コンテンツ設定" })).toBeInTheDocument();
   });
+
+  it("directs legacy live streams without a secret stream key to create a new stream", () => {
+    render(<StreamEditor stream={{ ...stream, stream_key_secret: undefined }} token="token" />);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "この配信は古い配信方式のため使用できません。"
+    );
+    expect(screen.getByRole("link", { name: "新しいライブ配信を作成" })).toHaveAttribute(
+      "href",
+      "/studio/streams/new"
+    );
+    expect(screen.queryByLabelText("配信URL")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("ストリームキー")).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /ブラウザから配信/ })).not.toBeInTheDocument();
+  });
 });
