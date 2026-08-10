@@ -16,9 +16,7 @@ export default async function StudioDashboard() {
   const [{ token, channel }, session] = await Promise.all([getStudioContext(), auth()]);
   if (!channel) return null;
   const page = await getStudioStreams(channel.id, token, { per_page: 20 });
-  const active =
-    page.data.find((stream) => stream.status === "online") ??
-    page.data.find((stream) => stream.status === "offline");
+  const active = page.data.find((stream) => stream.status === "online");
   const analytics = active
     ? await getListenerAnalytics(active.id, token).catch(() => ({ summary: null, timeline: [] }))
     : null;
