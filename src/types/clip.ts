@@ -22,9 +22,9 @@ export type ClipResource = {
   end_seconds: number;
   duration_seconds: number;
   thumbnail_url: string;
-  creator_channel: ClipChannel;
+  creator_channel: ClipChannel | null;
   source_video: ClipSourceVideo;
-  source_channel: ClipChannel;
+  source_channel: ClipChannel | null;
   created_at: string;
 };
 

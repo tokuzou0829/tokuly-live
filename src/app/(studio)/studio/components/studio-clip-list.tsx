@@ -150,10 +150,14 @@ export default function StudioClipList({
                   </Link>
                 </td>
                 <td className="px-4 py-3">
-                  <span className="block max-w-44 truncate">{clip.creator_channel.name}</span>
-                  <span className="text-xs text-[var(--studio-muted)]">
-                    @{clip.creator_channel.handle}
+                  <span className="block max-w-44 truncate">
+                    {clip.creator_channel?.name ?? "チャンネル情報なし"}
                   </span>
+                  {clip.creator_channel && (
+                    <span className="text-xs text-[var(--studio-muted)]">
+                      @{clip.creator_channel.handle}
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-3">
                   <Link

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ClipApiError, getClip, getVideoClips } from "./clips";
+import { ClipApiError, getClip, getLatestClips, getVideoClips } from "./clips";
 
 describe("Clip public API client", () => {
   beforeEach(() => vi.stubGlobal("fetch", vi.fn()));
@@ -35,6 +35,25 @@ describe("Clip public API client", () => {
     expect(fetch).toHaveBeenCalledWith(
       "https://api.example.test/v1/live/streams/34/clips?page=2&per_page=3",
       expect.any(Object)
+    );
+  });
+
+  it("loads the latest public clip feed without authentication", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ data: [], links: {}, meta: { total: 0 } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    await getLatestClips({ page: 2, perPage: 8 });
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.example.test/v1/live/clips?page=2&per_page=8",
+      expect.objectContaining({
+        cache: "no-store",
+        headers: { Accept: "application/json" },
+      })
     );
   });
 

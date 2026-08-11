@@ -828,7 +828,9 @@ export default function ClipCreator({ live }: { live: Live }) {
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">投稿先</dt>
-                  <dd className="mt-1 truncate font-semibold">{created.creator_channel.name}</dd>
+                  <dd className="mt-1 truncate font-semibold">
+                    {created.creator_channel?.name ?? "チャンネル情報なし"}
+                  </dd>
                 </div>
               </div>
             </dl>
@@ -1089,10 +1091,10 @@ export default function ClipCreator({ live }: { live: Live }) {
       >
         <PopoverAnchor asChild>
           <Button
-          ref={triggerRef}
-          type="button"
-          variant="secondary"
-          className="rounded-full font-bold"
+            ref={triggerRef}
+            type="button"
+            variant="secondary"
+            className="rounded-full font-bold"
             disabled={checkingChannels}
             onClick={openClip}
           >

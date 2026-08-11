@@ -28,14 +28,15 @@ export async function generateMetadata({
   const { clip } = await loadClip(params.clip_key);
   if (!clip) return { title: "クリップ" };
   const pageUrl = `${SITE_URL}/clip/${encodeURIComponent(clip.clip_key)}`;
+  const creatorName = clip.creator_channel?.name ?? "クリップ作成者";
   return {
     title: clip.title,
-    description: `${clip.creator_channel.name}が作成した「${clip.source_video.title}」のクリップ`,
+    description: `${creatorName}が作成した「${clip.source_video.title}」のクリップ`,
     alternates: { canonical: pageUrl },
     twitter: { card: "summary_large_image", title: clip.title, images: [clip.thumbnail_url] },
     openGraph: {
       title: clip.title,
-      description: `${clip.creator_channel.name}が作成したクリップ`,
+      description: `${creatorName}が作成したクリップ`,
       url: pageUrl,
       type: "video.other",
       images: [{ url: clip.thumbnail_url, alt: clip.title }],
@@ -85,26 +86,30 @@ export default async function ClipPage({ params }: { params: { clip_key: string 
         <div className="mt-5">
           <h1 className="text-2xl font-bold leading-snug">{clip.title}</h1>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-            <Link
-              href={`/${clip.creator_channel.handle}`}
-              className="flex min-w-0 items-center gap-3 hover:opacity-80"
-            >
-              {clip.creator_channel.icon_url ? (
-                <img
-                  src={clip.creator_channel.icon_url}
-                  alt=""
-                  className="h-11 w-11 rounded-full object-cover"
-                />
-              ) : (
-                <div className="h-11 w-11 rounded-full bg-slate-200" />
-              )}
-              <div className="min-w-0">
-                <p className="truncate font-semibold">{clip.creator_channel.name}</p>
-                <p className="truncate text-xs text-muted-foreground">
-                  @{clip.creator_channel.handle}
-                </p>
-              </div>
-            </Link>
+            {clip.creator_channel ? (
+              <Link
+                href={`/${clip.creator_channel.handle}`}
+                className="flex min-w-0 items-center gap-3 hover:opacity-80"
+              >
+                {clip.creator_channel.icon_url ? (
+                  <img
+                    src={clip.creator_channel.icon_url}
+                    alt=""
+                    className="h-11 w-11 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="h-11 w-11 rounded-full bg-slate-200" />
+                )}
+                <div className="min-w-0">
+                  <p className="truncate font-semibold">{clip.creator_channel.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    @{clip.creator_channel.handle}
+                  </p>
+                </div>
+              </Link>
+            ) : (
+              <p className="text-sm text-muted-foreground">チャンネル情報なし</p>
+            )}
             <span className="text-sm text-muted-foreground">
               {new Date(clip.created_at).toLocaleString("ja-JP")}
             </span>
@@ -122,7 +127,7 @@ export default async function ClipPage({ params }: { params: { clip_key: string 
               <div className="min-w-0">
                 <p className="line-clamp-2 font-semibold">{clip.source_video.title}</p>
                 <p className="mt-1 truncate text-xs text-muted-foreground">
-                  {clip.source_channel.name}
+                  {clip.source_channel?.name ?? "チャンネル情報なし"}
                 </p>
               </div>
             </ClipSourceLink>

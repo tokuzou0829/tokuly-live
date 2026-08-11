@@ -72,3 +72,11 @@ export function getVideoClips(
     options.token
   );
 }
+
+export function getLatestClips(
+  options: { page?: number; perPage?: number } = {}
+): Promise<ClipPage> {
+  const page = options.page ?? 1;
+  const perPage = options.perPage ?? 20;
+  return request<ClipPage>(`/clips?${pageQuery(page, perPage)}`);
+}

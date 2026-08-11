@@ -17,6 +17,8 @@ export default function ClipCard({
   clip: ClipResource;
   compact?: boolean;
 }) {
+  const creator = clip.creator_channel;
+
   return (
     <article className="group min-w-0">
       <Link href={`/clip/${encodeURIComponent(clip.clip_key)}`} className="block">
@@ -40,19 +42,36 @@ export default function ClipCard({
           {clip.title}
         </h3>
       </Link>
-      <Link
-        href={`/${clip.creator_channel.handle}`}
-        className={`flex w-fit max-w-full items-center text-slate-600 hover:text-slate-950 ${
-          compact ? "mt-0.5 gap-1 text-[11px]" : "mt-1 gap-1.5 text-xs"
-        }`}
-      >
-        {clip.creator_channel.icon_url ? (
-          <img
-            src={clip.creator_channel.icon_url}
-            alt=""
-            className={`${compact ? "h-4 w-4" : "h-5 w-5"} rounded-full object-cover`}
-          />
-        ) : (
+      {creator ? (
+        <Link
+          href={`/${creator.handle}`}
+          className={`flex w-fit max-w-full items-center text-slate-600 hover:text-slate-950 ${
+            compact ? "mt-0.5 gap-1 text-[11px]" : "mt-1 gap-1.5 text-xs"
+          }`}
+        >
+          {creator.icon_url ? (
+            <img
+              src={creator.icon_url}
+              alt=""
+              className={`${compact ? "h-4 w-4" : "h-5 w-5"} rounded-full object-cover`}
+            />
+          ) : (
+            <span
+              className={`flex items-center justify-center rounded-full bg-slate-200 ${
+                compact ? "h-4 w-4" : "h-5 w-5"
+              }`}
+            >
+              <Scissors className={compact ? "h-2.5 w-2.5" : "h-3 w-3"} />
+            </span>
+          )}
+          <span className="truncate">{creator.name}</span>
+        </Link>
+      ) : (
+        <div
+          className={`flex w-fit max-w-full items-center text-slate-500 ${
+            compact ? "mt-0.5 gap-1 text-[11px]" : "mt-1 gap-1.5 text-xs"
+          }`}
+        >
           <span
             className={`flex items-center justify-center rounded-full bg-slate-200 ${
               compact ? "h-4 w-4" : "h-5 w-5"
@@ -60,9 +79,9 @@ export default function ClipCard({
           >
             <Scissors className={compact ? "h-2.5 w-2.5" : "h-3 w-3"} />
           </span>
-        )}
-        <span className="truncate">{clip.creator_channel.name}</span>
-      </Link>
+          <span>チャンネル情報なし</span>
+        </div>
+      )}
     </article>
   );
 }
