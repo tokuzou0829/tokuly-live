@@ -39,9 +39,9 @@ const page = (count: number): ClipPage => ({
 });
 
 describe("VideoClipsSection", () => {
-  it("shows an empty state", () => {
-    render(<VideoClipsSection streamName="video-key" result={page(0)} />);
-    expect(screen.getByText("この動画のクリップはまだありません。")).toBeInTheDocument();
+  it("does not render the section when there are no clips", () => {
+    const { container } = render(<VideoClipsSection streamName="video-key" result={page(0)} />);
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("shows at most six compact clips and links to the full list", () => {

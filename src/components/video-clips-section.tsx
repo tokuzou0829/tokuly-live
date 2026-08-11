@@ -10,6 +10,10 @@ export default function VideoClipsSection({
   streamName: string;
   result: ClipPage | null;
 }) {
+  if (result?.data.length === 0) {
+    return null;
+  }
+
   return (
     <section className="mt-6 border-t border-slate-200 pt-5" aria-labelledby="video-clips-heading">
       <div className="mb-3 flex items-center justify-between gap-3">
@@ -28,10 +32,6 @@ export default function VideoClipsSection({
       {result === null ? (
         <p className="rounded-lg bg-white/70 p-4 text-sm text-slate-600">
           クリップを読み込めませんでした。
-        </p>
-      ) : result.data.length === 0 ? (
-        <p className="rounded-lg bg-white/70 p-4 text-sm text-slate-600">
-          この動画のクリップはまだありません。
         </p>
       ) : (
         <div className="grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-3 lg:grid-cols-4">
