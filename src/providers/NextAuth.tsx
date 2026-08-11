@@ -4,6 +4,7 @@ import { SessionProvider, signOut, useSession } from "next-auth/react";
 import React, { ReactNode, useEffect, useRef } from "react";
 import type { Session } from "next-auth";
 import { TOKULY_UNAUTHORIZED_EVENT } from "@/lib/auth-session-events";
+import { USER_PROFILE_REFRESH_INTERVAL_SECONDS } from "@/lib/user-profile";
 
 function AuthSessionGuard({ forceSignOut }: { forceSignOut: boolean }) {
   const { data: session } = useSession();
@@ -34,7 +35,12 @@ const NextAuthProvider = ({
   forceSignOut?: boolean;
 }) => {
   return (
-    <SessionProvider session={session}>
+    <SessionProvider
+      session={session}
+      refetchInterval={USER_PROFILE_REFRESH_INTERVAL_SECONDS}
+      refetchOnWindowFocus
+      refetchWhenOffline={false}
+    >
       <AuthSessionGuard forceSignOut={forceSignOut} />
       {children}
     </SessionProvider>

@@ -27,6 +27,7 @@ declare module "next-auth/jwt" {
     error?: "RefreshTokenError";
     activePostingIdentity?: PostingIdentity;
     postingIdentityInitialized?: boolean;
+    userProfileRefreshedAt?: number;
     user?: {
       id?: string;
       name?: string | null;

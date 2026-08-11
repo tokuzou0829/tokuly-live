@@ -7,6 +7,7 @@ import {
   userPostingIdentity,
 } from "@/lib/posting-identity";
 import { refreshAccessToken } from "@/lib/oauth-token";
+import { refreshUserProfile } from "@/lib/user-profile";
 
 // カスタム OAuth プロバイダーの設定
 const CustomOAuthProvider = {
@@ -65,6 +66,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           user: {
             ...user,
           },
+          userProfileRefreshedAt: Date.now(),
         };
       } else if (account) {
         // First-time login, save the `access_token`, its expiry and the `refresh_token`
@@ -84,6 +86,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!refreshedToken) return null;
         token = refreshedToken;
       }
+
+      token = await refreshUserProfile(token);
 
       if (!token.postingIdentityInitialized) {
         token.activePostingIdentity = await initialPostingIdentity(token);
@@ -107,6 +111,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       session.user.access_token = token.access_token;
       session.user.refresh_token = token.refresh_token;
       session.user.expires_at = token.expires_at;
+      session.user.name = token.user?.name ?? token.name;
+      const email = token.user?.email ?? token.email;
+      if (email != null) session.user.email = email;
+      session.user.image = token.user?.image ?? token.picture;
       session.user.handle = token.user?.handle;
       session.activePostingIdentity = token.activePostingIdentity ?? userPostingIdentity(token);
       return session;
