@@ -3,9 +3,16 @@ import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/re
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { activateStudioChannel } from "../actions";
 import { createStudioChannel, StudioApiError } from "@/requests/studio";
-import ChannelCreateDialog from "./channel-create-dialog";
+import ChannelCreateDialog from "@/components/channel-create-dialog";
 
 const navigation = vi.hoisted(() => ({ replace: vi.fn(), refresh: vi.fn() }));
+
+async function finishCreating(channel: { id: number }) {
+  const selected = await activateStudioChannel(channel.id);
+  if (!selected) throw new Error("作成したチャンネルを選択できませんでした。");
+  navigation.replace("/studio");
+  navigation.refresh();
+}
 
 vi.mock("next/navigation", () => ({ useRouter: () => navigation }));
 vi.mock("../actions", () => ({ activateStudioChannel: vi.fn() }));
@@ -39,6 +46,7 @@ describe("Studio channel creation dialog", () => {
         defaultIconUrl="https://example.test/user.jpg"
         open
         onOpenChange={vi.fn()}
+        onCreated={finishCreating}
       />
     );
 
@@ -83,6 +91,7 @@ describe("Studio channel creation dialog", () => {
         defaultIconUrl="https://example.test/user.jpg"
         open
         onOpenChange={vi.fn()}
+        onCreated={finishCreating}
       />
     );
     const unsupported = new File(["image"], "icon.gif", { type: "image/gif" });
@@ -117,6 +126,7 @@ describe("Studio channel creation dialog", () => {
         open
         onOpenChange={vi.fn()}
         blocking
+        onCreated={finishCreating}
       />
     );
 

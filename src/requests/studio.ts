@@ -9,6 +9,7 @@ import type {
   StudioSubtitlesResponse,
   UploadSession,
 } from "@/types/studio";
+import type { ClipPage, ClipResource, CreateClipInput } from "@/types/clip";
 
 export class StudioApiError extends Error {
   status: number;
@@ -133,6 +134,41 @@ export function getStudioStreams(
   params: { type?: "live" | "video"; status?: string; page?: number; per_page?: number } = {}
 ): Promise<StudioPage<StudioStream>> {
   return request(`/channels/${channelId}/streams${query(params)}`, token);
+}
+
+export async function createStudioClip(
+  channelId: number,
+  input: CreateClipInput,
+  token: string
+): Promise<ClipResource> {
+  return data(
+    await request<{ data: ClipResource }>(`/channels/${channelId}/clips`, token, {
+      method: "POST",
+      body: JSON.stringify(input),
+    })
+  );
+}
+
+export function getStudioCreatedClips(
+  channelId: number,
+  token: string,
+  params: { source_video_id?: number; page?: number; per_page?: number } = {}
+): Promise<ClipPage> {
+  return request(`/channels/${channelId}/clips/created${query(params)}`, token);
+}
+
+export function getStudioContentClips(
+  channelId: number,
+  token: string,
+  params: { source_video_id?: number; page?: number; per_page?: number } = {}
+): Promise<ClipPage> {
+  return request(`/channels/${channelId}/clips/on-content${query(params)}`, token);
+}
+
+export function deleteStudioClip(channelId: number, clipKey: string, token: string): Promise<void> {
+  return request(`/channels/${channelId}/clips/${encodeURIComponent(clipKey)}`, token, {
+    method: "DELETE",
+  });
 }
 
 export async function createStudioStream(

@@ -3,9 +3,10 @@
 import { Button } from "@/components/ui/button";
 import type { StudioChannel } from "@/types/studio";
 import { Check, Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 import React, { useState } from "react";
-import { selectStudioChannel } from "../actions";
-import ChannelCreateDialog from "./channel-create-dialog";
+import { activateStudioChannel, selectStudioChannel } from "../actions";
+import ChannelCreateDialog from "@/components/channel-create-dialog";
 
 export default function StudioChannelsView({
   token,
@@ -19,7 +20,15 @@ export default function StudioChannelsView({
   defaultIconUrl: string | null;
 }) {
   const [createOpen, setCreateOpen] = useState(false);
+  const router = useRouter();
   const atLimit = channels.length >= 5;
+
+  const finishCreatingChannel = async (createdChannel: StudioChannel) => {
+    const selected = await activateStudioChannel(createdChannel.id);
+    if (!selected) throw new Error("作成したチャンネルを選択できませんでした。");
+    router.replace("/studio");
+    router.refresh();
+  };
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
@@ -93,6 +102,7 @@ export default function StudioChannelsView({
         defaultIconUrl={defaultIconUrl}
         open={createOpen}
         onOpenChange={setCreateOpen}
+        onCreated={finishCreatingChannel}
       />
     </div>
   );

@@ -1,104 +1,75 @@
-"use client";
-
-import { signIn } from "next-auth/react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { ChangeEvent, useState } from "react";
+import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { cn } from "@/lib/utils";
+import React from "react";
+import SignInButton from "./sign-in-button";
 
-interface UserAuthFormProps extends React.HTMLAttributes<HTMLDivElement> {}
+export const metadata: Metadata = {
+  title: "ログイン | Tokuly Live",
+  description: "Tokuly Liveへのログイン",
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
-function UserAuthForm({ className, ...props }: UserAuthFormProps) {
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState<boolean>(false);
-  const [formValues, setFormValues] = useState({
-    email: "",
-    password: "",
-  });
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target;
-    setFormValues({ ...formValues, [name]: value });
+type SignInPageProps = {
+  searchParams?: {
+    callbackUrl?: string | string[];
+    error?: string | string[];
   };
-  //const searchParams = useSearchParams();
-  //const callbackUrl = searchParams.get("callbackUrl") || "/";
-  const callbackUrl = "/";
-  async function onSubmit(event: React.SyntheticEvent) {
-    event.preventDefault();
-    setIsLoading(true);
+};
 
-    const res = await signIn("credentials", {
-      redirect: false,
-      email: formValues.email,
-      password: formValues.password,
-      callbackUrl,
-    });
-
-    setIsLoading(false);
-
-    //console.log(res);
-    if (!res?.error) {
-      router.push(callbackUrl);
-    } else {
-      console.log("メールアドレスか、パスワードが間違っています");
-    }
-  }
+export default function SignInPage({ searchParams }: SignInPageProps) {
+  const callbackUrl =
+    typeof searchParams?.callbackUrl === "string" ? searchParams.callbackUrl : "/";
+  const hasError = typeof searchParams?.error === "string";
 
   return (
-    <div className={cn("grid gap-6", className)} {...props}>
-      <form onSubmit={onSubmit}>
-        <div className="grid gap-5">
-          <div className="grid gap-2">
-            <Label htmlFor="email">メールアドレス</Label>
-            <Input
-              id="email"
-              type="email"
-              name="email"
-              placeholder="tokulylove@example.com"
-              onInput={handleChange}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="password">パスワード</Label>
-            <Input
-              placeholder="パスワード"
-              id="password"
-              type="password"
-              name="password"
-              onInput={handleChange}
-            />
-          </div>
-          <Button disabled={isLoading}>ログイン</Button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-export default function LoginForm() {
-  return (
-    <div className="container flex h-screen w-screen flex-col items-center justify-center">
-      <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-        <div className="flex flex-col space-y-2 text-center">
-          <div className="w-full mx-auto flex justify-center">
-            <img src="/tokuly.png" className="h-[40px] w-[40px] rounded mx-auto" />
-          </div>
-          <h1 className="text-2xl font-semibold tracking-tight">おかえりなさい！</h1>
-          <p className="text-sm text-muted-foreground">
-            いつものTokulyアカウントでログインできます。
+    <main className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-10">
+      <section
+        aria-labelledby="signin-title"
+        className="w-full max-w-[400px] rounded-xl border bg-white p-6 shadow-sm sm:p-8"
+      >
+        <div className="flex flex-col items-center text-center">
+          <Image
+            src="/tokuly.png"
+            alt="Tokuly"
+            width={72}
+            height={72}
+            priority
+            className="rounded-xl"
+          />
+          <h1 id="signin-title" className="mt-5 text-2xl font-semibold tracking-tight">
+            Tokuly Liveにログイン
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Tokulyアカウントを使ってログインします
           </p>
         </div>
-        <UserAuthForm />
-        <p className="px-8 text-center text-sm text-muted-foreground">
-          Tokulyアカウントをお持ちでありませんか？
-          <Link href="/terms" className="underline underline-offset-4 hover:text-primary">
-            こちら
+
+        {hasError && (
+          <p
+            role="alert"
+            className="mt-6 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+          >
+            ログインを完了できませんでした。もう一度お試しください。
+          </p>
+        )}
+
+        <div className="mt-6">
+          <SignInButton callbackUrl={callbackUrl} />
+        </div>
+
+        <div className="mt-6 text-center">
+          <Link
+            href="/"
+            className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline focus-visible:rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            ホームに戻る
           </Link>
-          から作成できます。
-        </p>
-      </div>
-    </div>
+        </div>
+      </section>
+    </main>
   );
 }

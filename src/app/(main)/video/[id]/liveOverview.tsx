@@ -28,8 +28,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Copy } from "lucide-react";
+import type { ClipPage } from "@/types/clip";
+import VideoClipsSection from "@/components/video-clips-section";
 
-export default function LiveOverview({ live }: { live: Live }) {
+export default function LiveOverview({
+  live,
+  clips = null,
+}: {
+  live: Live;
+  clips?: ClipPage | null;
+}) {
   const [isWWF, setIsWWF] = useAtom<boolean>(IsWatchWithFriend);
   const [WWFRoomId, setWWFRoomId] = useAtom<string | null>(WatchWithFriendRoomId);
   const [, setIsHost] = useAtom<boolean>(IsPartyHost);
@@ -187,6 +195,7 @@ export default function LiveOverview({ live }: { live: Live }) {
           </button>
         )}
       </div>
+      <VideoClipsSection streamName={live.stream_name} result={clips} />
     </div>
   );
 }

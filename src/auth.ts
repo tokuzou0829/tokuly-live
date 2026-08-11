@@ -17,6 +17,7 @@ const CustomOAuthProvider = {
     url: "https://tokuly.com/oauth/authorize",
     params: { scope: "live get-profile" },
   },
+  icon: "https://assets.tokuly.com/tokuly.png",
   token: "https://tokuly.com/oauth/token",
   userinfo: {
     url: "https://api.tokuly.com/v1/me",
@@ -48,6 +49,9 @@ const CustomOAuthProvider = {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [CustomOAuthProvider],
+  pages: {
+    signIn: "/auth/signin",
+  },
   callbacks: {
     async jwt({ token, user, account, session, trigger }): Promise<JWT | null> {
       //console.log('jwt user ', user);

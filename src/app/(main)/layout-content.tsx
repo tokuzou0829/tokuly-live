@@ -20,7 +20,10 @@ export default function LayoutContent({
   channels: Channels;
 }) {
   const pathname = usePathname() ?? "";
-  const firstLocation = pathname.startsWith("/video/") || pathname.startsWith("/live/");
+  const firstLocation =
+    pathname.startsWith("/video/") ||
+    pathname.startsWith("/live/") ||
+    pathname.startsWith("/clip/");
   const [isCollapsed, setIsCollapsed] = useState(firstLocation ? true : false);
   const [isWatch, setIsWatch] = useState(false);
   const panelRef = useRef<any>(null);
@@ -36,7 +39,10 @@ export default function LayoutContent({
   }, []);
 
   useEffect(() => {
-    const isLocation = pathname.startsWith("/video/") || pathname.startsWith("/live/");
+    const isLocation =
+      pathname.startsWith("/video/") ||
+      pathname.startsWith("/live/") ||
+      pathname.startsWith("/clip/");
     if (isLocation) {
       panelRef.current?.collapse();
       setIsCollapsed(true);

@@ -4,8 +4,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { StudioChannel } from "@/types/studio";
 import StudioChannelsView from "./studio-channels-view";
 
-vi.mock("../actions", () => ({ selectStudioChannel: "/studio" }));
-vi.mock("./channel-create-dialog", () => ({
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }),
+}));
+vi.mock("../actions", () => ({
+  selectStudioChannel: "/studio",
+  activateStudioChannel: vi.fn(),
+}));
+vi.mock("@/components/channel-create-dialog", () => ({
   default: ({ open }: { open: boolean }) => (open ? <div>作成ダイアログ</div> : null),
 }));
 

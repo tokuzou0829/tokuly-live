@@ -18,6 +18,7 @@ import {
   List,
   Menu,
   MessageSquare,
+  Scissors,
   Settings,
   Video,
   X,
@@ -25,15 +26,16 @@ import {
 import { signOut } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import React, { useState } from "react";
-import { selectStudioChannel } from "./actions";
-import ChannelCreateDialog from "./components/channel-create-dialog";
+import { activateStudioChannel, selectStudioChannel } from "./actions";
+import ChannelCreateDialog from "@/components/channel-create-dialog";
 import StudioCreateMenu from "./components/studio-create-menu";
 
 const links = [
   { href: "/studio", label: "ダッシュボード", icon: LayoutDashboard },
   { href: "/studio/content", label: "コンテンツ", icon: Video },
+  { href: "/studio/clips", label: "クリップ", icon: Scissors },
   { href: "/studio/gifts", label: "ギフト", icon: Gift },
   { href: "/studio/chat-embed", label: "チャット埋め込み", icon: MessageSquare },
   { href: "/studio/channel", label: "チャンネル設定", icon: Settings },
@@ -130,7 +132,15 @@ export default function StudioShell({
   defaultIconUrl: string | null;
 }) {
   const pathname = usePathname() ?? "/studio";
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  const finishCreatingChannel = async (createdChannel: StudioChannel) => {
+    const selected = await activateStudioChannel(createdChannel.id);
+    if (!selected) throw new Error("作成したチャンネルを選択できませんでした。");
+    router.replace("/studio");
+    router.refresh();
+  };
 
   if (pathname.startsWith("/studio/stream/browser-encoder") && channel) return <>{children}</>;
 
@@ -195,6 +205,7 @@ export default function StudioShell({
         open={!channel}
         onOpenChange={() => undefined}
         blocking
+        onCreated={finishCreatingChannel}
       />
     </div>
   );

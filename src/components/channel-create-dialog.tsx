@@ -11,10 +11,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { activateStudioChannel } from "../actions";
 import { createStudioChannel, StudioApiError } from "@/requests/studio";
+import type { StudioChannel } from "@/types/studio";
 import { ImageIcon, Loader2, Plus, X } from "lucide-react";
-import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 
 const ACCEPTED_ICON_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -26,14 +25,15 @@ export default function ChannelCreateDialog({
   open,
   onOpenChange,
   blocking = false,
+  onCreated,
 }: {
   token: string;
   defaultIconUrl: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   blocking?: boolean;
+  onCreated: (channel: StudioChannel) => void | Promise<void>;
 }) {
-  const router = useRouter();
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const [fields, setFields] = useState<Record<string, string[]>>({});
@@ -106,10 +106,7 @@ export default function ChannelCreateDialog({
         },
         token
       );
-      const selected = await activateStudioChannel(channel.id);
-      if (!selected) throw new Error("作成したチャンネルを選択できませんでした。");
-      router.replace("/studio");
-      router.refresh();
+      await onCreated(channel);
     } catch (caught) {
       if (caught instanceof StudioApiError) {
         setFields(caught.fields);
@@ -144,7 +141,7 @@ export default function ChannelCreateDialog({
             <div>
               <Label htmlFor="channel-create-icon">アイコン（任意）</Label>
               <div className="mt-2 flex flex-col items-center gap-3">
-                <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-[var(--studio-subtle)]">
+                <div className="flex h-28 w-28 items-center justify-center overflow-hidden rounded-full bg-muted">
                   {iconPreview || defaultIconUrl ? (
                     <img
                       src={iconPreview ?? defaultIconUrl ?? ""}
@@ -156,7 +153,7 @@ export default function ChannelCreateDialog({
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <ImageIcon className="h-9 w-9 text-[var(--studio-muted)]" />
+                    <ImageIcon className="h-9 w-9 text-muted-foreground" />
                   )}
                 </div>
                 {iconPreview && (
@@ -177,9 +174,7 @@ export default function ChannelCreateDialog({
                 className="h-auto py-2"
                 onChange={(event) => chooseIcon(event.target.files?.[0])}
               />
-              <p className="text-xs text-[var(--studio-muted)]">
-                JPG、JPEG、PNG、WebP形式、10MB以下
-              </p>
+              <p className="text-xs text-muted-foreground">JPG、JPEG、PNG、WebP形式、10MB以下</p>
               {fields.icon?.map((message) => (
                 <p key={message} className="text-xs font-semibold" role="alert">
                   {message}
@@ -209,7 +204,7 @@ export default function ChannelCreateDialog({
           <div>
             <Label htmlFor="channel-create-handle">ハンドル</Label>
             <div className="relative mt-2">
-              <span className="absolute left-3 top-2.5 text-sm text-[var(--studio-muted)]">@</span>
+              <span className="absolute left-3 top-2.5 text-sm text-muted-foreground">@</span>
               <Input
                 id="channel-create-handle"
                 name="handle"
@@ -223,7 +218,7 @@ export default function ChannelCreateDialog({
                 placeholder="tokuly-channel"
               />
             </div>
-            <p className="mt-1 text-xs text-[var(--studio-muted)]">小文字英数字とハイフンのみ</p>
+            <p className="mt-1 text-xs text-muted-foreground">小文字英数字とハイフンのみ</p>
             {fields.handle?.map((message) => (
               <p key={message} className="mt-1 text-xs font-semibold" role="alert">
                 {message}
@@ -232,7 +227,7 @@ export default function ChannelCreateDialog({
           </div>
 
           {error && (
-            <p role="alert" className="rounded-lg border border-[var(--studio-border)] p-3 text-sm">
+            <p role="alert" className="rounded-lg border p-3 text-sm">
               {error}
             </p>
           )}

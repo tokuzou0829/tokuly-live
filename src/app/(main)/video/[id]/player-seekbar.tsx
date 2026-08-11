@@ -12,6 +12,11 @@ type SeekBarProps = {
   onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
 };
 
+export function seekBarPercent(value: number, duration: number): number {
+  if (!Number.isFinite(value) || !Number.isFinite(duration) || duration <= 0) return 0;
+  return Math.min(100, Math.max(0, (value / duration) * 100));
+}
+
 const SeekBar = ({
   playervalue,
   bufferValue,
@@ -21,7 +26,7 @@ const SeekBar = ({
   onMouseLeave,
   onClick,
 }: SeekBarProps) => {
-  const [value, setValue] = useState((playervalue / duration) * 100);
+  const [value, setValue] = useState(seekBarPercent(playervalue, duration));
   const [isDragging, setIsDragging] = useState(false);
   const seekBarRef = useRef<HTMLDivElement>(null);
   const [seek, setSeek] = useState(0);
@@ -104,8 +109,10 @@ const SeekBar = ({
   }, [isDragging, handleMove, handleMouseUp, handleTouchEnd]);
 
   useEffect(() => {
-    setValue((playervalue / duration) * 100);
+    setValue(seekBarPercent(playervalue, duration));
   }, [playervalue, duration]);
+
+  const bufferPercent = seekBarPercent(bufferValue, duration);
 
   return (
     <div className="w-full">
@@ -128,7 +135,8 @@ const SeekBar = ({
         }
       >
         <div
-          style={{ width: `${(bufferValue / duration) * 100}%` }}
+          data-testid="seekbar-buffer"
+          style={{ width: `${bufferPercent}%` }}
           className="absolute h-full bg-gray-400 rounded-full"
         />
         {(!isWatchWithFriend || isHost) && (
@@ -137,10 +145,15 @@ const SeekBar = ({
             className="absolute h-full bg-gray-300 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
           />
         )}
-        <div style={{ width: `${value}%` }} className="absolute h-full bg-white rounded-full" />
+        <div
+          data-testid="seekbar-progress"
+          style={{ width: `${value}%` }}
+          className="absolute h-full bg-white rounded-full"
+        />
         {(!isWatchWithFriend || isHost) && (
           <div
-            style={{ left: `${value}%` }}
+            data-testid="seekbar-thumb"
+            style={{ left: `clamp(8px, ${value}%, calc(100% - 8px))` }}
             className="absolute w-4 h-4 bg-white rounded-full top-1/2 transform -translate-x-1/2 -translate-y-1/2 hover:scale-110 transition-transform duration-200 shadow-md"
           />
         )}

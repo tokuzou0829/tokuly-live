@@ -9,6 +9,8 @@ import { MoreVideo } from "@/components/moreVideo";
 import { StreamComments } from "@/components/stream-comments";
 import { getChannel } from "@/requests/channel";
 import { ArchivePlaybackProvider } from "./archive-playback-context";
+import ClipCreator from "./clip-creator";
+import { getVideoClips } from "@/requests/clips";
 interface LiveProps {
   id: string;
 }
@@ -17,36 +19,51 @@ export const revalidate = 180;
 
 export default async function LivePlayer({ id }: LiveProps) {
   const [session, live] = await Promise.all([auth(), getLive({ id })]);
-  const channel = await getChannel({ handle: live.ch_handle });
+  const [channel, clips] = await Promise.all([
+    getChannel({ handle: live.ch_handle }),
+    getVideoClips(live.id, {
+      perPage: 6,
+      token: session?.user?.access_token,
+    }).catch(() => null),
+  ]);
 
   return (
     <ArchivePlaybackProvider>
       <div className="w-[100%] overflow-hidden">
         <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_430px] xl:items-start">
           <div className="min-w-0 px-4 pt-3 xl:pr-3">
-            <Video live={live} />
+            <div id="clip-mobile-stage">
+              <div id="clip-mobile-player">
+                <Video live={live} />
+              </div>
+              <div id="clip-mobile-editor-slot" />
+            </div>
             <div className="pt-2">
               <p className="mb-2 text-2xl font-bold leading-snug">{live.title}</p>
-              <Link
-                href={`/${live.ch_handle}`}
-                className="flex w-fit max-w-full items-center gap-3 rounded-full py-1 pr-3 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
-              >
-                <img
-                  src={live.ch_icon}
-                  alt={`${live.ch_name} icon`}
-                  className="h-11 w-11 flex-shrink-0 rounded-full object-cover ring-1 ring-slate-200"
-                />
-                <div className="min-w-0">
-                  <h2 className="truncate text-lg font-bold leading-tight text-slate-950">
-                    {live.ch_name}
-                  </h2>
-                </div>
-              </Link>
-              <LiveOverview live={live} />
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <Link
+                  href={`/${live.ch_handle}`}
+                  className="flex w-fit max-w-full items-center gap-3 rounded-full py-1 pr-3 transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300"
+                >
+                  <img
+                    src={live.ch_icon}
+                    alt={`${live.ch_name} icon`}
+                    className="h-11 w-11 flex-shrink-0 rounded-full object-cover ring-1 ring-slate-200"
+                  />
+                  <div className="min-w-0">
+                    <h2 className="truncate text-lg font-bold leading-tight text-slate-950">
+                      {live.ch_name}
+                    </h2>
+                  </div>
+                </Link>
+                <ClipCreator live={live} />
+              </div>
+              <LiveOverview live={live} clips={clips} />
             </div>
           </div>
           <div className="max-w-[100%] p-4 xl:col-start-2 xl:row-span-2 xl:row-start-1 xl:pl-3 xl:pr-5">
             <div>
+              <div id="clip-editor-slot" className="mb-4 hidden empty:mb-0 xl:block" />
               {live.status !== "video" && <Chat id={live.id} />}
               {live.status == "video" && (
                 <WatchWithFriendView id={live.id} session={session}></WatchWithFriendView>

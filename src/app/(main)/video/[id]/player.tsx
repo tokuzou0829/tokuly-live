@@ -72,6 +72,7 @@ import {
   type SubtitleCue,
 } from "@/lib/subtitles";
 import { useArchivePlayback } from "./archive-playback-context";
+import { clipDisplayToMediaTime, clipMediaToDisplayTime } from "@/lib/clip";
 
 interface VideoProps {
   id: string;
@@ -79,6 +80,8 @@ interface VideoProps {
   poster_url?: string;
   isUploadVideo?: boolean;
   subtitles?: Subtitle[];
+  playbackRange?: { startSeconds: number; endSeconds: number };
+  shareUrl?: string;
 }
 declare global {
   interface HTMLVideoElement {
@@ -220,7 +223,12 @@ function SubtitleDisplaySettingsMenu({
 }
 
 function Player(props: VideoProps) {
-  const { id, className, poster_url, isUploadVideo } = props;
+  const { id, className, poster_url, isUploadVideo, playbackRange, shareUrl } = props;
+  const clipStart = Math.max(0, playbackRange?.startSeconds ?? 0);
+  const clipEnd = Math.max(clipStart, playbackRange?.endSeconds ?? clipStart);
+  const clipDuration = clipEnd - clipStart;
+  const isClipPlayback = Boolean(playbackRange && clipDuration > 0);
+  const publicShareUrl = shareUrl ?? `https://live.tokuly.com/video/${id}`;
   const subtitleStyleClassName = `subtitle-player-${useId().replace(/:/g, "")}`;
   const subtitles = useMemo(
     () => [...(props.subtitles ?? [])].sort((a, b) => a.id - b.id),
@@ -241,8 +249,12 @@ function Player(props: VideoProps) {
   const [isPictureInPicture, setIsPictureInPicture] = useState<boolean>(false);
   const cursorHideTimeoutRef = useRef<number | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
-  const { setCurrentTime: setArchivePlaybackTime, setIsEnded: setArchiveEnded } =
-    useArchivePlayback();
+  const {
+    setCurrentTime: setArchivePlaybackTime,
+    setDuration: setArchiveDuration,
+    setIsEnded: setArchiveEnded,
+    registerController,
+  } = useArchivePlayback();
   const [duration, setDuration] = useState(0);
   const [buffer, setBuffer] = useState(0);
   const [isLoop, setIsLoop] = useState(false);
@@ -282,11 +294,20 @@ function Player(props: VideoProps) {
   const [isHost] = useAtom(IsPartyHost);
 
   const updatePlaybackTime = useCallback(
-    (time: number) => {
-      setCurrentTime(time);
-      setArchivePlaybackTime(time);
+    (mediaTime: number) => {
+      const displayTime = isClipPlayback
+        ? clipMediaToDisplayTime(mediaTime, clipStart, clipEnd)
+        : mediaTime;
+      setCurrentTime(displayTime);
+      setArchivePlaybackTime(displayTime);
     },
-    [setArchivePlaybackTime]
+    [clipEnd, clipStart, isClipPlayback, setArchivePlaybackTime]
+  );
+
+  const mediaTimeFor = useCallback(
+    (displayTime: number) =>
+      isClipPlayback ? clipDisplayToMediaTime(displayTime, clipStart, clipEnd) : displayTime,
+    [clipEnd, clipStart, isClipPlayback]
   );
 
   useEffect(() => {
@@ -522,12 +543,16 @@ function Player(props: VideoProps) {
           break;
         case "ArrowLeft": // 左矢印キーで5秒巻き戻し
           if (!isWWF || isHost) {
-            video.currentTime = Math.max(0, video.currentTime - 5);
+            video.currentTime = isClipPlayback
+              ? Math.max(clipStart, video.currentTime - 5)
+              : Math.max(0, video.currentTime - 5);
           }
           break;
         case "ArrowRight": // 右矢印キーで5秒早送り
           if (!isWWF || isHost) {
-            video.currentTime = Math.min(video.duration, video.currentTime + 5);
+            video.currentTime = isClipPlayback
+              ? Math.min(clipEnd, video.currentTime + 5)
+              : Math.min(video.duration, video.currentTime + 5);
           }
           break;
         case "ArrowUp": // 上矢印キーで音量を上げる
@@ -555,7 +580,7 @@ function Player(props: VideoProps) {
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isWWF, isHost, myRef.current]);
+  }, [clipEnd, clipStart, isClipPlayback, isWWF, isHost, myRef.current]);
 
   function copyLink() {
     if (LinkText.current) {
@@ -595,6 +620,14 @@ function Player(props: VideoProps) {
     }
   };
   const handleVideoPlay = () => {
+    if (
+      isClipPlayback &&
+      myRef.current &&
+      (myRef.current.currentTime < clipStart || myRef.current.currentTime >= clipEnd - 0.05)
+    ) {
+      myRef.current.currentTime = clipStart;
+      updatePlaybackTime(clipStart);
+    }
     setIsPlaying(true);
     setArchiveEnded(false);
   };
@@ -779,13 +812,11 @@ function Player(props: VideoProps) {
               });
               setVideoQualityList(availableQualities);
 
-              if (share_time) {
-                const sharedTime = parseFloat(share_time);
-                if (Number.isFinite(sharedTime)) {
-                  myRef.current!.currentTime = sharedTime;
-                  updatePlaybackTime(sharedTime);
-                }
-              }
+              const sharedTime = share_time ? parseFloat(share_time) : 0;
+              const initialDisplayTime = Number.isFinite(sharedTime) ? sharedTime : 0;
+              const initialMediaTime = mediaTimeFor(initialDisplayTime);
+              myRef.current!.currentTime = initialMediaTime;
+              updatePlaybackTime(initialMediaTime);
             });
 
             // オーディオトラック情報を更新されたタイミングで取得
@@ -832,13 +863,13 @@ function Player(props: VideoProps) {
         hls.destroy(); // HLS.js インスタンスを破棄
       }
     };
-  }, [id, searchParams, updatePlaybackTime]);
+  }, [id, mediaTimeFor, searchParams, updatePlaybackTime]);
 
   useEffect(() => {
     if (myRef.current) {
-      setDuration(myRef.current.duration);
+      setDuration(isClipPlayback ? clipDuration : myRef.current.duration);
     }
-  }, [myRef.current]);
+  }, [clipDuration, isClipPlayback, myRef.current]);
 
   useEffect(() => {
     if (hlsRef.current) {
@@ -848,18 +879,51 @@ function Player(props: VideoProps) {
 
   const handleTimeUpdate = () => {
     if (myRef.current) {
-      updatePlaybackTime(myRef.current.currentTime);
+      const mediaTime = myRef.current.currentTime;
+      if (isClipPlayback && mediaTime >= clipEnd) {
+        myRef.current.currentTime = clipEnd;
+        updatePlaybackTime(clipEnd);
+        setArchiveEnded(true);
+        if (isLoop) {
+          myRef.current.currentTime = clipStart;
+          updatePlaybackTime(clipStart);
+          void myRef.current.play();
+        } else {
+          myRef.current.pause();
+        }
+        return;
+      }
+      if (isClipPlayback && mediaTime < clipStart) {
+        myRef.current.currentTime = clipStart;
+        updatePlaybackTime(clipStart);
+        return;
+      }
+      updatePlaybackTime(mediaTime);
     }
   };
 
-  const handleSeek = (e: any) => {
-    if (myRef.current) {
-      const newTime = e;
-      setArchiveEnded(false);
-      myRef.current.currentTime = newTime;
-      updatePlaybackTime(newTime);
-    }
-  };
+  const handleSeek = useCallback(
+    (displayTime: number) => {
+      if (myRef.current) {
+        const newTime = mediaTimeFor(displayTime);
+        setArchiveEnded(false);
+        myRef.current.currentTime = newTime;
+        updatePlaybackTime(newTime);
+      }
+    },
+    [mediaTimeFor, setArchiveEnded, updatePlaybackTime]
+  );
+
+  useEffect(() => {
+    registerController({
+      seekTo: handleSeek,
+      play: async () => {
+        if (myRef.current) await myRef.current.play();
+      },
+      pause: () => myRef.current?.pause(),
+    });
+    return () => registerController(null);
+  }, [handleSeek, registerController]);
 
   const formatTime = (time: any) => {
     const hours = Math.floor(time / 3600);
@@ -886,19 +950,20 @@ function Player(props: VideoProps) {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const percentage = x / rect.width;
-    const previewTime = percentage * duration;
-    if (previewTime > duration) {
+    const displayPreviewTime = percentage * duration;
+    if (displayPreviewTime > duration) {
       setShowPreview(false);
       return;
     }
+    const sourcePreviewTime = mediaTimeFor(displayPreviewTime);
 
     if (isPreviewAvailable) {
       // プレビュー画像の位置を計算
-      const tileSetNumber = Math.max(1, Math.ceil(previewTime / 125));
+      const tileSetNumber = Math.max(1, Math.ceil(sourcePreviewTime / 125));
       const tileSet = tileSetNumber.toString().padStart(3, "0");
 
       // 5秒ごとに1フレームのインデックスを計算
-      const tileIndex = Math.round(previewTime / 5);
+      const tileIndex = Math.round(sourcePreviewTime / 5);
       const tileX = tileIndex % 5;
       const tileY = Math.floor(tileIndex / 5);
 
@@ -914,7 +979,7 @@ function Player(props: VideoProps) {
 
     setShowPreview(true);
     setHoverPosition(percentage);
-    setPreviewTime(previewTime);
+    setPreviewTime(displayPreviewTime);
   };
 
   const handleSeekLeave = () => {
@@ -993,7 +1058,14 @@ function Player(props: VideoProps) {
         onEnded={() => setArchiveEnded(true)}
         onLoadedMetadata={(event) => {
           const videoElement = event.target as HTMLVideoElement;
-          setDuration(videoElement.duration);
+          const displayDuration = isClipPlayback ? clipDuration : videoElement.duration;
+          setDuration(displayDuration);
+          setArchiveDuration(displayDuration);
+          if (isClipPlayback) {
+            const sharedTime = Number(searchParams?.get("t") ?? 0);
+            videoElement.currentTime = mediaTimeFor(Number.isFinite(sharedTime) ? sharedTime : 0);
+            updatePlaybackTime(videoElement.currentTime);
+          }
         }}
       >
         {subtitles.map((subtitle) => (
@@ -1111,12 +1183,7 @@ function Player(props: VideoProps) {
                       )}
                     </div>
                   </div>
-                  <input
-                    ref={LinkText}
-                    className="hidden"
-                    readOnly
-                    value={"https://live.tokuly.com/video/" + id}
-                  />
+                  <input ref={LinkText} className="hidden" readOnly value={publicShareUrl} />
                   <div className="flex items-center">
                     <button
                       onClick={(e) => {
@@ -1441,30 +1508,32 @@ function Player(props: VideoProps) {
                 <Label htmlFor="link" className="sr-only">
                   Link
                 </Label>
-                <Input id="link" defaultValue={"https://live.tokuly.com/video/" + id} readOnly />
+                <Input id="link" defaultValue={publicShareUrl} readOnly />
               </div>
               <Button type="submit" size="sm" className="px-3" onClick={copyLink}>
                 <span className="sr-only">Copy</span>
                 <Copy className="h-4 w-4" />
               </Button>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="grid flex-1 gap-2">
-                <Label htmlFor="emded_code" className="">
-                  埋め込みコード
-                </Label>
-                <Textarea
-                  id="emded_code"
-                  ref={EmdedCode}
-                  readOnly
-                  defaultValue={`<iframe src="https://live.tokuly.com/embed/${id}" title="Tokuly video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="tokuly-live"></iframe>`}
-                ></Textarea>
+            {!isClipPlayback && (
+              <div className="flex items-center space-x-2">
+                <div className="grid flex-1 gap-2">
+                  <Label htmlFor="emded_code" className="">
+                    埋め込みコード
+                  </Label>
+                  <Textarea
+                    id="emded_code"
+                    ref={EmdedCode}
+                    readOnly
+                    defaultValue={`<iframe src="https://live.tokuly.com/embed/${id}" title="Tokuly video player" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen class="tokuly-live"></iframe>`}
+                  ></Textarea>
+                </div>
+                <Button type="submit" size="sm" className="px-3" onClick={copyEmdedCode}>
+                  <span className="sr-only">Copy</span>
+                  <Copy className="h-4 w-4" />
+                </Button>
               </div>
-              <Button type="submit" size="sm" className="px-3" onClick={copyEmdedCode}>
-                <span className="sr-only">Copy</span>
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
+            )}
             <DialogFooter className="sm:justify-start">
               <DialogClose asChild>
                 <Button type="button" variant="secondary">

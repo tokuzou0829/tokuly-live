@@ -4,11 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { StudioChannel } from "@/types/studio";
 import StudioShell from "./studio-shell";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/studio" }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/studio",
+  useRouter: () => ({ replace: vi.fn(), refresh: vi.fn() }),
+}));
 vi.mock("next-auth/react", () => ({ signOut: vi.fn() }));
-vi.mock("./actions", () => ({ selectStudioChannel: "/studio" }));
+vi.mock("./actions", () => ({
+  selectStudioChannel: "/studio",
+  activateStudioChannel: vi.fn(),
+}));
 vi.mock("./components/studio-create-menu", () => ({ default: () => <div>コンテンツ作成</div> }));
-vi.mock("./components/channel-create-dialog", () => ({
+vi.mock("@/components/channel-create-dialog", () => ({
   default: ({ open, blocking }: { open: boolean; blocking?: boolean }) =>
     open ? <div data-testid="channel-create-dialog" data-blocking={String(blocking)} /> : null,
 }));

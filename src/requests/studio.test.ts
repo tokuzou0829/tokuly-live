@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createStudioChannel,
+  createStudioClip,
+  deleteStudioClip,
+  getStudioContentClips,
+  getStudioCreatedClips,
   getStudioChannels,
   getStudioStreams,
   StudioApiError,
@@ -138,5 +142,53 @@ describe("Studio API client", () => {
       message: "Invalid",
       fields: { title: ["Required"] },
     });
+  });
+
+  it("creates a clip using the selected channel path and API field names", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ data: { clip_key: "clip-key", title: "見どころ" } }), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+    const input = {
+      title: "見どころ",
+      source_video_id: 34,
+      start_seconds: 12.3,
+      end_seconds: 42.5,
+    };
+    await createStudioClip(12, input, "token");
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.example.test/v1/live/studio/channels/12/clips",
+      expect.objectContaining({ method: "POST", body: JSON.stringify(input) })
+    );
+  });
+
+  it("loads both Studio clip views with source filters", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ data: [], links: {}, meta: { total: 0 } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+    await getStudioCreatedClips(12, "token", { source_video_id: 34, page: 2, per_page: 20 });
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://api.example.test/v1/live/studio/channels/12/clips/created?source_video_id=34&page=2&per_page=20",
+      expect.any(Object)
+    );
+    await getStudioContentClips(12, "token", { source_video_id: 34, page: 1 });
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://api.example.test/v1/live/studio/channels/12/clips/on-content?source_video_id=34&page=1",
+      expect.any(Object)
+    );
+  });
+
+  it("deletes an encoded clip key without parsing a response body", async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }));
+    await expect(deleteStudioClip(12, "A/B", "token")).resolves.toBeNull();
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.example.test/v1/live/studio/channels/12/clips/A%2FB",
+      expect.objectContaining({ method: "DELETE" })
+    );
   });
 });
