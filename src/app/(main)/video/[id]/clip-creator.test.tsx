@@ -63,7 +63,14 @@ function PlaybackSetup({
     registerController({ seekTo: vi.fn(), play: vi.fn(), pause: vi.fn() });
     return () => registerController(null);
   }, [durationSeconds, registerController, setCurrentTime, setDuration]);
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <button data-testid="set-playback-start" hidden onClick={() => setCurrentTime(0)} />
+      <button data-testid="set-playback-end" hidden onClick={() => setCurrentTime(120)} />
+      <button data-testid="set-playback-outside" hidden onClick={() => setCurrentTime(121)} />
+    </>
+  );
 }
 
 function renderCreator(source = live) {
@@ -409,6 +416,38 @@ describe("ClipCreator", () => {
     expect(screen.getByRole("button", { name: "5分" })).toBeInTheDocument();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(document.getElementById("clip-editor-slot")).toHaveTextContent("クリップを作成");
+  });
+
+  it("shows the current playback position on the detail timeline and follows updates", () => {
+    vi.mocked(useSession).mockReturnValue({
+      status: "authenticated",
+      update: vi.fn(),
+      data: {
+        expires: "2099-01-01T00:00:00Z",
+        user: { id: "1", name: "User" },
+        activePostingIdentity: {
+          type: "channel",
+          accountId: "1",
+          channelId: 12,
+          name: "投稿チャンネル",
+          handle: "my-channel",
+          profilePhotoUrl: "",
+        },
+      },
+    });
+    renderCreator();
+    fireEvent.click(screen.getByRole("button", { name: "クリップ" }));
+
+    expect(screen.getByTestId("clip-playhead")).toHaveStyle({ left: `${(10 / 120) * 100}%` });
+
+    fireEvent.click(screen.getByTestId("set-playback-start"));
+    expect(screen.getByTestId("clip-playhead")).toHaveStyle({ left: "0%" });
+
+    fireEvent.click(screen.getByTestId("set-playback-end"));
+    expect(screen.getByTestId("clip-playhead")).toHaveStyle({ left: "100%" });
+
+    fireEvent.click(screen.getByTestId("set-playback-outside"));
+    expect(screen.queryByTestId("clip-playhead")).not.toBeInTheDocument();
   });
 
   it("keeps the anchored editor open until its close button is used", () => {

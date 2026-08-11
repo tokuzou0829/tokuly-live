@@ -185,6 +185,7 @@ function ClipTimeline({
   posterUrl,
   range,
   durationTicks,
+  currentTime,
   zoomSeconds,
   windowFocus,
   onZoomChange,
@@ -197,6 +198,7 @@ function ClipTimeline({
   posterUrl: string;
   range: ClipRange;
   durationTicks: number;
+  currentTime: number;
   zoomSeconds: number;
   windowFocus: number;
   onZoomChange: (seconds: number) => void;
@@ -227,6 +229,11 @@ function ClipTimeline({
   const viewportLeft = (window.start / durationTicks) * 100;
   const viewportWidth = (windowSize / durationTicks) * 100;
   const selectionCenter = Math.round((range.start + range.end) / 2);
+  const currentTimeTicks = secondsToClipTicks(currentTime);
+  const playheadPercent =
+    currentTimeTicks >= window.start && currentTimeTicks <= window.end
+      ? ((currentTimeTicks - window.start) / windowSize) * 100
+      : null;
 
   const moveSelectionTo = (targetCenter: number) => {
     const length = range.end - range.start;
@@ -312,6 +319,14 @@ function ClipTimeline({
             className="pointer-events-none absolute inset-y-0 border-y-4 border-white bg-white/10"
             style={{ left: `${startPercent}%`, width: `${widthPercent}%` }}
           />
+          {playheadPercent !== null && (
+            <div
+              data-testid="clip-playhead"
+              className="pointer-events-none absolute inset-y-0 z-30 w-0.5 -translate-x-1/2 bg-red-500 shadow-sm"
+              style={{ left: `${playheadPercent}%` }}
+              aria-hidden="true"
+            />
+          )}
           <SliderPrimitive.Root
             aria-label="クリップ範囲"
             className="absolute inset-0 flex w-full touch-none select-none items-center"
@@ -869,6 +884,7 @@ export default function ClipCreator({ live }: { live: Live }) {
                   posterUrl={live.static_thumbnail_url || live.thumbnail_url}
                   range={range}
                   durationTicks={durationTicks}
+                  currentTime={currentTime}
                   zoomSeconds={zoomSeconds}
                   windowFocus={windowFocus}
                   onZoomChange={(seconds) => {
