@@ -337,8 +337,8 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
         </div>
         <div>
           <Label htmlFor="thumbnail">サムネイル</Label>
-          <div className="mt-2 grid gap-4 sm:grid-cols-[minmax(0,320px)_minmax(0,1fr)] sm:items-start">
-            <div className="aspect-video overflow-hidden rounded-lg bg-black">
+          <div className="mt-2 grid min-w-0 gap-4">
+            <div className="aspect-video w-full max-w-80 overflow-hidden rounded-lg bg-black">
               {thumbnailPreview ? (
                 <img
                   src={thumbnailPreview}
@@ -351,18 +351,18 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
                 </div>
               )}
             </div>
-            <div>
+            <div className="min-w-0">
               <Input
                 ref={thumbnailInput}
                 id="thumbnail"
                 name="thumbnail"
                 type="file"
                 accept="image/jpeg,image/png"
-                className="h-auto py-2"
+                className="h-auto min-w-0 max-w-full py-2"
                 onChange={(event) => previewThumbnail(event.target.files?.[0])}
               />
               <p className="mt-2 text-xs text-[var(--studio-muted)]">
-                JPEGまたはPNGを選択すると、保存前にプレビューできます。
+                対応フォーマット: JPEGまたはPNG
               </p>
               {hasNewThumbnail && (
                 <Button
