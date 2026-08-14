@@ -307,8 +307,8 @@ export default function AccountDropdownMenu() {
           <Link href="/gifts">
             <DropdownMenuItem className="cursor-pointer">ギフト履歴</DropdownMenuItem>
           </Link>
-          <Link href="https://tokuly.com/studio" target="_blank">
-            <DropdownMenuItem className="cursor-pointer">配信する</DropdownMenuItem>
+          <Link href="/studio" target="_blank">
+            <DropdownMenuItem className="cursor-pointer">Tokuly Studio</DropdownMenuItem>
           </Link>
           <Link href="https://tokuly.com/user/profile" target="_blank">
             <DropdownMenuItem className="cursor-pointer">アカウント管理</DropdownMenuItem>
