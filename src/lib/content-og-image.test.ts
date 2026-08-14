@@ -43,6 +43,6 @@ describe("content OG image rendering", () => {
     expect(metadata.height).toBe(CONTENT_OG_HEIGHT);
     expect(output.byteLength).toBeLessThan(500_000);
     expect(info.channels).toBe(3);
-    expect([...data]).toEqual([0, 255, 1]);
+    expect([data[0], data[1], data[2]]).toEqual([0, 255, 1]);
   });
 });
