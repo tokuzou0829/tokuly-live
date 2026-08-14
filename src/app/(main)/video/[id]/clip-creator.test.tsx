@@ -40,6 +40,7 @@ const live = {
   stream_overview: "",
   archive: true,
   stream_start_time: "2026-08-01T00:00:00Z",
+  published_at: "2026-08-01T00:00:00Z",
   publishing_setting: "public",
   gifts_enabled: false,
   ch_name: "配信者",

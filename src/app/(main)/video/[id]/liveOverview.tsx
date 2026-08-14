@@ -13,7 +13,7 @@ import {
   WatchPartyConnectionStatus,
   WatchWithFriendRoomId,
 } from "@/atoms/watchWithFriendAtom";
-import { LogOut, PartyPopper } from "lucide-react";
+import { ChevronDown, LogOut, PartyPopper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -43,6 +43,7 @@ export default function LiveOverview({
   const [, setIsHost] = useAtom<boolean>(IsPartyHost);
   const [partyConnectionStatus, setPartyConnectionStatus] = useAtom(WatchPartyConnectionStatus);
   const [partyUrl, setPartyUrl] = useState("");
+  const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
 
   //console.log(live);
   function copyLink() {
@@ -76,14 +77,14 @@ export default function LiveOverview({
     ));
   }
 
-  function formatDate(StreamStartTimeData: string): string {
-    if (StreamStartTimeData) {
-      const timeZone = "Asia/Tokyo";
-      const zonedDate = utcToZonedTime(StreamStartTimeData, timeZone);
-      return formatDistanceToNowStrict(zonedDate, { locale: ja }) + "前に配信";
-    } else {
-      return "ストリーマーを待機中";
-    }
+  function formatDate(streamStartTime: string, publishedAt: string): string {
+    const date = streamStartTime || publishedAt;
+    if (!date) return "";
+
+    const timeZone = "Asia/Tokyo";
+    const zonedDate = utcToZonedTime(date, timeZone);
+    const suffix = streamStartTime ? "前に配信" : "前に公開";
+    return formatDistanceToNowStrict(zonedDate, { locale: ja }) + suffix;
   }
 
   useEffect(() => {
@@ -118,84 +119,124 @@ export default function LiveOverview({
     return () => clearInterval(intervalId);
   }, [checksStatus]);
   return (
-    <div className="p-[10px] bg-slate-100 mt-3 rounded-lg">
-      <p className="font-bold text-slate-900	">{formatDate(StreamStartTime)}</p>
-      <p className="mb-0">{linkify(streamOverview)}</p>
-      <div className="mt-5">
-        <Dialog>
-          <DialogTrigger asChild>
-            {live.status == "video" && !isWWF && (
+    <div
+      className={`mt-3 rounded-lg bg-slate-100 p-[10px] ${isOverviewExpanded ? "" : "cursor-pointer"}`}
+      onClick={() => {
+        if (!isOverviewExpanded) setIsOverviewExpanded(true);
+      }}
+    >
+      <p className="font-bold text-slate-900">{formatDate(StreamStartTime, live.published_at)}</p>
+      <div
+        id="video-overview"
+        className={`relative ${isOverviewExpanded ? "" : "max-h-[5.5rem] overflow-hidden"}`}
+      >
+        <p className={`mb-0 ${isOverviewExpanded ? "" : "pb-8"}`}>{linkify(streamOverview)}</p>
+        {!isOverviewExpanded && (
+          <div className="absolute inset-x-0 bottom-0 flex h-16 items-end justify-start bg-gradient-to-t from-slate-100 via-slate-100/90 to-transparent pb-1">
+            <button
+              type="button"
+              className="flex items-center py-1 text-sm font-semibold text-slate-700 hover:text-slate-950"
+              aria-expanded="false"
+              aria-controls="video-overview"
+              onClick={() => setIsOverviewExpanded(true)}
+            >
+              続きを見る
+              <ChevronDown className="ml-1 h-4 w-4" />
+            </button>
+          </div>
+        )}
+      </div>
+      {isOverviewExpanded && (
+        <>
+          <div className="mt-5">
+            <Dialog>
+              <DialogTrigger asChild>
+                {live.status == "video" && !isWWF && (
+                  <button
+                    className="flex items-center text-gray-600 p-1 rounded-lg hover:bg-gray-200"
+                    onClick={() => {
+                      const room_id = crypto.randomUUID();
+                      setWWFRoomId(room_id);
+                      setIsWWF(true);
+                      setIsHost(false);
+                      setPartyConnectionStatus("connecting");
+                      const url = new URL(window.location.href);
+                      url.searchParams.set("room_id", room_id);
+                      window.history.pushState({}, "", url.toString());
+                    }}
+                  >
+                    <PartyPopper size={15} />
+                    <span className="ml-1">この動画をみんなで観る</span>
+                  </button>
+                )}
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[425px]">
+                <DialogHeader>
+                  <DialogTitle>一緒に観る</DialogTitle>
+                  <DialogDescription>
+                    友達にこのリンクを共有して一緒にこの動画を楽しみましょう！
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="flex items-center space-x-2">
+                  <div className="grid flex-1 gap-2">
+                    <Label htmlFor="link" className="sr-only">
+                      Link
+                    </Label>
+                    <Input id="link" value={partyUrl} readOnly />
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="px-3"
+                    onClick={copyLink}
+                    disabled={partyConnectionStatus !== "connected"}
+                  >
+                    <span className="sr-only">Copy</span>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button type="button" disabled={partyConnectionStatus !== "connected"}>
+                      {partyConnectionStatus === "connected" ? "始める" : "接続中…"}
+                    </Button>
+                  </DialogClose>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            {isWWF && (
               <button
                 className="flex items-center text-gray-600 p-1 rounded-lg hover:bg-gray-200"
                 onClick={() => {
-                  const room_id = crypto.randomUUID();
-                  setWWFRoomId(room_id);
-                  setIsWWF(true);
+                  setIsWWF(false);
                   setIsHost(false);
-                  setPartyConnectionStatus("connecting");
+                  setWWFRoomId(null);
+                  setPartyConnectionStatus("idle");
                   const url = new URL(window.location.href);
-                  url.searchParams.set("room_id", room_id);
+                  url.searchParams.delete("room_id");
                   window.history.pushState({}, "", url.toString());
                 }}
               >
-                <PartyPopper size={15} />
-                <span className="ml-1">この動画をみんなで観る</span>
+                <LogOut size={15} />
+                <span className="ml-1">パーティーから退出する</span>
               </button>
             )}
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>一緒に観る</DialogTitle>
-              <DialogDescription>
-                友達にこのリンクを共有して一緒にこの動画を楽しみましょう！
-              </DialogDescription>
-            </DialogHeader>
-            <div className="flex items-center space-x-2">
-              <div className="grid flex-1 gap-2">
-                <Label htmlFor="link" className="sr-only">
-                  Link
-                </Label>
-                <Input id="link" value={partyUrl} readOnly />
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                className="px-3"
-                onClick={copyLink}
-                disabled={partyConnectionStatus !== "connected"}
-              >
-                <span className="sr-only">Copy</span>
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" disabled={partyConnectionStatus !== "connected"}>
-                  {partyConnectionStatus === "connected" ? "始める" : "接続中…"}
-                </Button>
-              </DialogClose>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        {isWWF && (
-          <button
-            className="flex items-center text-gray-600 p-1 rounded-lg hover:bg-gray-200"
-            onClick={() => {
-              setIsWWF(false);
-              setIsHost(false);
-              setWWFRoomId(null);
-              setPartyConnectionStatus("idle");
-              const url = new URL(window.location.href);
-              url.searchParams.delete("room_id");
-              window.history.pushState({}, "", url.toString());
-            }}
-          >
-            <LogOut size={15} />
-            <span className="ml-1">パーティーから退出する</span>
-          </button>
-        )}
-      </div>
-      <VideoClipsSection streamName={live.stream_name} result={clips} />
+          </div>
+          <VideoClipsSection streamName={live.stream_name} result={clips} />
+          <div className="mt-4 flex justify-start">
+            <button
+              type="button"
+              className="flex items-center py-1 text-sm font-semibold text-slate-700 hover:text-slate-950"
+              aria-expanded="true"
+              aria-controls="video-overview"
+              onClick={() => setIsOverviewExpanded(false)}
+            >
+              折りたたむ
+              <ChevronDown className="ml-1 h-4 w-4 rotate-180" />
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -16,6 +16,7 @@ const live = {
   stream_name: "archive-name",
   stream_overview: "概要",
   stream_start_time: "2026-08-10T00:00:00.000Z",
+  published_at: "2026-08-09T00:00:00.000Z",
 } as Live;
 
 describe("watch party creation", () => {
@@ -36,6 +37,7 @@ describe("watch party creation", () => {
         <LiveOverview live={live} />
       </Provider>
     );
+    fireEvent.click(screen.getByRole("button", { name: "続きを見る" }));
     fireEvent.click(screen.getByRole("button", { name: "この動画をみんなで観る" }));
 
     expect(store.get(IsWatchWithFriend)).toBe(true);
@@ -43,5 +45,42 @@ describe("watch party creation", () => {
     expect(store.get(WatchWithFriendRoomId)).toBe(roomId);
     expect(store.get(WatchPartyConnectionStatus)).toBe("connecting");
     expect(new URL(window.location.href).searchParams.get("room_id")).toBe(roomId);
+  });
+
+  it("previews the video description in a collapsed card and allows it to be expanded", () => {
+    const store = createStore();
+
+    render(
+      <Provider store={store}>
+        <LiveOverview live={live} />
+      </Provider>
+    );
+
+    expect(screen.getByRole("button", { name: "続きを見る" })).toHaveAttribute(
+      "aria-expanded",
+      "false"
+    );
+    expect(screen.getByText("概要")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText(/前に配信$/));
+
+    expect(screen.getByText("概要")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "折りたたむ" })).toHaveAttribute(
+      "aria-expanded",
+      "true"
+    );
+  });
+
+  it("uses the publication date for an uploaded video without a stream start time", () => {
+    const store = createStore();
+
+    render(
+      <Provider store={store}>
+        <LiveOverview live={{ ...live, stream_start_time: "" }} />
+      </Provider>
+    );
+
+    expect(screen.getByText(/前に公開$/)).toBeInTheDocument();
+    expect(screen.queryByText("ストリーマーを待機中")).not.toBeInTheDocument();
   });
 });
