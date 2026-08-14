@@ -2,14 +2,24 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createStreamComment,
   deleteStreamComment,
+  getStreamCommentReplies,
   getStreamComments,
   updateStreamComment,
 } from "./comments";
 
 const comment = {
   id: 10,
+  parent_comment_id: null,
   content: "テストコメント",
-  author: { id: 1, name: "投稿者", profile_photo_url: "https://example.test/avatar.png" },
+  author: {
+    id: 1,
+    type: "user" as const,
+    channel_id: null,
+    name: "投稿者",
+    handle: "author",
+    profile_photo_url: "https://example.test/avatar.png",
+  },
+  reply_count: 0,
   created_at: "2026-07-30T10:00:00+09:00",
   updated_at: "2026-07-30T10:00:00+09:00",
   edited_at: null,
@@ -36,7 +46,22 @@ describe("stream comment requests", () => {
   });
 
   it.each([
-    ["POST", () => createStreamComment(3, "投稿", "token")],
+    [undefined, "https://api.example.test/v1/live/streams/3/comments/10/replies"],
+    [42, "https://api.example.test/v1/live/streams/3/comments/10/replies?after_id=42"],
+  ])("loads direct replies with after_id %s", async (afterId, expectedUrl) => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ data: [], next_after_id: null, has_more: false }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    await getStreamCommentReplies(3, 10, afterId);
+    expect(fetch).toHaveBeenCalledWith(expectedUrl, expect.any(Object));
+  });
+
+  it.each([
+    ["POST", () => createStreamComment(3, { content: "投稿" }, "token")],
     ["PATCH", () => updateStreamComment(3, 10, "編集", "token")],
   ])("sends %s requests as authenticated JSON", async (method, request) => {
     vi.mocked(fetch).mockResolvedValue(
@@ -59,6 +84,19 @@ describe("stream comment requests", () => {
     );
   });
 
+  it("omits reply and channel fields for a root user comment", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify(comment), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    await createStreamComment(3, { content: "ルート投稿" }, "token");
+    const init = vi.mocked(fetch).mock.calls[0][1];
+    expect(JSON.parse(String(init?.body))).toEqual({ content: "ルート投稿" });
+  });
+
   it("accepts a 204 response when deleting", async () => {
     vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }));
 
@@ -69,7 +107,7 @@ describe("stream comment requests", () => {
     );
   });
 
-  it("adds channel_id only for channel posting", async () => {
+  it("adds parent_comment_id and channel_id for a channel reply", async () => {
     vi.mocked(fetch).mockResolvedValue(
       new Response(JSON.stringify(comment), {
         status: 201,
@@ -77,9 +115,17 @@ describe("stream comment requests", () => {
       })
     );
 
-    await createStreamComment(3, "チャンネル投稿", "token", 7);
+    await createStreamComment(
+      3,
+      { content: "チャンネル投稿", parentCommentId: 10, channelId: 7 },
+      "token"
+    );
     const init = vi.mocked(fetch).mock.calls[0][1];
-    expect(JSON.parse(String(init?.body))).toEqual({ content: "チャンネル投稿", channel_id: 7 });
+    expect(JSON.parse(String(init?.body))).toEqual({
+      content: "チャンネル投稿",
+      parent_comment_id: 10,
+      channel_id: 7,
+    });
   });
 
   it("maps validation errors", async () => {
@@ -90,10 +136,19 @@ describe("stream comment requests", () => {
       })
     );
 
-    await expect(createStreamComment(3, "", "token")).rejects.toMatchObject({
+    await expect(createStreamComment(3, { content: "" }, "token")).rejects.toMatchObject({
       status: 422,
       message: "入力エラー",
       fields: { content: ["必須です"] },
+    });
+  });
+
+  it("maps the write rate limit error", async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 429 }));
+
+    await expect(createStreamComment(3, { content: "投稿" }, "token")).rejects.toMatchObject({
+      status: 429,
+      message: "投稿回数が上限に達しました。しばらく待ってからお試しください。",
     });
   });
 });

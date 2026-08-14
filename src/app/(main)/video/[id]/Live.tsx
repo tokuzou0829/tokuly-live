@@ -75,7 +75,7 @@ export default async function LivePlayer({ id }: LiveProps) {
             <StreamComments
               streamId={live.id}
               session={session}
-              isChannelOwner={Number(session?.user?.id) === Number(channel.id)}
+              streamChannelId={Number(channel.id)}
             />
           </div>
         </div>

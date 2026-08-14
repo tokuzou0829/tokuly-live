@@ -1,4 +1,4 @@
-import type { StreamComment, StreamCommentPage } from "@/types/comment";
+import type { StreamComment, StreamCommentPage, StreamCommentReplyPage } from "@/types/comment";
 import { notifyTokulyUnauthorized } from "@/lib/auth-session-events";
 
 export class CommentApiError extends Error {
@@ -70,18 +70,35 @@ export function getStreamComments(
   return commentRequest<StreamCommentPage>(`${streamPath(streamId)}${before}`);
 }
 
+export function getStreamCommentReplies(
+  streamId: number | string,
+  commentId: number | string,
+  afterId?: number | null
+): Promise<StreamCommentReplyPage> {
+  const after = afterId == null ? "" : `?after_id=${encodeURIComponent(afterId)}`;
+  return commentRequest<StreamCommentReplyPage>(
+    `${streamPath(streamId)}/${encodeURIComponent(commentId)}/replies${after}`
+  );
+}
+
+export type CreateStreamCommentInput = {
+  content: string;
+  parentCommentId?: number;
+  channelId?: number;
+};
+
 export function createStreamComment(
   streamId: number | string,
-  content: string,
-  token: string,
-  channelId?: number
+  input: CreateStreamCommentInput,
+  token: string
 ): Promise<StreamComment> {
   return commentRequest<StreamComment>(streamPath(streamId), {
     method: "POST",
     headers: authenticated(token),
     body: JSON.stringify({
-      content,
-      ...(channelId === undefined ? {} : { channel_id: channelId }),
+      content: input.content,
+      ...(input.parentCommentId === undefined ? {} : { parent_comment_id: input.parentCommentId }),
+      ...(input.channelId === undefined ? {} : { channel_id: input.channelId }),
     }),
   });
 }
