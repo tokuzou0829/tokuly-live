@@ -11,6 +11,7 @@ import { getChannel } from "@/requests/channel";
 import { ArchivePlaybackProvider } from "./archive-playback-context";
 import ClipCreator from "./clip-creator";
 import { getVideoClips } from "@/requests/clips";
+import StreamReactionButtons from "@/components/stream-reaction-buttons";
 interface LiveProps {
   id: string;
 }
@@ -56,7 +57,14 @@ export default async function LivePlayer({ id }: LiveProps) {
                     </h2>
                   </div>
                 </Link>
-                <ClipCreator live={live} />
+                <div className="ml-auto flex min-w-0 max-w-full flex-nowrap items-center gap-2 overflow-x-auto overscroll-x-contain">
+                  <StreamReactionButtons
+                    streamId={live.id}
+                    initialLikeCount={live.like_count}
+                    initialDislikeCount={live.dislike_count}
+                  />
+                  <ClipCreator live={live} />
+                </div>
               </div>
               <LiveOverview live={live} clips={clips} />
             </div>

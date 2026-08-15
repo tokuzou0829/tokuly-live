@@ -95,7 +95,7 @@ export default function VideoUploader({
   }
 
   return (
-    <section className="studio-card p-5">
+    <section className="studio-card min-w-0 max-w-full overflow-hidden p-4 sm:p-5">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="font-bold">動画ファイル</h2>
@@ -118,7 +118,7 @@ export default function VideoUploader({
               動画ファイルを選択してください
             </span>
             <Input
-              className="mt-4 h-auto max-w-md py-2"
+              className="mt-4 h-auto w-full min-w-0 max-w-md py-2"
               name="video"
               type="file"
               accept="video/*"

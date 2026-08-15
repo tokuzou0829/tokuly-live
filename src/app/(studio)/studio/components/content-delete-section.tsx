@@ -45,12 +45,12 @@ export default function ContentDeleteSection({
   }
 
   return (
-    <section className="studio-card p-5">
+    <section className="studio-card min-w-0 max-w-full p-4 sm:p-5">
       <h2 className="font-bold">コンテンツを削除</h2>
       <p className="mt-2 text-sm text-[var(--studio-muted)]">
         {stream.type === "live"
-          ? "配信と関連するアーカイブ、チャット、分析データを削除します。"
-          : "動画と関連する字幕、設定データを削除します。"}
+          ? "配信と関連するすべてのデータを削除します。"
+          : "動画と関連するすべてのデータを削除します。"}
       </p>
       {error && (
         <p role="alert" className="mt-3 rounded-lg border border-[var(--studio-fg)] p-3 text-sm">

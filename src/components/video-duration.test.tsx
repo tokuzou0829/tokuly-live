@@ -20,6 +20,8 @@ const relatedVideo: MoreVideoList = {
   ch_icon: "https://example.test/icon.jpg",
   ch_handle: "test-channel",
   duration_seconds: 65,
+  like_count: 0,
+  dislike_count: 0,
 };
 
 describe("video duration badges", () => {

@@ -111,7 +111,7 @@ export default function StudioClipList({
   nextHref?: string;
 }) {
   return (
-    <section className="studio-card overflow-hidden">
+    <section className="studio-card min-w-0 max-w-full overflow-hidden">
       {title && (
         <div className="border-b border-[var(--studio-border)] p-5">
           <h2 className="font-bold">{title}</h2>

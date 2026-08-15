@@ -28,6 +28,8 @@ export type Live = {
   ch_handle: string;
   subtitles: Subtitle[];
   duration_seconds: number | null;
+  like_count: number;
+  dislike_count: number;
 };
 
 export type MoreVideoList = {
@@ -45,6 +47,8 @@ export type MoreVideoList = {
   ch_icon: string;
   ch_handle: string;
   duration_seconds: number | null;
+  like_count: number;
+  dislike_count: number;
 };
 
 export type LiveList = {
@@ -57,6 +61,8 @@ export type LiveList = {
   ch_icon: string;
   ch_handle: string;
   duration_seconds: number | null;
+  like_count: number;
+  dislike_count: number;
 };
 
 export type OnlineLiveList = LiveList & {

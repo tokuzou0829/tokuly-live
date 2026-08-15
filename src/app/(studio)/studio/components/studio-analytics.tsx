@@ -134,7 +134,7 @@ export default function StudioAnalytics({
   };
 
   return (
-    <section className="studio-card p-5">
+    <section className="studio-card min-w-0 max-w-full overflow-hidden p-4 sm:p-5">
       <div className="mb-4">
         <h2 className="font-bold">リアルタイム分析</h2>
       </div>

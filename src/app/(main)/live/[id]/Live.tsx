@@ -8,6 +8,7 @@ import { MoreVideo } from "@/components/moreVideo";
 import { getChannel } from "@/requests/channel";
 import { StreamComments } from "@/components/stream-comments";
 import { ListenerAnalyticsProvider } from "./listener-analytics";
+import StreamReactionButtons from "@/components/stream-reaction-buttons";
 
 interface LiveProps {
   id: string;
@@ -29,20 +30,28 @@ export default async function LivePlayer({ id }: LiveProps) {
             </div>
             <div className="pt-2">
               <p className="mt-0 text-2xl font-bold">{live.title}</p>
-              <div className="flex w-[100%]">
-                <div className="relative w-[85px] h-[85px]">
-                  <img
-                    src={live.ch_icon}
-                    className="w-[80px] h-[80px] rounded-full aspect-square m-[auto] object-cover flex-shrink-0 min-w-[80px] m-[2.5px] mt-[0px]"
-                  />
-                  <div className="absolute bg-red-600 w-[85px] h-[25px] bottom-[0px] left-[0px] rounded-md">
-                    <p className=" text-white text-center font-semibold">ライブ配信</p>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center">
+                  <div className="relative h-[85px] w-[85px] shrink-0">
+                    <img
+                      src={live.ch_icon}
+                      alt={`${live.ch_name} icon`}
+                      className="m-[2.5px] mt-0 aspect-square h-[80px] w-[80px] min-w-[80px] rounded-full object-cover"
+                    />
+                    <div className="absolute bottom-0 left-0 h-[25px] w-[85px] rounded-md bg-red-600">
+                      <p className="text-center font-semibold text-white">ライブ配信</p>
+                    </div>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="mb-0 truncate text-xl font-bold">{live.ch_name}</p>
+                    <Viewer />
                   </div>
                 </div>
-                <div>
-                  <p className="font-bold mb-0 text-xl">{live.ch_name}</p>
-                  <Viewer />
-                </div>
+                <StreamReactionButtons
+                  streamId={live.id}
+                  initialLikeCount={live.like_count}
+                  initialDislikeCount={live.dislike_count}
+                />
               </div>
               <LiveOverview live={live} />
             </div>

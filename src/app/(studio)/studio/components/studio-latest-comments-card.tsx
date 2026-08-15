@@ -30,7 +30,10 @@ export default function StudioLatestCommentsCard({
   const error = initial ? "" : "最新コメントを読み込めませんでした。";
 
   return (
-    <section className="studio-card overflow-hidden" aria-labelledby="latest-comments-heading">
+    <section
+      className="studio-card min-w-0 max-w-full overflow-hidden"
+      aria-labelledby="latest-comments-heading"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--studio-border)] p-4 sm:p-5">
         <div>
           <h2 id="latest-comments-heading" className="font-bold">

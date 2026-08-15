@@ -12,6 +12,7 @@ import type {
   UploadSession,
 } from "@/types/studio";
 import type { ClipPage, ClipResource, CreateClipInput } from "@/types/clip";
+import type { ReactionAnalytics } from "@/types/reaction";
 
 export class StudioApiError extends Error {
   status: number;
@@ -136,6 +137,24 @@ export function getStudioStreams(
   params: { type?: "live" | "video"; status?: string; page?: number; per_page?: number } = {}
 ): Promise<StudioPage<StudioStream>> {
   return request(`/channels/${channelId}/streams${query(params)}`, token);
+}
+
+export async function getStudioReactionAnalytics(
+  channelId: number,
+  token: string
+): Promise<ReactionAnalytics> {
+  return data(
+    await request<{ data: ReactionAnalytics }>(`/channels/${channelId}/reaction-analytics`, token)
+  );
+}
+
+export async function getStudioStreamReactionAnalytics(
+  streamId: number,
+  token: string
+): Promise<ReactionAnalytics> {
+  return data(
+    await request<{ data: ReactionAnalytics }>(`/streams/${streamId}/reaction-analytics`, token)
+  );
 }
 
 export type StudioCommentListParams = {

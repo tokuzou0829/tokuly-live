@@ -30,6 +30,8 @@
 }
 
 .studio-card {
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--studio-border);
   border-radius: 14px;
   background: var(--studio-surface);

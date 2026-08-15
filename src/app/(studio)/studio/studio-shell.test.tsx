@@ -91,4 +91,20 @@ describe("Studio shell channel navigation", () => {
       screen.queryByRole("button", { name: "チャンネルとアカウントを切り替える" })
     ).not.toBeInTheDocument();
   });
+
+  it("contains detail content within the mobile viewport", () => {
+    render(
+      <StudioShell channels={[channel]} channel={channel} token="token" defaultIconUrl={null}>
+        <div>Detail content</div>
+      </StudioShell>
+    );
+
+    const main = screen.getByText("Detail content").closest("main");
+    expect(main).toHaveClass("min-w-0", "max-w-full", "overflow-x-hidden");
+    expect(screen.getByText("Detail content").parentElement).toHaveClass(
+      "w-full",
+      "min-w-0",
+      "max-w-[1800px]"
+    );
+  });
 });

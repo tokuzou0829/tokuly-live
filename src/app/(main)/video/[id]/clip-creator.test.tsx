@@ -48,6 +48,8 @@ const live = {
   ch_handle: "owner",
   subtitles: [],
   duration_seconds: 120,
+  like_count: 0,
+  dislike_count: 0,
 } satisfies Live;
 
 function PlaybackSetup({

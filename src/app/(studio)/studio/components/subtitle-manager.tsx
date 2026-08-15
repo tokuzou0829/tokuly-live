@@ -135,7 +135,7 @@ export default function SubtitleManager({
   };
 
   return (
-    <section className="studio-card p-5">
+    <section className="studio-card min-w-0 max-w-full overflow-hidden p-4 sm:p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h2 className="font-bold">字幕</h2>
         {initial.can_upload && (
@@ -278,7 +278,7 @@ export default function SubtitleManager({
                   type="file"
                   accept=".vtt,.srt"
                   required
-                  className="mt-2 h-auto py-2"
+                  className="mt-2 h-auto w-full min-w-0 max-w-full py-2"
                 />
               </div>
 

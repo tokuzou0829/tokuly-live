@@ -1094,16 +1094,16 @@ export default function ClipCreator({ live }: { live: Live }) {
             ref={triggerRef}
             type="button"
             variant="secondary"
-            className="rounded-full font-bold"
+            className="shrink-0 whitespace-nowrap rounded-full font-bold"
             disabled={checkingChannels}
             onClick={openClip}
           >
             {checkingChannels ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+              <Loader2 className="h-4 w-4 animate-spin sm:mr-2" aria-hidden="true" />
             ) : (
-              <Scissors className="mr-2 h-4 w-4" aria-hidden="true" />
+              <Scissors className="h-4 w-4 sm:mr-2" aria-hidden="true" />
             )}
-            クリップ
+            <span className="hidden sm:inline">クリップ</span>
           </Button>
         </PopoverAnchor>
 

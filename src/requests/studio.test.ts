@@ -11,6 +11,8 @@ import {
   getStudioCreatedClips,
   getStudioChannels,
   getStudioStreams,
+  getStudioReactionAnalytics,
+  getStudioStreamReactionAnalytics,
   getStudioStreamComments,
   removeStudioCommentReaction,
   StudioApiError,
@@ -35,6 +37,49 @@ describe("Studio API client", () => {
       expect.objectContaining({
         cache: "no-store",
         headers: expect.objectContaining({ Authorization: "Bearer secret-token" }),
+      })
+    );
+  });
+
+  it("loads channel reaction analytics", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ data: { timezone: "Asia/Tokyo", total_likes: 3 } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    await expect(getStudioReactionAnalytics(12, "token")).resolves.toEqual(
+      expect.objectContaining({ timezone: "Asia/Tokyo", total_likes: 3 })
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.example.test/v1/live/studio/channels/12/reaction-analytics",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer token" }),
+      })
+    );
+  });
+
+  it("loads reaction analytics for one stream", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: { scope: { type: "stream", id: 34 }, timezone: "Asia/Tokyo", total_likes: 2 },
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    );
+
+    await expect(getStudioStreamReactionAnalytics(34, "token")).resolves.toEqual(
+      expect.objectContaining({ scope: { type: "stream", id: 34 }, total_likes: 2 })
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.example.test/v1/live/studio/streams/34/reaction-analytics",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer token" }),
       })
     );
   });

@@ -5,6 +5,7 @@ import {
   getStudioStreamComments,
   getStudioSubtitles,
   getUploadSession,
+  getStudioStreamReactionAnalytics,
 } from "@/requests/studio";
 import { notFound } from "next/navigation";
 import ContentDeleteSection from "../../components/content-delete-section";
@@ -14,6 +15,7 @@ import SubtitleManager from "../../components/subtitle-manager";
 import VideoUploader from "../../components/video-uploader";
 import StudioClipList from "../../components/studio-clip-list";
 import StudioLatestCommentsCard from "../../components/studio-latest-comments-card";
+import StudioReactionAnalytics from "../../components/studio-reaction-analytics";
 
 export default async function VideoPage({
   params,
@@ -29,7 +31,7 @@ export default async function VideoPage({
   const ownsStream = channels.some((item) => Number(item.id) === Number(stream.channel_id));
   if (!ownsStream || stream.type !== "video") notFound();
   const clipPage = Math.max(1, Number(searchParams.clip_page) || 1);
-  const [upload, subtitles, clips, comments] = await Promise.all([
+  const [upload, subtitles, clips, comments, reactionAnalytics] = await Promise.all([
     getUploadSession(id, token),
     getStudioSubtitles(id, token).catch(() => ({ data: [], can_upload: false })),
     getStudioContentClips(stream.channel_id, token, {
@@ -38,13 +40,14 @@ export default async function VideoPage({
       per_page: 20,
     }),
     getStudioStreamComments(id, token, { view: "flat", per_page: 5, page: 1 }).catch(() => null),
+    getStudioStreamReactionAnalytics(id, token).catch(() => null),
   ]);
   const clipHref = (page: number) => `/studio/videos/${id}?clip_page=${page}`;
   return (
-    <div className="space-y-6">
-      <h1 className="studio-title">{stream.title}</h1>
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(380px,.8fr)]">
-        <div className="space-y-5">
+    <div className="min-w-0 max-w-full space-y-6">
+      <h1 className="studio-title break-words">{stream.title}</h1>
+      <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(380px,.8fr)]">
+        <div className="min-w-0 space-y-5">
           <StudioMonitor streamKey={stream.stream_key} />
           <VideoUploader streamId={id} token={token} initial={upload} />
           <SubtitleManager streamId={id} token={token} initial={subtitles} />
@@ -52,6 +55,7 @@ export default async function VideoPage({
         <StreamEditor stream={stream} token={token} />
       </div>
       <StudioLatestCommentsCard streamId={id} token={token} initial={comments} />
+      <StudioReactionAnalytics analytics={reactionAnalytics} />
       <StudioClipList
         title="この動画のクリップ"
         result={clips}

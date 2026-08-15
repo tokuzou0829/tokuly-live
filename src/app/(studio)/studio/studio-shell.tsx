@@ -197,8 +197,8 @@ export default function StudioShell({
           })}
         </nav>
       </aside>
-      <main className="min-h-screen pt-16 lg:pl-64">
-        <div className="mx-auto max-w-[1800px] p-4 md:p-6 xl:p-8">{children}</div>
+      <main className="min-h-screen min-w-0 max-w-full overflow-x-hidden pt-16 lg:pl-64">
+        <div className="mx-auto w-full min-w-0 max-w-[1800px] p-4 md:p-6 xl:p-8">{children}</div>
       </main>
       <ChannelCreateDialog
         token={token}

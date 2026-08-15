@@ -76,6 +76,11 @@ describe("StreamEditor streaming credentials", () => {
     expect(screen.queryByLabelText("配信URL")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("ストリームキー")).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "コンテンツ設定" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "コンテンツ設定" }).closest("form")).toHaveClass(
+      "min-w-0",
+      "max-w-full",
+      "overflow-hidden"
+    );
   });
 
   it("directs legacy live streams without a secret stream key to create a new stream", () => {

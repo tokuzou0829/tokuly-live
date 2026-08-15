@@ -120,9 +120,9 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
   };
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 max-w-full space-y-4">
       {stream.type === "live" && stream.status !== "end" && (
-        <section className="studio-card min-w-0 overflow-hidden p-5">
+        <section className="studio-card min-w-0 max-w-full overflow-hidden p-4 sm:p-5">
           <h2 className="font-bold">配信方法</h2>
           {stream.stream_key_secret ? (
             <>
@@ -217,7 +217,10 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
           )}
         </section>
       )}
-      <form onSubmit={submit} className="studio-card space-y-5 p-5">
+      <form
+        onSubmit={submit}
+        className="studio-card min-w-0 max-w-full space-y-5 overflow-hidden p-4 sm:p-5"
+      >
         <h2 className="font-bold">コンテンツ設定</h2>
         <StudioPublicLink stream={stream} />
         <div>
@@ -281,11 +284,11 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
         <div>
           <Label htmlFor="game-search">ゲーム</Label>
           {game ? (
-            <div className="mt-2 flex items-center gap-3 rounded-lg bg-[var(--studio-subtle)] p-3">
+            <div className="mt-2 flex min-w-0 items-center gap-3 rounded-lg bg-[var(--studio-subtle)] p-3">
               {game.image_url && (
                 <img src={game.image_url} alt="" className="h-14 w-10 rounded object-cover" />
               )}
-              <p className="flex-1 font-semibold">{game.name}</p>
+              <p className="min-w-0 flex-1 break-words font-semibold">{game.name}</p>
               <Button type="button" variant="ghost" size="sm" onClick={() => setGame(null)}>
                 解除
               </Button>

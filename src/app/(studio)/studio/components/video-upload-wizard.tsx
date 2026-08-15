@@ -332,7 +332,7 @@ export default function VideoUploadWizard({
                   onChange={(event) => setManualThumbnail(event.target.files?.[0] ?? null)}
                 />
                 <p className="mt-2 text-xs text-[var(--studio-muted)]">
-                  未指定の場合は動画の10%地点から自動生成します。
+                  サムネイル推奨サイズ:1920x180px
                 </p>
                 {manualThumbnail && (
                   <Button
