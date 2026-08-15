@@ -524,7 +524,7 @@ export function StreamComments({
                   <Tooltip>
                     <TooltipTrigger asChild>
                       <span
-                        className="relative mx-1 inline-flex h-7 w-7 shrink-0"
+                        className="relative mx-1 inline-flex h-8 w-8 shrink-0 items-center justify-center"
                         role="img"
                         aria-label={`${creatorName}さんが反応`}
                         tabIndex={0}
@@ -544,7 +544,7 @@ export function StreamComments({
                           </span>
                         )}
                         <Heart
-                          className="absolute bottom-0 right-0 h-3.5 w-3.5 text-rose-500"
+                          className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 text-rose-500"
                           fill="currentColor"
                           aria-hidden="true"
                         />
