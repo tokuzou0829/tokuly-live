@@ -16,6 +16,7 @@ export type StreamComment = {
   replies?: StreamComment[];
   has_more_replies?: boolean;
   next_reply_after_id?: number | null;
+  creator_reacted_at: string | null;
   created_at: string;
   updated_at: string;
   edited_at: string | null;

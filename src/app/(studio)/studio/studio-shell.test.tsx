@@ -59,6 +59,11 @@ describe("Studio shell channel navigation", () => {
       </StudioShell>
     );
 
+    expect(screen.getByRole("link", { name: "コメント" })).toHaveAttribute(
+      "href",
+      "/studio/comments"
+    );
+
     fireEvent.pointerDown(
       screen.getByRole("button", { name: "チャンネルとアカウントを切り替える" }),
       { button: 0, ctrlKey: false }

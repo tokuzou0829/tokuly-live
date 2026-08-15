@@ -14,6 +14,48 @@ export type StudioPage<T> = {
   meta: StudioPagination;
 };
 
+export type StudioCommentAuthor = {
+  id: number | null;
+  type: "user" | "channel";
+  channel_id: number | null;
+  name: string;
+  handle: string;
+  profile_photo_url: string | null;
+};
+
+export type StudioCommentStream = {
+  id: number;
+  title: string;
+  type: "live" | "video";
+  status: string;
+  stream_key: string;
+  thumbnail_url: string | null;
+};
+
+export type StudioComment = {
+  id: number;
+  parent_comment_id: number | null;
+  content: string;
+  author: StudioCommentAuthor;
+  reply_count: number;
+  replies?: StudioComment[];
+  has_more_replies?: boolean;
+  next_reply_after_id?: number | null;
+  stream?: StudioCommentStream;
+  creator_reacted_at: string | null;
+  created_at: string;
+  updated_at: string;
+  edited_at: string | null;
+};
+
+export type StudioCommentPage = StudioPage<StudioComment>;
+
+export type StudioCommentReplyPage = {
+  data: StudioComment[];
+  next_after_id: number | null;
+  has_more: boolean;
+};
+
 export type StudioChannel = {
   id: number;
   name: string;

@@ -4,6 +4,8 @@ import type {
   ListenerAnalytics,
   ReceivedStudioGift,
   StudioChannel,
+  StudioCommentPage,
+  StudioCommentReplyPage,
   StudioPage,
   StudioStream,
   StudioSubtitlesResponse,
@@ -134,6 +136,80 @@ export function getStudioStreams(
   params: { type?: "live" | "video"; status?: string; page?: number; per_page?: number } = {}
 ): Promise<StudioPage<StudioStream>> {
   return request(`/channels/${channelId}/streams${query(params)}`, token);
+}
+
+export type StudioCommentListParams = {
+  view?: "flat" | "threaded";
+  query?: string;
+  author?: string;
+  author_type?: "user" | "channel";
+  from?: string;
+  to?: string;
+  stream_id?: number;
+  per_page?: number;
+  page?: number;
+};
+
+export function getStudioChannelComments(
+  channelId: number,
+  token: string,
+  params: StudioCommentListParams = {}
+): Promise<StudioCommentPage> {
+  return request(`/channels/${channelId}/comments${query(params)}`, token);
+}
+
+export function getStudioStreamComments(
+  streamId: number,
+  token: string,
+  params: Omit<StudioCommentListParams, "stream_id"> = {}
+): Promise<StudioCommentPage> {
+  return request(`/streams/${streamId}/comments${query(params)}`, token);
+}
+
+export function getStudioCommentReplies(
+  streamId: number,
+  commentId: number,
+  token: string,
+  afterId?: number | null
+): Promise<StudioCommentReplyPage> {
+  return request(
+    `/streams/${streamId}/comments/${commentId}/replies${query({
+      after_id: afterId ?? undefined,
+    })}`,
+    token
+  );
+}
+
+export function deleteStudioComment(
+  streamId: number,
+  commentId: number,
+  token: string
+): Promise<void> {
+  return request(`/streams/${streamId}/comments/${commentId}`, token, { method: "DELETE" });
+}
+
+export async function addStudioCommentReaction(
+  streamId: number,
+  commentId: number,
+  token: string
+): Promise<string> {
+  return data(
+    await request<{ data: { creator_reacted_at: string } }>(
+      `/streams/${streamId}/comments/${commentId}/reaction`,
+      token,
+      { method: "PUT" }
+    )
+  ).creator_reacted_at;
+}
+
+export function removeStudioCommentReaction(
+  streamId: number,
+  commentId: number,
+  token: string
+): Promise<void> {
+  return request(`/streams/${streamId}/comments/${commentId}/reaction`, token, {
+    method: "DELETE",
+  });
 }
 
 export async function createStudioClip(

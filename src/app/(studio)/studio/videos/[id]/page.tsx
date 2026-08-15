@@ -2,6 +2,7 @@ import { requireStudioContext } from "@/lib/studio-context";
 import {
   getStudioContentClips,
   getStudioStream,
+  getStudioStreamComments,
   getStudioSubtitles,
   getUploadSession,
 } from "@/requests/studio";
@@ -12,6 +13,7 @@ import StudioMonitor from "../../components/studio-monitor";
 import SubtitleManager from "../../components/subtitle-manager";
 import VideoUploader from "../../components/video-uploader";
 import StudioClipList from "../../components/studio-clip-list";
+import StudioLatestCommentsCard from "../../components/studio-latest-comments-card";
 
 export default async function VideoPage({
   params,
@@ -27,7 +29,7 @@ export default async function VideoPage({
   const ownsStream = channels.some((item) => Number(item.id) === Number(stream.channel_id));
   if (!ownsStream || stream.type !== "video") notFound();
   const clipPage = Math.max(1, Number(searchParams.clip_page) || 1);
-  const [upload, subtitles, clips] = await Promise.all([
+  const [upload, subtitles, clips, comments] = await Promise.all([
     getUploadSession(id, token),
     getStudioSubtitles(id, token).catch(() => ({ data: [], can_upload: false })),
     getStudioContentClips(stream.channel_id, token, {
@@ -35,6 +37,7 @@ export default async function VideoPage({
       page: clipPage,
       per_page: 20,
     }),
+    getStudioStreamComments(id, token, { view: "flat", per_page: 5, page: 1 }).catch(() => null),
   ]);
   const clipHref = (page: number) => `/studio/videos/${id}?clip_page=${page}`;
   return (
@@ -48,6 +51,7 @@ export default async function VideoPage({
         </div>
         <StreamEditor stream={stream} token={token} />
       </div>
+      <StudioLatestCommentsCard streamId={id} token={token} initial={comments} />
       <StudioClipList
         title="この動画のクリップ"
         result={clips}

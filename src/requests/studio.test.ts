@@ -2,11 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createStudioChannel,
   createStudioClip,
+  addStudioCommentReaction,
   deleteStudioClip,
+  deleteStudioComment,
+  getStudioChannelComments,
+  getStudioCommentReplies,
   getStudioContentClips,
   getStudioCreatedClips,
   getStudioChannels,
   getStudioStreams,
+  getStudioStreamComments,
+  removeStudioCommentReaction,
   StudioApiError,
   updateStudioStream,
 } from "./studio";
@@ -189,6 +195,108 @@ describe("Studio API client", () => {
     expect(fetch).toHaveBeenCalledWith(
       "https://api.example.test/v1/live/studio/channels/12/clips/A%2FB",
       expect.objectContaining({ method: "DELETE" })
+    );
+  });
+
+  it("loads channel comments with encoded Studio filters", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ data: [], links: {}, meta: { total: 0 } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    await getStudioChannelComments(12, "token", {
+      view: "threaded",
+      query: "ありがとう & hello",
+      author: "viewer name",
+      author_type: "user",
+      from: "2026-08-01T00:00:00+09:00",
+      to: "2026-08-31T23:59:59+09:00",
+      stream_id: 34,
+      per_page: 20,
+      page: 2,
+    });
+
+    const url = String(vi.mocked(fetch).mock.calls[0][0]);
+    expect(url).toContain("/v1/live/studio/channels/12/comments?");
+    const params = new URL(url).searchParams;
+    expect(Object.fromEntries(params)).toEqual({
+      view: "threaded",
+      query: "ありがとう & hello",
+      author: "viewer name",
+      author_type: "user",
+      from: "2026-08-01T00:00:00+09:00",
+      to: "2026-08-31T23:59:59+09:00",
+      stream_id: "34",
+      per_page: "20",
+      page: "2",
+    });
+  });
+
+  it("loads stream comments and paginates direct replies", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ data: [], links: {}, meta: { total: 0 } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+    await getStudioStreamComments(34, "token", { view: "flat", page: 1 });
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://api.example.test/v1/live/studio/streams/34/comments?view=flat&page=1",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer token" }),
+      })
+    );
+
+    await getStudioCommentReplies(34, 100, "token", 153);
+    expect(fetch).toHaveBeenLastCalledWith(
+      "https://api.example.test/v1/live/studio/streams/34/comments/100/replies?after_id=153",
+      expect.any(Object)
+    );
+  });
+
+  it("deletes a Studio comment without parsing the 204 response", async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }));
+    await expect(deleteStudioComment(34, 100, "token")).resolves.toBeNull();
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.example.test/v1/live/studio/streams/34/comments/100",
+      expect.objectContaining({ method: "DELETE" })
+    );
+  });
+
+  it("adds a creator reaction without a request body and returns its timestamp", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ data: { creator_reacted_at: "2026-08-15T12:00:00+09:00" } }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    await expect(addStudioCommentReaction(34, 100, "token")).resolves.toBe(
+      "2026-08-15T12:00:00+09:00"
+    );
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.example.test/v1/live/studio/streams/34/comments/100/reaction",
+      expect.objectContaining({
+        method: "PUT",
+        headers: expect.objectContaining({ Authorization: "Bearer token" }),
+      })
+    );
+    const init = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    expect(init.body).toBeUndefined();
+  });
+
+  it("removes a creator reaction without parsing the 204 response", async () => {
+    vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }));
+
+    await expect(removeStudioCommentReaction(34, 100, "token")).resolves.toBeNull();
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.example.test/v1/live/studio/streams/34/comments/100/reaction",
+      expect.objectContaining({
+        method: "DELETE",
+        headers: expect.objectContaining({ Authorization: "Bearer token" }),
+      })
     );
   });
 });

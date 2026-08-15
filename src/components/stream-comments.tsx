@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Flag,
+  Heart,
   Loader2,
   MessageCircle,
   MoreHorizontal,
@@ -30,6 +31,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   CommentApiError,
   createStreamComment,
@@ -47,6 +49,8 @@ type Props = {
   streamId: number;
   session: Session | null;
   streamChannelId: number;
+  creatorName: string;
+  creatorIconUrl: string | null;
 };
 
 function errorMessage(error: unknown, fallback: string): string {
@@ -135,7 +139,13 @@ function removeCommentTree(
   return { comments: next, removed };
 }
 
-export function StreamComments({ streamId, session, streamChannelId }: Props) {
+export function StreamComments({
+  streamId,
+  session,
+  streamChannelId,
+  creatorName,
+  creatorIconUrl,
+}: Props) {
   const [comments, setComments] = useState<StreamComment[]>([]);
   const [nextBeforeId, setNextBeforeId] = useState<number | null>(null);
   const [hasMore, setHasMore] = useState(false);
@@ -496,7 +506,7 @@ export function StreamComments({ streamId, session, streamChannelId }: Props) {
             )}
 
             {editingId !== comment.id && (
-              <div className="mt-2 flex flex-wrap gap-1">
+              <div className="mt-2 flex flex-wrap items-center gap-1">
                 {token && (
                   <Button
                     type="button"
@@ -509,6 +519,39 @@ export function StreamComments({ streamId, session, streamChannelId }: Props) {
                     <ReplyIcon className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
                     返信
                   </Button>
+                )}
+                {comment.creator_reacted_at !== null && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span
+                        className="relative mx-1 inline-flex h-7 w-7 shrink-0"
+                        role="img"
+                        aria-label={`${creatorName}さんが反応`}
+                        tabIndex={0}
+                      >
+                        {creatorIconUrl ? (
+                          <img
+                            src={creatorIconUrl}
+                            alt=""
+                            className="h-6 w-6 rounded-full object-cover"
+                          />
+                        ) : (
+                          <span
+                            className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-800 text-[10px] font-bold text-white"
+                            aria-hidden="true"
+                          >
+                            {creatorName.slice(0, 1)}
+                          </span>
+                        )}
+                        <Heart
+                          className="absolute bottom-0 right-0 h-3.5 w-3.5 text-rose-500"
+                          fill="currentColor"
+                          aria-hidden="true"
+                        />
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent>{creatorName}さんが反応</TooltipContent>
+                  </Tooltip>
                 )}
                 {isAuthor && (
                   <Button

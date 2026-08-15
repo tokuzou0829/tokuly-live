@@ -7,7 +7,7 @@ export const studioPublishingSettings: ReadonlyArray<{
   { value: "public", label: "公開" },
   { value: "hidden_from_feed", label: "フィードに表示しない" },
   { value: "link", label: "リンク限定" },
-  { value: "friend", label: "フレンド限定" },
+  { value: "friend", label: "フレンド/リンク限定(フレンドのフィードにのみ表示)" },
 ];
 
 export const studioPublishingSettingLabels = Object.fromEntries(

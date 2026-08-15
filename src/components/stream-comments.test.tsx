@@ -2,7 +2,7 @@ import React from "react";
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Session } from "next-auth";
-import { StreamComments } from "./stream-comments";
+import { StreamComments as StreamCommentsComponent } from "./stream-comments";
 import {
   createStreamComment,
   deleteStreamComment,
@@ -11,6 +11,26 @@ import {
   updateStreamComment,
 } from "@/requests/comments";
 import type { StreamComment } from "@/types/comment";
+import { TooltipProvider } from "@/components/ui/tooltip";
+
+type StreamCommentsProps = React.ComponentProps<typeof StreamCommentsComponent>;
+
+function StreamComments({
+  creatorName = "配信者",
+  creatorIconUrl = "https://example.test/creator.png",
+  ...props
+}: Omit<StreamCommentsProps, "creatorName" | "creatorIconUrl"> &
+  Partial<Pick<StreamCommentsProps, "creatorName" | "creatorIconUrl">>) {
+  return (
+    <TooltipProvider delayDuration={0}>
+      <StreamCommentsComponent
+        {...props}
+        creatorName={creatorName}
+        creatorIconUrl={creatorIconUrl}
+      />
+    </TooltipProvider>
+  );
+}
 
 vi.mock("next-auth/react", () => ({ signIn: vi.fn() }));
 vi.mock("@/requests/comments", () => ({
@@ -39,6 +59,7 @@ function makeComment(overrides: Partial<StreamComment> = {}): StreamComment {
       profile_photo_url: "https://example.test/avatar.png",
     },
     reply_count: 0,
+    creator_reacted_at: null,
     created_at: "2026-07-30T10:00:00+09:00",
     updated_at: "2026-07-30T10:00:00+09:00",
     edited_at: null,
@@ -243,6 +264,80 @@ describe("StreamComments", () => {
     fireEvent.click(screen.getByRole("button", { name: "返信1件を表示" }));
     expect(await screen.findByText("孫返信")).toBeInTheDocument();
     expect(getStreamCommentReplies).toHaveBeenCalledWith(3, 11, undefined);
+  });
+
+  it("shows the creator icon and heart on reacted root comments and nested replies", async () => {
+    const reactedAt = "2026-08-15T12:00:00+09:00";
+    const reply = makeComment({
+      id: 11,
+      parent_comment_id: 10,
+      content: "反応済みの返信",
+      creator_reacted_at: reactedAt,
+    });
+    vi.mocked(getStreamComments).mockResolvedValue({
+      data: [
+        makeComment({
+          creator_reacted_at: reactedAt,
+          reply_count: 1,
+          replies: [reply],
+          has_more_replies: false,
+        }),
+      ],
+      next_before_id: null,
+      has_more: false,
+    });
+    render(
+      <StreamComments
+        streamId={3}
+        streamChannelId={7}
+        session={session}
+        creatorName="配信チャンネル"
+        creatorIconUrl="https://example.test/stream-creator.png"
+      />
+    );
+
+    const rootReaction = await screen.findByRole("img", {
+      name: "配信チャンネルさんが反応",
+    });
+    expect(rootReaction.parentElement).toContainElement(
+      screen.getByRole("button", { name: "返信" })
+    );
+    expect(rootReaction.querySelector("svg")?.parentElement).toBe(rootReaction);
+    fireEvent.focus(rootReaction);
+    expect(await screen.findByRole("tooltip")).toHaveTextContent("配信チャンネルさんが反応");
+    fireEvent.click(screen.getByRole("button", { name: "返信1件を表示" }));
+    expect(screen.getAllByRole("img", { name: "配信チャンネルさんが反応" })).toHaveLength(2);
+    expect(
+      document.querySelectorAll('img[src="https://example.test/stream-creator.png"]')
+    ).toHaveLength(2);
+  });
+
+  it("uses the creator name fallback and hides the badge on unreacted comments", async () => {
+    vi.mocked(getStreamComments).mockResolvedValue({
+      data: [
+        makeComment({ id: 10, content: "未反応" }),
+        makeComment({
+          id: 11,
+          content: "反応済み",
+          creator_reacted_at: "2026-08-15T12:00:00+09:00",
+        }),
+      ],
+      next_before_id: null,
+      has_more: false,
+    });
+    render(
+      <StreamComments
+        streamId={3}
+        streamChannelId={7}
+        session={null}
+        creatorName="配信チャンネル"
+        creatorIconUrl={null}
+      />
+    );
+
+    await screen.findByText("反応済み");
+    expect(screen.getAllByRole("img", { name: "配信チャンネルさんが反応" })).toHaveLength(1);
+    expect(screen.getByText("配", { selector: "span" })).toBeInTheDocument();
   });
 
   it("edits and deletes a nested reply", async () => {

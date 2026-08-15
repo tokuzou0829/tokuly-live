@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
+import StudioPublicLink from "./studio-public-link";
 
 export default function StreamEditor({ stream, token }: { stream: StudioStream; token: string }) {
   const router = useRouter();
@@ -195,11 +196,6 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
                     ブラウザから配信 <ExternalLink className="ml-2 h-4 w-4" />
                   </a>
                 </Button>
-                <Button asChild variant="outline">
-                  <a href={stream.urls.public} target="_blank" rel="noreferrer">
-                    公開ページ <ExternalLink className="ml-2 h-4 w-4" />
-                  </a>
-                </Button>
               </div>
             </>
           ) : (
@@ -223,6 +219,7 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
       )}
       <form onSubmit={submit} className="studio-card space-y-5 p-5">
         <h2 className="font-bold">コンテンツ設定</h2>
+        <StudioPublicLink stream={stream} />
         <div>
           <Label htmlFor="title">タイトル</Label>
           <Input

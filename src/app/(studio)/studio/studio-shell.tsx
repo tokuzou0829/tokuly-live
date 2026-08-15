@@ -35,6 +35,7 @@ import StudioCreateMenu from "./components/studio-create-menu";
 const links = [
   { href: "/studio", label: "ダッシュボード", icon: LayoutDashboard },
   { href: "/studio/content", label: "コンテンツ", icon: Video },
+  { href: "/studio/comments", label: "コメント", icon: MessageSquare },
   { href: "/studio/clips", label: "クリップ", icon: Scissors },
   { href: "/studio/gifts", label: "ギフト", icon: Gift },
   { href: "/studio/chat-embed", label: "チャット埋め込み", icon: MessageSquare },

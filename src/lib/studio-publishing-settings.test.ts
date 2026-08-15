@@ -10,7 +10,7 @@ describe("studio publishing settings", () => {
       public: "公開",
       hidden_from_feed: "フィードに表示しない",
       link: "リンク限定",
-      friend: "フレンド限定",
+      friend: "フレンド/リンク限定(フレンドのフィードにのみ表示)",
     });
     expect(studioPublishingSettings).toHaveLength(4);
   });

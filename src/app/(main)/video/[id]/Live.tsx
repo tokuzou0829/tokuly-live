@@ -76,6 +76,8 @@ export default async function LivePlayer({ id }: LiveProps) {
               streamId={live.id}
               session={session}
               streamChannelId={Number(channel.id)}
+              creatorName={live.ch_name}
+              creatorIconUrl={live.ch_icon}
             />
           </div>
         </div>
