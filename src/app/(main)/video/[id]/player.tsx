@@ -73,6 +73,13 @@ import {
 } from "@/lib/subtitles";
 import { useArchivePlayback } from "./archive-playback-context";
 import { clipDisplayToMediaTime, clipMediaToDisplayTime } from "@/lib/clip";
+import {
+  legacyVideoPreviewFrameAt,
+  parseVideoPreviewManifest,
+  videoPreviewFrameAt,
+  type VideoPreviewFrame,
+  type VideoPreviewManifest,
+} from "@/lib/video-preview";
 
 interface VideoProps {
   id: string;
@@ -259,10 +266,11 @@ function Player(props: VideoProps) {
   const [buffer, setBuffer] = useState(0);
   const [isLoop, setIsLoop] = useState(false);
 
-  const previewBaseUrl = `https://live-data.tokuly.com/videos/hls/${id}/video_preview/video_preview_`;
-  const [previewPosition, setPreviewPosition] = useState({ x: 0, y: 0 });
+  const previewDirectoryUrl = `https://live-data.tokuly.com/videos/hls/${id}/video_preview/`;
+  const previewBaseUrl = `${previewDirectoryUrl}video_preview_`;
   const [showPreview, setShowPreview] = useState(false);
-  const [currentPreviewUrl, setCurrentPreviewUrl] = useState("");
+  const [previewManifest, setPreviewManifest] = useState<VideoPreviewManifest | null>(null);
+  const [previewFrame, setPreviewFrame] = useState<VideoPreviewFrame | null>(null);
   const [hoverPosition, setHoverPosition] = useState(0);
   const previewRef = useRef<HTMLDivElement>(null);
   const [previewTime, setPreviewTime] = useState(0);
@@ -434,28 +442,47 @@ function Player(props: VideoProps) {
 
   useEffect(() => {
     let isCancelled = false;
+    const controller = new AbortController();
     const previewImage = new Image();
 
     setIsPreviewAvailable(false);
+    setPreviewManifest(null);
+    setPreviewFrame(null);
 
-    previewImage.onload = () => {
-      if (!isCancelled) {
-        setIsPreviewAvailable(true);
-      }
+    const detectLegacyPreview = () => {
+      previewImage.onload = () => {
+        if (!isCancelled) setIsPreviewAvailable(true);
+      };
+      previewImage.onerror = () => {
+        if (!isCancelled) setIsPreviewAvailable(false);
+      };
+      previewImage.src = `${previewBaseUrl}001.jpg`;
     };
-    previewImage.onerror = () => {
-      if (!isCancelled) {
-        setIsPreviewAvailable(false);
-      }
-    };
-    previewImage.src = `${previewBaseUrl}001.jpg`;
+
+    const manifestUrl = `${previewDirectoryUrl}manifest.json`;
+    void fetch(manifestUrl, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Preview manifest is unavailable");
+        const manifest = parseVideoPreviewManifest(await response.json(), manifestUrl);
+        if (!manifest) throw new Error("Preview manifest is invalid");
+        if (!isCancelled) {
+          setPreviewManifest(manifest);
+          setIsPreviewAvailable(true);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!isCancelled && !(error instanceof DOMException && error.name === "AbortError")) {
+          detectLegacyPreview();
+        }
+      });
 
     return () => {
       isCancelled = true;
+      controller.abort();
       previewImage.onload = null;
       previewImage.onerror = null;
     };
-  }, [previewBaseUrl]);
+  }, [previewBaseUrl, previewDirectoryUrl]);
 
   // コンポーネントがアンマウントされたときにクリーンアップ
   useEffect(() => {
@@ -958,23 +985,11 @@ function Player(props: VideoProps) {
     const sourcePreviewTime = mediaTimeFor(displayPreviewTime);
 
     if (isPreviewAvailable) {
-      // プレビュー画像の位置を計算
-      const tileSetNumber = Math.max(1, Math.ceil(sourcePreviewTime / 125));
-      const tileSet = tileSetNumber.toString().padStart(3, "0");
-
-      // 5秒ごとに1フレームのインデックスを計算
-      const tileIndex = Math.round(sourcePreviewTime / 5);
-      const tileX = tileIndex % 5;
-      const tileY = Math.floor(tileIndex / 5);
-
-      setPreviewPosition({
-        x: -(tileX * 160), // 160はプレビュー画像の幅
-        y: -(tileY * 90), // 90はプレビュー画像の高さ
-      });
-
-      // タイルセットの番号に基づいて適切な画像URLを生成
-      const imageUrl = `${previewBaseUrl}${tileSet}.jpg`;
-      setCurrentPreviewUrl(imageUrl);
+      setPreviewFrame(
+        previewManifest
+          ? videoPreviewFrameAt(previewManifest, sourcePreviewTime)
+          : legacyVideoPreviewFrameAt(previewBaseUrl, sourcePreviewTime)
+      );
     }
 
     setShowPreview(true);
@@ -1164,16 +1179,18 @@ function Player(props: VideoProps) {
                             }% - 80px), calc(100% - 160px))`,
                           }}
                         >
-                          {isPreviewAvailable && currentPreviewUrl && (
+                          {isPreviewAvailable && previewFrame && (
                             <div
                               ref={previewRef}
                               className="h-[90px] overflow-hidden pointer-events-none rounded border-white border"
                             >
                               <div
-                                className="w-[800px] h-[450px]" // 10x10タイルの全体サイズ
+                                className="h-full w-full"
                                 style={{
-                                  backgroundImage: `url(${currentPreviewUrl})`,
-                                  backgroundPosition: `${previewPosition.x}px ${previewPosition.y}px`,
+                                  backgroundImage: `url(${previewFrame.imageUrl})`,
+                                  backgroundPosition: `${previewFrame.x}px ${previewFrame.y}px`,
+                                  backgroundRepeat: "no-repeat",
+                                  backgroundSize: `${previewFrame.sheetWidth}px ${previewFrame.sheetHeight}px`,
                                 }}
                               />
                             </div>
