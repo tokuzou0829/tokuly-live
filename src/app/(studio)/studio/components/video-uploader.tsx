@@ -16,6 +16,7 @@ const stateLabel: Record<string, string> = {
   encode: "エンコード中",
   complete: "公開準備完了",
   error: "処理に失敗しました",
+  upload: "ファイルの確認中"
 };
 
 const terminalStates = new Set(["complete", "error", "file_hash_not_much"]);
@@ -136,7 +137,7 @@ export default function VideoUploader({
               </div>
               <p className="mt-2 text-center text-sm">
                 {uploadPhase === "hashing"
-                  ? "ファイルハッシュを生成中…"
+                  ? "ファイルを確認中…"
                   : uploadPhase === "preparing"
                     ? "アップロードを準備中…"
                     : `転送中 ${progress}%`}

@@ -25,7 +25,7 @@ type ThumbnailState = "idle" | "generating" | "ready" | "failed";
 
 const phaseLabel: Record<ProgressPhase, string> = {
   creating: "動画枠を作成中…",
-  hashing: "ファイルハッシュを生成中…",
+  hashing: "ファイルを確認中…",
   preparing: "アップロードを準備中…",
   uploading: "アップロード中",
 };

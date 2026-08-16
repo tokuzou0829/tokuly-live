@@ -5,11 +5,7 @@ import { ExternalLink } from "lucide-react";
 import Link from "next/link";
 import GiftAction from "../components/gift-action";
 export const metadata = { title: "ギフト" };
-export default async function GiftsPage({
-  searchParams,
-}: {
-  searchParams: { page?: string };
-}) {
+export default async function GiftsPage({ searchParams }: { searchParams: { page?: string } }) {
   const { token } = await requireStudioContext();
   const page = Math.max(1, Number(searchParams.page) || 1);
   const result = await getReceivedGifts(token, page);
@@ -46,11 +42,17 @@ export default async function GiftsPage({
                 </p>
               </div>
               <p className="text-xl font-bold">¥{gift.amount.toLocaleString()}</p>
-              {gift.accessed_at ? (
-                <span className="text-sm text-[var(--studio-muted)]">受取済み</span>
-              ) : (
-                <GiftAction id={gift.id} token={token} type="claim" />
-              )}
+              <div className="flex items-center gap-3">
+                {gift.accessed_at && (
+                  <span className="text-sm text-[var(--studio-muted)]">アクセス済み</span>
+                )}
+                <GiftAction
+                  id={gift.id}
+                  token={token}
+                  type="claim"
+                  accessed={Boolean(gift.accessed_at)}
+                />
+              </div>
             </div>
           ))}
           {result.data.length === 0 && (
@@ -68,9 +70,7 @@ export default async function GiftsPage({
               {page} / {result.meta.last_page}
             </span>
             <Button asChild variant="outline" size="sm">
-              <Link
-                href={`/studio/gifts?page=${Math.min(result.meta.last_page, page + 1)}`}
-              >
+              <Link href={`/studio/gifts?page=${Math.min(result.meta.last_page, page + 1)}`}>
                 次へ
               </Link>
             </Button>
