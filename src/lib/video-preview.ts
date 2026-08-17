@@ -13,6 +13,8 @@ export type VideoPreviewFrame = {
   imageUrl: string;
   x: number;
   y: number;
+  tileWidth: number;
+  tileHeight: number;
   sheetWidth: number;
   sheetHeight: number;
 };
@@ -68,10 +70,11 @@ export function videoPreviewFrameAt(
   timeSeconds: number
 ): VideoPreviewFrame | null {
   if (!Number.isFinite(timeSeconds)) return null;
-  const frameIndex = Math.min(
-    manifest.frameCount - 1,
-    Math.max(0, Math.floor(timeSeconds / manifest.intervalSeconds))
-  );
+  // Generated previews are aligned to the end of their sampling interval.
+  // Compensate for that offset so an 8-second preview is selected at 8 seconds,
+  // rather than selecting the following 16-second preview.
+  const intervalFrameIndex = Math.max(0, Math.floor(timeSeconds / manifest.intervalSeconds) - 1);
+  const frameIndex = Math.min(manifest.frameCount - 1, intervalFrameIndex);
   const spriteCapacity = manifest.columns * manifest.rows;
   const spriteIndex = Math.floor(frameIndex / spriteCapacity);
   const tileIndex = frameIndex % spriteCapacity;
@@ -84,6 +87,8 @@ export function videoPreviewFrameAt(
     imageUrl,
     x: column === 0 ? 0 : -column * manifest.tileWidth,
     y: row === 0 ? 0 : -row * manifest.tileHeight,
+    tileWidth: manifest.tileWidth,
+    tileHeight: manifest.tileHeight,
     sheetWidth: manifest.columns * manifest.tileWidth,
     sheetHeight: manifest.rows * manifest.tileHeight,
   };
@@ -104,6 +109,8 @@ export function legacyVideoPreviewFrameAt(
     imageUrl: `${previewBaseUrl}${String(spriteIndex).padStart(3, "0")}.jpg`,
     x: column === 0 ? 0 : -column * 160,
     y: row === 0 ? 0 : -row * 90,
+    tileWidth: 160,
+    tileHeight: 90,
     sheetWidth: 800,
     sheetHeight: 450,
   };

@@ -26,6 +26,12 @@ import {
   type ClipRange,
   updateClipRange,
 } from "@/lib/clip";
+import {
+  legacyVideoPreviewFrameAt,
+  parseVideoPreviewManifest,
+  videoPreviewFrameAt,
+  type VideoPreviewManifest,
+} from "@/lib/video-preview";
 import { createStudioClip, StudioApiError } from "@/requests/studio";
 import { getOwnedChannels } from "@/requests/owned-channels";
 import type { ClipResource } from "@/types/clip";
@@ -53,6 +59,9 @@ import { createPortal } from "react-dom";
 import { useArchivePlayback } from "./archive-playback-context";
 
 const FILMSTRIP_FRAMES = 8;
+const FILMSTRIP_HEIGHT = 96;
+const FILMSTRIP_TILE_INSET = 1;
+const TIMELINE_RULER_TICKS = 5;
 const TIMELINE_ZOOMS = [60, 120, 300] as const;
 const TIMELINE_HANDLE_HIT_WIDTH = 28;
 export type ClipEditorMode = "mobile" | "anchored" | "sidebar";
@@ -149,33 +158,68 @@ function ChannelSelectDialog({
 }
 
 function FilmstripFrame({
-  streamName,
+  previewBaseUrl,
+  previewManifest,
+  previewMode,
   posterUrl,
   time,
 }: {
-  streamName: string;
+  previewBaseUrl: string;
+  previewManifest: VideoPreviewManifest | null;
+  previewMode: "loading" | "manifest" | "legacy";
   posterUrl: string;
   time: number;
 }) {
-  const tileSet = String(Math.floor(time / 125) + 1).padStart(3, "0");
-  const tileIndex = Math.floor((time % 125) / 5);
-  const tileX = tileIndex % 5;
-  const tileY = Math.floor(tileIndex / 5);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const frame =
+    previewMode === "manifest" && previewManifest
+      ? videoPreviewFrameAt(previewManifest, time)
+      : previewMode === "legacy"
+        ? legacyVideoPreviewFrameAt(previewBaseUrl, time)
+        : null;
+  const insetX = frame && frame.tileWidth > FILMSTRIP_TILE_INSET * 2 ? FILMSTRIP_TILE_INSET : 0;
+  const insetY = frame && frame.tileHeight > FILMSTRIP_TILE_INSET * 2 ? FILMSTRIP_TILE_INSET : 0;
+  const visibleTileWidth = frame ? frame.tileWidth - insetX * 2 : 1;
+  const visibleTileHeight = frame ? frame.tileHeight - insetY * 2 : 1;
+  const scale = frame
+    ? Math.max(FILMSTRIP_HEIGHT / visibleTileHeight, containerWidth / visibleTileWidth)
+    : 1;
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateWidth = () => setContainerWidth(container.getBoundingClientRect().width);
+    updateWidth();
+    if (typeof ResizeObserver === "undefined") return;
+
+    const observer = new ResizeObserver(updateWidth);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div
-      className="h-full flex-1 bg-cover bg-center"
+      ref={containerRef}
+      className="relative h-full min-w-0 flex-1 overflow-hidden bg-cover bg-center"
       style={{ backgroundImage: posterUrl ? `url(${posterUrl})` : undefined }}
       aria-hidden="true"
     >
-      <div
-        className="h-full w-full"
-        style={{
-          backgroundImage: `url(https://live-data.tokuly.com/videos/hls/${streamName}/video_preview/video_preview_${tileSet}.jpg)`,
-          backgroundPosition: `${-tileX * 160}px ${-tileY * 90}px`,
-          backgroundRepeat: "no-repeat",
-          backgroundSize: "800px 450px",
-        }}
-      />
+      {frame && (
+        <div
+          data-testid="clip-filmstrip-frame"
+          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+          style={{
+            width: `${visibleTileWidth * scale}px`,
+            height: `${visibleTileHeight * scale}px`,
+            backgroundImage: `url(${frame.imageUrl})`,
+            backgroundPosition: `${(frame.x - insetX) * scale}px ${(frame.y - insetY) * scale}px`,
+            backgroundRepeat: "no-repeat",
+            backgroundSize: `${frame.sheetWidth * scale}px ${frame.sheetHeight * scale}px`,
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -213,6 +257,10 @@ function ClipTimeline({
     latest: ClipRange;
   } | null>(null);
   const [dragging, setDragging] = useState(false);
+  const previewDirectoryUrl = `https://live-data.tokuly.com/videos/hls/${streamName}/video_preview/`;
+  const previewBaseUrl = `${previewDirectoryUrl}video_preview_`;
+  const [previewManifest, setPreviewManifest] = useState<VideoPreviewManifest | null>(null);
+  const [previewMode, setPreviewMode] = useState<"loading" | "manifest" | "legacy">("loading");
   const window = clipTimelineWindow(windowFocus, durationTicks, zoomSeconds * 10);
   const windowSize = window.end - window.start;
   const frameTimes = useMemo(
@@ -222,6 +270,15 @@ function ClipTimeline({
           window.start + Math.round((windowSize * index) / Math.max(1, FILMSTRIP_FRAMES - 1))
         )
       ),
+    [window.start, windowSize]
+  );
+  const rulerTicks = useMemo(
+    () =>
+      Array.from({ length: TIMELINE_RULER_TICKS }, (_, index) => {
+        const ticks =
+          window.start + Math.round((windowSize * index) / Math.max(1, TIMELINE_RULER_TICKS - 1));
+        return { ticks, percent: (index / Math.max(1, TIMELINE_RULER_TICKS - 1)) * 100 };
+      }),
     [window.start, windowSize]
   );
   const startPercent = ((range.start - window.start) / windowSize) * 100;
@@ -234,6 +291,35 @@ function ClipTimeline({
     currentTimeTicks >= window.start && currentTimeTicks <= window.end
       ? ((currentTimeTicks - window.start) / windowSize) * 100
       : null;
+
+  useEffect(() => {
+    let isCancelled = false;
+    const controller = new AbortController();
+    const manifestUrl = `${previewDirectoryUrl}manifest.json`;
+
+    setPreviewManifest(null);
+    setPreviewMode("loading");
+    void fetch(manifestUrl, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Preview manifest is unavailable");
+        const manifest = parseVideoPreviewManifest(await response.json(), manifestUrl);
+        if (!manifest) throw new Error("Preview manifest is invalid");
+        if (!isCancelled) {
+          setPreviewManifest(manifest);
+          setPreviewMode("manifest");
+        }
+      })
+      .catch((error: unknown) => {
+        if (!isCancelled && !(error instanceof DOMException && error.name === "AbortError")) {
+          setPreviewMode("legacy");
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+      controller.abort();
+    };
+  }, [previewDirectoryUrl]);
 
   const moveSelectionTo = (targetCenter: number) => {
     const length = range.end - range.start;
@@ -308,15 +394,27 @@ function ClipTimeline({
             {frameTimes.map((time, index) => (
               <FilmstripFrame
                 key={`${index}-${time}`}
-                streamName={streamName}
+                previewBaseUrl={previewBaseUrl}
+                previewManifest={previewManifest}
+                previewMode={previewMode}
                 posterUrl={posterUrl}
                 time={time}
               />
             ))}
           </div>
-          <div className="pointer-events-none absolute inset-0 bg-black/50" />
           <div
-            className="pointer-events-none absolute inset-y-0 border-y-4 border-white bg-white/10"
+            data-testid="clip-selection-before"
+            className="pointer-events-none absolute inset-y-0 left-0 z-10 bg-black/55"
+            style={{ width: `${Math.max(0, Math.min(100, startPercent))}%` }}
+          />
+          <div
+            data-testid="clip-selection-after"
+            className="pointer-events-none absolute inset-y-0 right-0 z-10 bg-black/55"
+            style={{ width: `${Math.max(0, Math.min(100, 100 - startPercent - widthPercent))}%` }}
+          />
+          <div
+            data-testid="clip-selection"
+            className="pointer-events-none absolute inset-y-0 z-20 border-y-4 border-white bg-white/5 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.35)]"
             style={{ left: `${startPercent}%`, width: `${widthPercent}%` }}
           />
           {playheadPercent !== null && (
@@ -422,9 +520,25 @@ function ClipTimeline({
             }}
           />
         </div>
-        <div className="mt-2 flex justify-between font-mono text-xs text-muted-foreground">
-          <span>{formatClipTime(window.start)}</span>
-          <span>{formatClipTime(window.end)}</span>
+        <div className="relative mt-2 h-4 font-mono text-[10px] text-muted-foreground sm:text-[11px]">
+          {rulerTicks.map(({ ticks, percent }, index) => (
+            <span
+              key={`${ticks}-${index}`}
+              data-testid="clip-timeline-tick"
+              className={`absolute top-0 whitespace-nowrap ${
+                index === 0
+                  ? "left-0"
+                  : index === rulerTicks.length - 1
+                    ? "right-0"
+                    : "-translate-x-1/2"
+              }`}
+              style={
+                index === 0 || index === rulerTicks.length - 1 ? undefined : { left: `${percent}%` }
+              }
+            >
+              {formatClipTime(ticks)}
+            </span>
+          ))}
         </div>
       </div>
     </div>

@@ -46,7 +46,7 @@ describe("video preview manifest", () => {
     ).toBeNull();
   });
 
-  it("selects the correct sprite and tile at a boundary", () => {
+  it("does not select a preview from the following interval", () => {
     const manifest = parseVideoPreviewManifest(
       {
         version: 1,
@@ -62,9 +62,29 @@ describe("video preview manifest", () => {
     );
 
     expect(videoPreviewFrameAt(manifest!, 45 * 25)).toEqual({
+      imageUrl: "https://live-data.tokuly.com/videos/hls/demo/video_preview/video_preview_001.jpg",
+      x: -640,
+      y: -360,
+      tileWidth: 160,
+      tileHeight: 90,
+      sheetWidth: 800,
+      sheetHeight: 450,
+    });
+    expect(videoPreviewFrameAt(manifest!, 45 * 25 + 0.001)).toEqual({
+      imageUrl: "https://live-data.tokuly.com/videos/hls/demo/video_preview/video_preview_001.jpg",
+      x: -640,
+      y: -360,
+      tileWidth: 160,
+      tileHeight: 90,
+      sheetWidth: 800,
+      sheetHeight: 450,
+    });
+    expect(videoPreviewFrameAt(manifest!, 45 * 26)).toEqual({
       imageUrl: "https://live-data.tokuly.com/videos/hls/demo/video_preview/video_preview_002.jpg",
       x: 0,
       y: 0,
+      tileWidth: 160,
+      tileHeight: 90,
       sheetWidth: 800,
       sheetHeight: 450,
     });
@@ -87,6 +107,32 @@ describe("video preview manifest", () => {
 
     expect(videoPreviewFrameAt(manifest!, 999)?.x).toBe(-160);
   });
+
+  it("returns variable tile dimensions and positions from the manifest", () => {
+    const manifest = parseVideoPreviewManifest(
+      {
+        version: 1,
+        intervalSeconds: 10,
+        frameCount: 5,
+        tileWidth: 240,
+        tileHeight: 135,
+        columns: 2,
+        rows: 2,
+        sprites: ["sheet-a.jpg", "sheet-b.jpg"],
+      },
+      manifestUrl
+    );
+
+    expect(videoPreviewFrameAt(manifest!, 50)).toEqual({
+      imageUrl: "https://live-data.tokuly.com/videos/hls/demo/video_preview/sheet-b.jpg",
+      x: 0,
+      y: 0,
+      tileWidth: 240,
+      tileHeight: 135,
+      sheetWidth: 480,
+      sheetHeight: 270,
+    });
+  });
 });
 
 describe("legacy video previews", () => {
@@ -95,6 +141,8 @@ describe("legacy video previews", () => {
       imageUrl: "https://example.test/video_preview_002.jpg",
       x: 0,
       y: 0,
+      tileWidth: 160,
+      tileHeight: 90,
       sheetWidth: 800,
       sheetHeight: 450,
     });

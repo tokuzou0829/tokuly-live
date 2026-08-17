@@ -95,6 +95,7 @@ function renderCreator(source = live) {
 
 describe("ClipCreator", () => {
   beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, json: vi.fn() }));
     vi.stubGlobal("PointerEvent", MouseEvent);
     vi.stubGlobal(
       "ResizeObserver",
@@ -421,6 +422,86 @@ describe("ClipCreator", () => {
     expect(document.getElementById("clip-editor-slot")).toHaveTextContent("クリップを作成");
   });
 
+  it("renders filmstrip frames from the preview manifest", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        version: 1,
+        intervalSeconds: 30,
+        frameCount: 5,
+        tileWidth: 200,
+        tileHeight: 100,
+        columns: 2,
+        rows: 2,
+        sprites: ["sheet-a.jpg", "sheet-b.jpg"],
+      }),
+    } as unknown as Response);
+    vi.mocked(useSession).mockReturnValue({
+      status: "authenticated",
+      update: vi.fn(),
+      data: {
+        expires: "2099-01-01T00:00:00Z",
+        user: { id: "1", name: "User" },
+        activePostingIdentity: {
+          type: "channel",
+          accountId: "1",
+          channelId: 12,
+          name: "投稿チャンネル",
+          handle: "my-channel",
+          profilePhotoUrl: "",
+        },
+      },
+    });
+    renderCreator();
+    fireEvent.click(screen.getByRole("button", { name: "クリップ" }));
+
+    const frames = await screen.findAllByTestId("clip-filmstrip-frame");
+    expect(fetch).toHaveBeenCalledWith(
+      "https://live-data.tokuly.com/videos/hls/video-key/video_preview/manifest.json",
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
+    );
+    expect(frames).toHaveLength(8);
+    expect(frames[0].style.backgroundImage).toContain("sheet-a.jpg");
+    expect(parseFloat(frames[0].style.width)).toBeGreaterThan(190);
+    expect(frames[0]).toHaveStyle({ height: "96px", backgroundRepeat: "no-repeat" });
+    expect(frames[2].style.backgroundPosition).toMatch(/^-/);
+    expect(frames[7].style.backgroundImage).toContain("sheet-a.jpg");
+    expect(frames[7].style.backgroundImage).not.toContain("sheet-b.jpg");
+  });
+
+  it.each([
+    ["returns 404", () => Promise.resolve({ ok: false, json: vi.fn() })],
+    [
+      "is invalid",
+      () => Promise.resolve({ ok: true, json: vi.fn().mockResolvedValue({ version: 2 }) }),
+    ],
+    ["cannot be fetched", () => Promise.reject(new TypeError("Network request failed"))],
+  ])("falls back to legacy filmstrip frames when the manifest %s", async (_case, response) => {
+    vi.mocked(fetch).mockImplementationOnce(response as unknown as typeof fetch);
+    vi.mocked(useSession).mockReturnValue({
+      status: "authenticated",
+      update: vi.fn(),
+      data: {
+        expires: "2099-01-01T00:00:00Z",
+        user: { id: "1", name: "User" },
+        activePostingIdentity: {
+          type: "channel",
+          accountId: "1",
+          channelId: 12,
+          name: "投稿チャンネル",
+          handle: "my-channel",
+          profilePhotoUrl: "",
+        },
+      },
+    });
+    renderCreator();
+    fireEvent.click(screen.getByRole("button", { name: "クリップ" }));
+
+    const frames = await screen.findAllByTestId("clip-filmstrip-frame");
+    expect(frames[0].style.backgroundImage).toContain("video_preview_001.jpg");
+    expect(frames[7].style.backgroundImage).toContain("video_preview_001.jpg");
+  });
+
   it("shows the current playback position on the detail timeline and follows updates", () => {
     vi.mocked(useSession).mockReturnValue({
       status: "authenticated",
@@ -441,6 +522,13 @@ describe("ClipCreator", () => {
     renderCreator();
     fireEvent.click(screen.getByRole("button", { name: "クリップ" }));
 
+    expect(screen.getAllByTestId("clip-timeline-tick")).toHaveLength(5);
+    expect(screen.getByTestId("clip-selection-before")).toHaveClass("bg-black/55");
+    expect(screen.getByTestId("clip-selection-after")).toHaveClass("bg-black/55");
+    expect(screen.getByTestId("clip-selection")).toHaveStyle({
+      left: `${(10 / 120) * 100}%`,
+      width: "50%",
+    });
     expect(screen.getByTestId("clip-playhead")).toHaveStyle({ left: `${(10 / 120) * 100}%` });
 
     fireEvent.click(screen.getByTestId("set-playback-start"));
