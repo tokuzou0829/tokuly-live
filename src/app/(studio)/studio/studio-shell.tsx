@@ -13,6 +13,7 @@ import type { StudioChannel } from "@/types/studio";
 import {
   Check,
   ChevronDown,
+  Download,
   Gift,
   LayoutDashboard,
   List,
@@ -175,7 +176,7 @@ export default function StudioShell({
         />
       )}
       <aside
-        className={`fixed bottom-0 left-0 top-16 z-30 w-64 border-r border-[var(--studio-border)] bg-[var(--studio-surface)] p-3 transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed bottom-0 left-0 top-16 z-30 flex w-64 flex-col border-r border-[var(--studio-border)] bg-[var(--studio-surface)] p-3 transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
         <nav className="space-y-1">
           {links.map((link) => {
@@ -196,6 +197,16 @@ export default function StudioShell({
             );
           })}
         </nav>
+        <div className="-mx-3 mt-auto border-t border-[var(--studio-border)] px-3 pt-3">
+          <Link
+            href="/studio/desktop"
+            onClick={() => setOpen(false)}
+            className="flex h-11 items-center gap-2.5 whitespace-nowrap rounded-lg px-3 text-[13px] font-medium transition-colors hover:bg-[var(--studio-subtle)]"
+          >
+            <Download className="h-[18px] w-[18px] shrink-0" aria-hidden="true" />
+            デスクトップ版Studioを使う
+          </Link>
+        </div>
       </aside>
       <main className="min-h-screen min-w-0 max-w-full overflow-x-hidden pt-16 lg:pl-64">
         <div className="mx-auto w-full min-w-0 max-w-[1800px] p-4 md:p-6 xl:p-8">{children}</div>
