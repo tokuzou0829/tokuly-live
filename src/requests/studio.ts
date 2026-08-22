@@ -84,6 +84,14 @@ export async function getStudioChannels(token: string): Promise<StudioChannel[]>
   return data(await request<{ data: StudioChannel[] }>("/channels", token));
 }
 
+export type StreamServerInfo = {
+  url: string;
+};
+
+export function getStreamServerInfo(token: string): Promise<StreamServerInfo> {
+  return request<StreamServerInfo>("/stream-server-info", token);
+}
+
 export type CreateStudioChannelInput = {
   name: string;
   handle: string;

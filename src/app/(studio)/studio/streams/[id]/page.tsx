@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { requireStudioContext } from "@/lib/studio-context";
 import {
   getListenerAnalytics,
+  getStreamServerInfo,
   getStudioContentClips,
   getStudioStream,
   getStudioStreamComments,
@@ -33,19 +34,23 @@ export default async function StreamPage({
   const channel = channels.find((item) => Number(item.id) === Number(stream.channel_id));
   if (!channel || stream.type !== "live") notFound();
   const clipPage = Math.max(1, Number(searchParams.clip_page) || 1);
-  const [analytics, subtitles, clips, comments, reactionAnalytics] = await Promise.all([
-    getListenerAnalytics(id, token).catch(() => ({ summary: null, timeline: [] })),
-    getStudioSubtitles(id, token).catch(() => ({ data: [], can_upload: false })),
-    stream.status === "end"
-      ? getStudioContentClips(stream.channel_id, token, {
-          source_video_id: id,
-          page: clipPage,
-          per_page: 20,
-        })
-      : Promise.resolve(null),
-    getStudioStreamComments(id, token, { view: "flat", per_page: 5, page: 1 }).catch(() => null),
-    getStudioStreamReactionAnalytics(id, token).catch(() => null),
-  ]);
+  const [analytics, subtitles, clips, comments, reactionAnalytics, streamServerInfo] =
+    await Promise.all([
+      getListenerAnalytics(id, token).catch(() => ({ summary: null, timeline: [] })),
+      getStudioSubtitles(id, token).catch(() => ({ data: [], can_upload: false })),
+      stream.status === "end"
+        ? getStudioContentClips(stream.channel_id, token, {
+            source_video_id: id,
+            page: clipPage,
+            per_page: 20,
+          })
+        : Promise.resolve(null),
+      getStudioStreamComments(id, token, { view: "flat", per_page: 5, page: 1 }).catch(() => null),
+      getStudioStreamReactionAnalytics(id, token).catch(() => null),
+      stream.status !== "end" && stream.stream_key_secret
+        ? getStreamServerInfo(token).catch(() => null)
+        : Promise.resolve(null),
+    ]);
 
   if (stream.status === "end") {
     return (
@@ -57,7 +62,7 @@ export default async function StreamPage({
             <StudioAnalytics streamId={id} token={token} initial={analytics} />
             <SubtitleManager streamId={id} token={token} initial={subtitles} />
           </div>
-          <StreamEditor stream={stream} token={token} />
+          <StreamEditor stream={stream} token={token} streamServerUrl={streamServerInfo?.url} />
         </div>
         <StudioLatestCommentsCard streamId={id} token={token} initial={comments} />
         <StudioReactionAnalytics analytics={reactionAnalytics} />
@@ -111,7 +116,7 @@ export default async function StreamPage({
         <StudioLatestCommentsCard streamId={id} token={token} initial={comments} />
       </div>
       <div className="min-w-0 lg:col-start-1 lg:row-start-5">
-        <StreamEditor stream={stream} token={token} />
+        <StreamEditor stream={stream} token={token} streamServerUrl={streamServerInfo?.url} />
       </div>
       <div className="min-w-0 lg:col-start-1 lg:row-start-6">
         <SubtitleManager streamId={id} token={token} initial={subtitles} />

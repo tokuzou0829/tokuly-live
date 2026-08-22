@@ -52,9 +52,13 @@ describe("StreamEditor streaming credentials", () => {
   });
 
   it("hides the stream key by default, reveals it on demand, and copies it while hidden", async () => {
-    render(<StreamEditor stream={stream} token="token" />);
+    render(
+      <StreamEditor stream={stream} token="token" streamServerUrl="rtmp://api.example.test/live" />
+    );
 
-    expect(screen.getByLabelText("配信URL")).toHaveValue("rtmp://rtmp.live.tokuly.com/live2");
+    expect(screen.getByLabelText("配信URL")).toHaveValue("rtmp://api.example.test/live");
+    fireEvent.click(screen.getByRole("button", { name: "配信URLをコピー" }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith("rtmp://api.example.test/live"));
     const streamKey = screen.getByLabelText("ストリームキー");
     expect(streamKey).toHaveAttribute("type", "password");
 
@@ -67,6 +71,13 @@ describe("StreamEditor streaming credentials", () => {
       "aria-pressed",
       "true"
     );
+  });
+
+  it("disables copying when the stream server API is unavailable", () => {
+    render(<StreamEditor stream={stream} token="token" streamServerUrl={null} />);
+
+    expect(screen.getByLabelText("配信URL")).toHaveValue("");
+    expect(screen.getByRole("button", { name: "配信URLをコピー" })).toBeDisabled();
   });
 
   it("treats an ended live stream as archived content without streaming controls", () => {

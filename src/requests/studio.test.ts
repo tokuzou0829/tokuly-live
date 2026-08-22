@@ -10,6 +10,7 @@ import {
   getStudioContentClips,
   getStudioCreatedClips,
   getStudioChannels,
+  getStreamServerInfo,
   getStudioStreams,
   getStudioReactionAnalytics,
   getStudioStreamReactionAnalytics,
@@ -34,6 +35,26 @@ describe("Studio API client", () => {
     ]);
     expect(fetch).toHaveBeenCalledWith(
       "https://api.example.test/v1/live/studio/channels",
+      expect.objectContaining({
+        cache: "no-store",
+        headers: expect.objectContaining({ Authorization: "Bearer secret-token" }),
+      })
+    );
+  });
+
+  it("loads the RTMP server URL from the Studio API", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ url: "rtmp://rtmp.live.tokuly.com/live2" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    await expect(getStreamServerInfo("secret-token")).resolves.toEqual({
+      url: "rtmp://rtmp.live.tokuly.com/live2",
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      "https://api.example.test/v1/live/studio/stream-server-info",
       expect.objectContaining({
         cache: "no-store",
         headers: expect.objectContaining({ Authorization: "Bearer secret-token" }),

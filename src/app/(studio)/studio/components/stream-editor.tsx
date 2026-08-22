@@ -22,7 +22,15 @@ import { useRouter } from "next/navigation";
 import React, { useEffect, useRef, useState } from "react";
 import StudioPublicLink from "./studio-public-link";
 
-export default function StreamEditor({ stream, token }: { stream: StudioStream; token: string }) {
+export default function StreamEditor({
+  stream,
+  token,
+  streamServerUrl,
+}: {
+  stream: StudioStream;
+  token: string;
+  streamServerUrl?: string | null;
+}) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
@@ -132,9 +140,10 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
                   <div className="mt-2 flex min-w-0 items-center gap-2">
                     <Input
                       type="text"
-                      value="rtmp://rtmp.live.tokuly.com/live2"
+                      value={streamServerUrl ?? ""}
                       readOnly
                       aria-label="配信URL"
+                      placeholder="配信URLを取得できませんでした"
                       className="min-w-0 flex-1 border-0 bg-transparent px-2 font-mono shadow-none focus-visible:ring-1"
                     />
                     <Button
@@ -142,7 +151,8 @@ export default function StreamEditor({ stream, token }: { stream: StudioStream; 
                       size="icon"
                       variant="ghost"
                       className="shrink-0"
-                      onClick={() => copy("rtmp://rtmp.live.tokuly.com/live2")}
+                      onClick={() => streamServerUrl && copy(streamServerUrl)}
+                      disabled={!streamServerUrl}
                       aria-label="配信URLをコピー"
                     >
                       <Copy className="h-4 w-4" />
