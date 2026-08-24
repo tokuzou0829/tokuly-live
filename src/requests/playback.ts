@@ -2,6 +2,8 @@ import { notifyTokulyUnauthorized } from "@/lib/auth-session-events";
 import type {
   PlaybackFinishInput,
   PlaybackProgressInput,
+  PlaybackSessionRestoreInput,
+  PlaybackSessionRestoreResult,
   PlaybackSessionStartInput,
   PlaybackSessionStartResult,
   PlaybackContentType,
@@ -64,6 +66,21 @@ export async function startPlaybackSession(
     headers: playbackHeaders(options),
     body: JSON.stringify(input),
   });
+  return payload.data;
+}
+
+export async function restorePlaybackSession(
+  input: PlaybackSessionRestoreInput,
+  options: { accessToken?: string; viewerToken?: string }
+): Promise<PlaybackSessionRestoreResult> {
+  const payload = await jsonRequest<{ data: PlaybackSessionRestoreResult }>(
+    "/playback-sessions/restore",
+    {
+      method: "POST",
+      headers: playbackHeaders(options),
+      body: JSON.stringify(input),
+    }
+  );
   return payload.data;
 }
 

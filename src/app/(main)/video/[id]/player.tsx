@@ -82,6 +82,7 @@ import {
 } from "@/lib/video-preview";
 import { usePlaybackSession } from "@/hooks/use-playback-session";
 import type { PlaybackContentType } from "@/types/playback";
+import { parsePlaybackStartTime, resolvePlaybackStartTime } from "@/lib/playback-position";
 
 interface VideoProps {
   id: string;
@@ -322,6 +323,36 @@ function Player(props: VideoProps) {
     [clipEnd, clipStart, isClipPlayback]
   );
 
+  const explicitStartTime = useMemo(() => {
+    return parsePlaybackStartTime(searchParams?.get("t"));
+  }, [searchParams]);
+  const initialDisplayTimeRef = useRef<number | null>(null);
+  const initialSeekTargetRef = useRef<number | null>(null);
+  const hlsManifestParsedRef = useRef(false);
+
+  useEffect(() => {
+    initialDisplayTimeRef.current = null;
+    initialSeekTargetRef.current = null;
+    hlsManifestParsedRef.current = false;
+  }, [id, props.playbackContent?.key, props.playbackContent?.type]);
+
+  const applyInitialDisplayTime = useCallback(
+    (displayTime: number) => {
+      const video = myRef.current;
+      if (!video) return;
+      initialDisplayTimeRef.current = displayTime;
+      const mediaTime = mediaTimeFor(displayTime);
+      initialSeekTargetRef.current = mediaTime;
+      updatePlaybackTime(mediaTime);
+      if (hlsManifestParsedRef.current || video.readyState >= HTMLMediaElement.HAVE_METADATA) {
+        video.currentTime = mediaTime;
+      }
+    },
+    [mediaTimeFor, updatePlaybackTime]
+  );
+  const applyInitialDisplayTimeRef = useRef(applyInitialDisplayTime);
+  applyInitialDisplayTimeRef.current = applyInitialDisplayTime;
+
   const playbackTracking = usePlaybackSession({
     enabled: Boolean(props.playbackContent),
     contentType: props.playbackContent?.type ?? "video",
@@ -335,6 +366,14 @@ function Player(props: VideoProps) {
     },
     onViewCountChange: props.onViewCountChange,
   });
+  const initialPlaybackTime = resolvePlaybackStartTime(
+    searchParams?.get("t"),
+    playbackTracking.resumePositionMs
+  );
+
+  useEffect(() => {
+    if (initialPlaybackTime !== null) applyInitialDisplayTime(initialPlaybackTime);
+  }, [applyInitialDisplayTime, initialPlaybackTime]);
 
   useEffect(() => {
     if (isWWF && myRef.current) {
@@ -580,7 +619,7 @@ function Player(props: VideoProps) {
           event.preventDefault(); // ページのスクロール防止
           if (!isWWF || isHost) {
             if (video.paused) {
-              video.play();
+              void video.play();
             } else {
               video.pause();
             }
@@ -649,7 +688,7 @@ function Player(props: VideoProps) {
   const toggleControls = () => {
     const video = myRef.current!;
     if (video.paused) {
-      video.play();
+      void video.play();
     } else {
       video.pause();
     }
@@ -665,12 +704,13 @@ function Player(props: VideoProps) {
     }
   };
   const handleVideoPlay = () => {
+    const video = myRef.current;
     if (
       isClipPlayback &&
-      myRef.current &&
-      (myRef.current.currentTime < clipStart || myRef.current.currentTime >= clipEnd - 0.05)
+      video &&
+      (video.currentTime < clipStart || video.currentTime >= clipEnd - 0.05)
     ) {
-      myRef.current.currentTime = clipStart;
+      video.currentTime = clipStart;
       updatePlaybackTime(clipStart);
     }
     setIsPlaying(true);
@@ -812,7 +852,6 @@ function Player(props: VideoProps) {
   useEffect(() => {
     let hls: Hls; // HLS.js インスタンスを保持する変数を定義
     const videoSrc = `https://live-data.tokuly.com/videos/hls/${id}/index.m3u8`;
-    const share_time = searchParams?.get("t");
     // Function to check the m3u8 file status
     const checkM3u8Status = () => {
       fetch(videoSrc, { method: "HEAD" }).then((response) => {
@@ -839,6 +878,7 @@ function Player(props: VideoProps) {
               setBuffer(bufferedSeconds);
             });
             hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+              hlsManifestParsedRef.current = true;
               const qualityMap = new Map();
               hls.levels.forEach((level) => {
                 const quality = level.height + "p";
@@ -858,11 +898,12 @@ function Player(props: VideoProps) {
               });
               setVideoQualityList(availableQualities);
 
-              const sharedTime = share_time ? parseFloat(share_time) : 0;
-              const initialDisplayTime = Number.isFinite(sharedTime) ? sharedTime : 0;
-              const initialMediaTime = mediaTimeFor(initialDisplayTime);
-              myRef.current!.currentTime = initialMediaTime;
-              updatePlaybackTime(initialMediaTime);
+              const initialDisplayTime =
+                initialDisplayTimeRef.current ??
+                parsePlaybackStartTime(new URLSearchParams(window.location.search).get("t"));
+              if (initialDisplayTime !== null) {
+                applyInitialDisplayTimeRef.current(initialDisplayTime);
+              }
             });
 
             // オーディオトラック情報を更新されたタイミングで取得
@@ -907,7 +948,7 @@ function Player(props: VideoProps) {
         hls.destroy(); // HLS.js インスタンスを破棄
       }
     };
-  }, [id, mediaTimeFor, searchParams, updatePlaybackTime]);
+  }, [id]);
 
   useEffect(() => {
     if (myRef.current) {
@@ -924,6 +965,15 @@ function Player(props: VideoProps) {
   const handleTimeUpdate = () => {
     if (myRef.current) {
       const mediaTime = myRef.current.currentTime;
+      const initialSeekTarget = initialSeekTargetRef.current;
+      if (initialSeekTarget !== null) {
+        if (Math.abs(mediaTime - initialSeekTarget) < 0.25) {
+          initialSeekTargetRef.current = null;
+        } else {
+          myRef.current.currentTime = initialSeekTarget;
+          return;
+        }
+      }
       if (isClipPlayback && mediaTime >= clipEnd) {
         myRef.current.currentTime = clipEnd;
         updatePlaybackTime(clipEnd);
@@ -1090,7 +1140,18 @@ function Player(props: VideoProps) {
         onPause={handleVideoPause}
         onTimeUpdate={handleTimeUpdate}
         onSeeking={() => setArchiveEnded(false)}
-        onSeeked={playbackTracking.onSeeked}
+        onSeeked={() => {
+          const video = myRef.current;
+          const initialSeekTarget = initialSeekTargetRef.current;
+          if (
+            video &&
+            initialSeekTarget !== null &&
+            Math.abs(video.currentTime - initialSeekTarget) < 0.25
+          ) {
+            initialSeekTargetRef.current = null;
+          }
+          playbackTracking.onSeeked();
+        }}
         onEnded={() => {
           setArchiveEnded(true);
           void playbackTracking.onEnded();
@@ -1101,11 +1162,10 @@ function Player(props: VideoProps) {
           const displayDuration = isClipPlayback ? clipDuration : videoElement.duration;
           setDuration(displayDuration);
           setArchiveDuration(displayDuration);
-          if (isClipPlayback) {
-            const sharedTime = Number(searchParams?.get("t") ?? 0);
-            videoElement.currentTime = mediaTimeFor(Number.isFinite(sharedTime) ? sharedTime : 0);
-            updatePlaybackTime(videoElement.currentTime);
-          }
+          const initialDisplayTime =
+            initialDisplayTimeRef.current ?? explicitStartTime ?? (isClipPlayback ? 0 : null);
+          if (initialDisplayTime === null) return;
+          applyInitialDisplayTime(initialDisplayTime);
         }}
       >
         {subtitles.map((subtitle) => (

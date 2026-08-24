@@ -3,6 +3,8 @@
 import {
   ANONYMOUS_VIEWER_STORAGE_KEY,
   finishPlaybackSession,
+  PlaybackApiError,
+  restorePlaybackSession,
   sendPlaybackProgress,
   startPlaybackSession,
 } from "@/requests/playback";
@@ -12,13 +14,16 @@ import type {
   PlaybackProgressState,
 } from "@/types/playback";
 import { useSession } from "next-auth/react";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type PlaybackCredentials = {
   accessToken?: string;
   viewerToken?: string;
   viewerChannelId?: number;
 };
+
+type RestoreState = "idle" | "pending" | "restored" | "fallback" | "blocked";
+type RestoreOutcome = "restored" | "fallback" | "blocked";
 
 type UsePlaybackSessionOptions = {
   enabled?: boolean;
@@ -55,14 +60,21 @@ export function usePlaybackSession({
   getPositionMs,
   onViewCountChange,
 }: UsePlaybackSessionOptions) {
-  const { data: authSession } = useSession();
+  const { data: authSession, status: authStatus } = useSession();
+  const [resumePositionMs, setResumePositionMs] = useState<number | null>(null);
   const playbackSessionIdRef = useRef<string | null>(null);
   const clientSessionIdRef = useRef<string | null>(null);
   const startingRef = useRef(false);
   const playingRef = useRef(false);
+  const activatedRef = useRef(false);
   const finishedRef = useRef(false);
-  const retryTimerRef = useRef<number | null>(null);
-  const retryAttemptRef = useRef(0);
+  const startRetryTimerRef = useRef<number | null>(null);
+  const restoreRetryTimerRef = useRef<number | null>(null);
+  const startRetryAttemptRef = useRef(0);
+  const restoreRetryAttemptRef = useRef(0);
+  const restoreStateRef = useRef<RestoreState>(contentType === "clip" ? "fallback" : "idle");
+  const restorePromiseRef = useRef<Promise<RestoreOutcome> | null>(null);
+  const restoreGenerationRef = useRef(0);
   const pendingFinishRef = useRef<{ reason: PlaybackFinishReason; keepalive: boolean } | null>(
     null
   );
@@ -79,8 +91,9 @@ export function usePlaybackSession({
   const accessToken = viewerChannelId ? authSession?.user?.access_token : undefined;
   const identityKey = viewerChannelId
     ? `channel:${viewerChannelId}:${accessToken ?? ""}`
-    : "anonymous";
-  const previousIdentityKeyRef = useRef(identityKey);
+    : authStatus === "loading"
+      ? "loading"
+      : "anonymous";
   credentialsRef.current = viewerChannelId
     ? { viewerChannelId, accessToken }
     : { viewerToken: typeof window === "undefined" ? undefined : readViewerToken() };
@@ -88,6 +101,8 @@ export function usePlaybackSession({
   const progress = useCallback(async (state: PlaybackProgressState) => {
     const sessionId = playbackSessionIdRef.current;
     if (!sessionId || finishedRef.current) return;
+    if (state === "playing") activatedRef.current = true;
+    if (!activatedRef.current) return;
     await sendPlaybackProgress(
       sessionId,
       { position_ms: safePosition(getPositionRef.current()), state },
@@ -102,12 +117,21 @@ export function usePlaybackSession({
       return;
     }
     if (finishedRef.current) return;
-    finishedRef.current = true;
+
     playbackSessionIdRef.current = null;
     startingRef.current = false;
-    if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current);
-    retryTimerRef.current = null;
+    if (startRetryTimerRef.current !== null) window.clearTimeout(startRetryTimerRef.current);
+    startRetryTimerRef.current = null;
     pendingFinishRef.current = null;
+
+    // A restored session is already paused. Do not finish it until playback really starts.
+    if (!activatedRef.current) {
+      sessionCredentialsRef.current = null;
+      return;
+    }
+
+    finishedRef.current = true;
+    activatedRef.current = false;
     await finishPlaybackSession(
       sessionId,
       { position_ms: safePosition(getPositionRef.current()), reason },
@@ -116,7 +140,13 @@ export function usePlaybackSession({
   }, []);
 
   const start = useCallback(async () => {
-    if (!enabled || !playingRef.current || playbackSessionIdRef.current || startingRef.current)
+    if (
+      !enabled ||
+      !playingRef.current ||
+      playbackSessionIdRef.current ||
+      startingRef.current ||
+      restoreStateRef.current !== "fallback"
+    )
       return;
     if (!clientSessionIdRef.current) clientSessionIdRef.current = crypto.randomUUID();
     startingRef.current = true;
@@ -141,10 +171,12 @@ export function usePlaybackSession({
       );
       playbackSessionIdRef.current = result.playback_session_id;
       sessionCredentialsRef.current = credentials;
-      retryAttemptRef.current = 0;
+      activatedRef.current = true;
+      startRetryAttemptRef.current = 0;
       if (!credentials.viewerChannelId && result.viewer_token) {
         writeViewerToken(result.viewer_token);
         credentialsRef.current = { viewerToken: result.viewer_token };
+        sessionCredentialsRef.current = credentialsRef.current;
       }
       onViewCountRef.current?.(result.view_count);
       const pendingFinish = pendingFinishRef.current;
@@ -156,21 +188,35 @@ export function usePlaybackSession({
     } catch {
       if (playingRef.current) {
         const delays = [1000, 3000, 10000];
-        const delay = delays[Math.min(retryAttemptRef.current, delays.length - 1)];
-        retryAttemptRef.current += 1;
-        retryTimerRef.current = window.setTimeout(() => void start(), delay);
+        const delay = delays[Math.min(startRetryAttemptRef.current, delays.length - 1)];
+        startRetryAttemptRef.current += 1;
+        startRetryTimerRef.current = window.setTimeout(() => void start(), delay);
       }
     } finally {
       startingRef.current = false;
     }
   }, [contentKey, contentType, enabled, finish, progress]);
 
+  const waitForRestore = useCallback(async (): Promise<RestoreOutcome> => {
+    if (restorePromiseRef.current) return restorePromiseRef.current;
+    if (restoreStateRef.current === "restored") return "restored";
+    if (restoreStateRef.current === "fallback") return "fallback";
+    return "blocked";
+  }, []);
+
   const onPlaying = useCallback(() => {
     if (!enabled) return;
     playingRef.current = true;
-    if (playbackSessionIdRef.current) void progress("playing");
-    else void start();
-  }, [enabled, progress, start]);
+    void (async () => {
+      const outcome = await waitForRestore();
+      if (!playingRef.current) return;
+      if (outcome === "restored") {
+        if (!activatedRef.current) await progress("playing");
+      } else if (outcome === "fallback") {
+        await start();
+      }
+    })();
+  }, [enabled, progress, start, waitForRestore]);
 
   const onPause = useCallback(() => {
     playingRef.current = false;
@@ -183,11 +229,12 @@ export function usePlaybackSession({
 
   const onEnded = useCallback(async () => {
     playingRef.current = false;
-    const completion = finish("ended");
+    await finish("ended");
     clientSessionIdRef.current = null;
     sessionCredentialsRef.current = null;
     finishedRef.current = false;
-    await completion;
+    activatedRef.current = false;
+    restoreStateRef.current = "fallback";
   }, [finish]);
 
   const onError = useCallback(() => {
@@ -196,16 +243,92 @@ export function usePlaybackSession({
   }, [finish]);
 
   useEffect(() => {
-    if (previousIdentityKeyRef.current === identityKey) return;
-    previousIdentityKeyRef.current = identityKey;
-    const wasPlaying = playingRef.current;
-    void finish("navigation", true).finally(() => {
-      clientSessionIdRef.current = null;
-      sessionCredentialsRef.current = null;
-      finishedRef.current = false;
-      if (wasPlaying) void start();
-    });
-  }, [finish, identityKey, start]);
+    const generation = ++restoreGenerationRef.current;
+    const cleanup = () => {
+      if (generation === restoreGenerationRef.current) restoreGenerationRef.current += 1;
+      if (restoreRetryTimerRef.current !== null) {
+        window.clearTimeout(restoreRetryTimerRef.current);
+        restoreRetryTimerRef.current = null;
+      }
+      restorePromiseRef.current = null;
+      void finish("navigation", true);
+    };
+    if (restoreRetryTimerRef.current !== null) window.clearTimeout(restoreRetryTimerRef.current);
+    restoreRetryTimerRef.current = null;
+    restorePromiseRef.current = null;
+    restoreRetryAttemptRef.current = 0;
+    setResumePositionMs(null);
+
+    if (!enabled || contentType === "clip") {
+      restoreStateRef.current = "fallback";
+      return cleanup;
+    }
+    if (authStatus === "loading") {
+      restoreStateRef.current = "idle";
+      return cleanup;
+    }
+
+    const credentials = credentialsRef.current;
+    if (credentials.viewerChannelId && !credentials.accessToken) {
+      restoreStateRef.current = "blocked";
+      return cleanup;
+    }
+    if (!credentials.viewerChannelId && !credentials.viewerToken) {
+      restoreStateRef.current = "fallback";
+      return cleanup;
+    }
+
+    const attemptRestore = (): Promise<RestoreOutcome> => {
+      restoreStateRef.current = "pending";
+      const promise = restorePlaybackSession(
+        {
+          content_type: contentType,
+          content_key: contentKey,
+          ...(credentials.viewerChannelId
+            ? { viewer_channel_id: credentials.viewerChannelId }
+            : {}),
+        },
+        credentials
+      )
+        .then(async (result): Promise<RestoreOutcome> => {
+          if (generation !== restoreGenerationRef.current) return "blocked";
+          playbackSessionIdRef.current = result.playback_session_id;
+          sessionCredentialsRef.current = credentials;
+          onViewCountRef.current?.(result.view_count);
+          setResumePositionMs(safePosition(result.resume_position_ms));
+          restoreStateRef.current = "restored";
+          restoreRetryAttemptRef.current = 0;
+          if (playingRef.current) await progress("playing");
+          return "restored";
+        })
+        .catch((error: unknown): RestoreOutcome => {
+          if (generation !== restoreGenerationRef.current) return "blocked";
+          if (error instanceof PlaybackApiError && error.status === 404) {
+            restoreStateRef.current = "fallback";
+            return "fallback";
+          }
+
+          restoreStateRef.current = "blocked";
+          const delays = [1000, 3000, 10000];
+          const delay = delays[Math.min(restoreRetryAttemptRef.current, delays.length - 1)];
+          restoreRetryAttemptRef.current += 1;
+          restoreRetryTimerRef.current = window.setTimeout(() => {
+            if (generation !== restoreGenerationRef.current) return;
+            restoreRetryTimerRef.current = null;
+            restorePromiseRef.current = attemptRestore();
+          }, delay);
+          return "blocked";
+        });
+      restorePromiseRef.current = promise;
+      void promise.finally(() => {
+        if (restorePromiseRef.current === promise) restorePromiseRef.current = null;
+      });
+      return promise;
+    };
+
+    void attemptRestore();
+    return cleanup;
+  }, [authStatus, contentKey, contentType, enabled, finish, identityKey, progress]);
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -224,9 +347,10 @@ export function usePlaybackSession({
     return () => {
       playingRef.current = false;
       void finish("navigation", true);
-      if (retryTimerRef.current !== null) window.clearTimeout(retryTimerRef.current);
+      if (startRetryTimerRef.current !== null) window.clearTimeout(startRetryTimerRef.current);
+      if (restoreRetryTimerRef.current !== null) window.clearTimeout(restoreRetryTimerRef.current);
     };
   }, [contentKey, contentType, finish]);
 
-  return { onPlaying, onPause, onSeeked, onEnded, onError };
+  return { resumePositionMs, onPlaying, onPause, onSeeked, onEnded, onError };
 }

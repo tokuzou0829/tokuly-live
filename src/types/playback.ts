@@ -15,6 +15,18 @@ export type PlaybackSessionStartResult = {
   viewer_token?: string | null;
 };
 
+export type PlaybackSessionRestoreInput = {
+  content_type: PlaybackContentType;
+  content_key: string;
+  viewer_channel_id?: number;
+};
+
+export type PlaybackSessionRestoreResult = {
+  playback_session_id: string;
+  resume_position_ms: number;
+  view_count: number;
+};
+
 export type PlaybackProgressState = "playing" | "paused";
 
 export type PlaybackProgressInput = {

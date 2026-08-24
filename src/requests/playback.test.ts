@@ -3,6 +3,8 @@ import {
   clearWatchHistory,
   deleteWatchHistoryItem,
   getWatchHistory,
+  PlaybackApiError,
+  restorePlaybackSession,
   startPlaybackSession,
   watchHistoryHref,
 } from "./playback";
@@ -56,6 +58,73 @@ describe("playback requests", () => {
     expect(init.headers).toMatchObject({ Authorization: "Bearer secret" });
     expect(init.headers).not.toHaveProperty("X-Tokuly-Viewer");
     expect(JSON.parse(String(init.body))).toMatchObject({ viewer_channel_id: 12 });
+  });
+
+  it("restores anonymous playback with the stored viewer token", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: {
+            playback_session_id: "restored-id",
+            resume_position_ms: 45000,
+            view_count: 101,
+          },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    );
+
+    await expect(
+      restorePlaybackSession(
+        { content_type: "video", content_key: "stream-key" },
+        { viewerToken: "anonymous-token" }
+      )
+    ).resolves.toMatchObject({ playback_session_id: "restored-id", resume_position_ms: 45000 });
+
+    const [url, init] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://api.example.test/v1/live/playback-sessions/restore");
+    expect(init.headers).toMatchObject({ "X-Tokuly-Viewer": "anonymous-token" });
+    expect(JSON.parse(String(init.body))).toEqual({
+      content_type: "video",
+      content_key: "stream-key",
+    });
+  });
+
+  it("restores channel playback with bearer authentication", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          data: { playback_session_id: "restored-id", resume_position_ms: 1000, view_count: 20 },
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } }
+      )
+    );
+
+    await restorePlaybackSession(
+      { content_type: "archive", content_key: "archive-key", viewer_channel_id: 12 },
+      { accessToken: "secret", viewerToken: "must-not-be-used" }
+    );
+
+    const init = vi.mocked(fetch).mock.calls[0][1] as RequestInit;
+    expect(init.headers).toMatchObject({ Authorization: "Bearer secret" });
+    expect(init.headers).not.toHaveProperty("X-Tokuly-Viewer");
+    expect(JSON.parse(String(init.body))).toMatchObject({ viewer_channel_id: 12 });
+  });
+
+  it("exposes a 404 restore response as PlaybackApiError", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ message: "not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    await expect(
+      restorePlaybackSession(
+        { content_type: "video", content_key: "stream-key" },
+        { viewerToken: "anonymous-token" }
+      )
+    ).rejects.toMatchObject({ status: 404 } satisfies Partial<PlaybackApiError>);
   });
 
   it("normalizes history content and creates a resume URL", async () => {
