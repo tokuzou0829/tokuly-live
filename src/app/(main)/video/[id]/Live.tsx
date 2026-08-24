@@ -29,7 +29,9 @@ export default async function LivePlayer({ id }: LiveProps) {
   ]);
 
   return (
-    <ArchivePlaybackProvider>
+    <ArchivePlaybackProvider
+      initialViewCount={typeof live.view_count === "number" ? live.view_count + 1 : undefined}
+    >
       <div className="w-[100%] overflow-hidden">
         <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_430px] xl:items-start">
           <div className="min-w-0 px-4 pt-3 xl:pr-3">

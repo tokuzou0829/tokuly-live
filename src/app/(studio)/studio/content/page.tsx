@@ -54,6 +54,7 @@ export default async function ContentPage({
                 <th className="px-4 py-3">種類</th>
                 <th className="px-4 py-3">公開設定</th>
                 <th className="px-4 py-3">状態</th>
+                <th className="px-4 py-3">再生数</th>
                 <th className="px-4 py-3">作成日時</th>
               </tr>
             </thead>
@@ -87,6 +88,11 @@ export default async function ContentPage({
                   </td>
                   <td className="px-4 py-3">
                     <StreamStatus status={stream.status} />
+                  </td>
+                  <td className="px-4 py-3 tabular-nums">
+                    {typeof stream.view_count === "number"
+                      ? stream.view_count.toLocaleString("ja-JP")
+                      : "—"}
                   </td>
                   <td className="px-4 py-3 text-[var(--studio-muted)]">
                     {new Date(stream.created_at).toLocaleDateString("ja-JP")}

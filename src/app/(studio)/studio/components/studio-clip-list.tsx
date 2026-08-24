@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { deleteStudioClip } from "@/requests/studio";
 import type { ClipPage, ClipResource } from "@/types/clip";
-import { ExternalLink, Loader2, Trash2 } from "lucide-react";
+import { BarChart3, ExternalLink, Loader2, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -128,6 +128,7 @@ export default function StudioClipList({
               <th className="px-4 py-3">作成者</th>
               <th className="px-4 py-3">元の動画</th>
               <th className="px-4 py-3">長さ</th>
+              <th className="px-4 py-3">再生数</th>
               <th className="px-4 py-3">作成日時</th>
               <th className="w-24 px-4 py-3">操作</th>
             </tr>
@@ -169,11 +170,24 @@ export default function StudioClipList({
                   </Link>
                 </td>
                 <td className="px-4 py-3">{clip.duration_seconds.toFixed(0)}秒</td>
+                <td className="px-4 py-3 tabular-nums">
+                  {typeof clip.view_count === "number"
+                    ? clip.view_count.toLocaleString("ja-JP")
+                    : "—"}
+                </td>
                 <td className="px-4 py-3 text-[var(--studio-muted)]">
                   {new Date(clip.created_at).toLocaleString("ja-JP")}
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1">
+                    <Button asChild size="icon" variant="ghost">
+                      <Link
+                        href={`/studio/clips/${encodeURIComponent(clip.clip_key)}`}
+                        aria-label={`${clip.title}の再生数分析`}
+                      >
+                        <BarChart3 className="h-4 w-4" />
+                      </Link>
+                    </Button>
                     <Button asChild size="icon" variant="ghost">
                       <Link
                         href={`/clip/${clip.clip_key}`}

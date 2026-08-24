@@ -80,6 +80,8 @@ import {
   type VideoPreviewFrame,
   type VideoPreviewManifest,
 } from "@/lib/video-preview";
+import { usePlaybackSession } from "@/hooks/use-playback-session";
+import type { PlaybackContentType } from "@/types/playback";
 
 interface VideoProps {
   id: string;
@@ -89,6 +91,8 @@ interface VideoProps {
   subtitles?: Subtitle[];
   playbackRange?: { startSeconds: number; endSeconds: number };
   shareUrl?: string;
+  playbackContent?: { type: PlaybackContentType; key: string };
+  onViewCountChange?: (viewCount: number) => void;
 }
 declare global {
   interface HTMLVideoElement {
@@ -317,6 +321,20 @@ function Player(props: VideoProps) {
       isClipPlayback ? clipDisplayToMediaTime(displayTime, clipStart, clipEnd) : displayTime,
     [clipEnd, clipStart, isClipPlayback]
   );
+
+  const playbackTracking = usePlaybackSession({
+    enabled: Boolean(props.playbackContent),
+    contentType: props.playbackContent?.type ?? "video",
+    contentKey: props.playbackContent?.key ?? id,
+    getPositionMs: () => {
+      const mediaTime = myRef.current?.currentTime ?? 0;
+      const displayTime = isClipPlayback
+        ? clipMediaToDisplayTime(mediaTime, clipStart, clipEnd)
+        : mediaTime;
+      return displayTime * 1000;
+    },
+    onViewCountChange: props.onViewCountChange,
+  });
 
   useEffect(() => {
     if (isWWF && myRef.current) {
@@ -661,6 +679,7 @@ function Player(props: VideoProps) {
 
   const handleVideoPause = () => {
     setIsPlaying(false);
+    playbackTracking.onPause();
   };
 
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -878,8 +897,6 @@ function Player(props: VideoProps) {
             video.src = videoSrc;
             video.load();
           }
-
-          myRef.current!.addEventListener("pause", handleVideoPause);
         }
       });
     };
@@ -911,10 +928,12 @@ function Player(props: VideoProps) {
         myRef.current.currentTime = clipEnd;
         updatePlaybackTime(clipEnd);
         setArchiveEnded(true);
+        void playbackTracking.onEnded();
         if (isLoop) {
           myRef.current.currentTime = clipStart;
           updatePlaybackTime(clipStart);
           void myRef.current.play();
+          playbackTracking.onPlaying();
         } else {
           myRef.current.pause();
         }
@@ -1067,10 +1086,16 @@ function Player(props: VideoProps) {
         className={`${subtitleStyleClassName} w-full h-full bg-black aspect-w-16 aspect-video`}
         onMouseEnter={handleVideoHoverEnter}
         onPlay={handleVideoPlay}
+        onPlaying={playbackTracking.onPlaying}
         onPause={handleVideoPause}
         onTimeUpdate={handleTimeUpdate}
         onSeeking={() => setArchiveEnded(false)}
-        onEnded={() => setArchiveEnded(true)}
+        onSeeked={playbackTracking.onSeeked}
+        onEnded={() => {
+          setArchiveEnded(true);
+          void playbackTracking.onEnded();
+        }}
+        onError={playbackTracking.onError}
         onLoadedMetadata={(event) => {
           const videoElement = event.target as HTMLVideoElement;
           const displayDuration = isClipPlayback ? clipDuration : videoElement.duration;

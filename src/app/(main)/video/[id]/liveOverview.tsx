@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useCallback, useEffect, useState } from "react";
+import format from "date-fns/format";
 import formatDistanceToNowStrict from "date-fns/formatDistanceToNowStrict";
 import { ja } from "date-fns/locale";
 import { utcToZonedTime } from "date-fns-tz";
@@ -30,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { Copy } from "lucide-react";
 import type { ClipPage } from "@/types/clip";
 import VideoClipsSection from "@/components/video-clips-section";
+import { useArchivePlayback } from "./archive-playback-context";
 
 export default function LiveOverview({
   live,
@@ -42,6 +44,7 @@ export default function LiveOverview({
   const [WWFRoomId, setWWFRoomId] = useAtom<string | null>(WatchWithFriendRoomId);
   const [, setIsHost] = useAtom<boolean>(IsPartyHost);
   const [partyConnectionStatus, setPartyConnectionStatus] = useAtom(WatchPartyConnectionStatus);
+  const { viewCount } = useArchivePlayback();
   const [partyUrl, setPartyUrl] = useState("");
   const [isOverviewExpanded, setIsOverviewExpanded] = useState(false);
 
@@ -77,12 +80,18 @@ export default function LiveOverview({
     ));
   }
 
-  function formatDate(streamStartTime: string, publishedAt: string): string {
+  function formatDate(
+    streamStartTime: string,
+    publishedAt: string,
+    isExpanded: boolean
+  ): string {
     const date = streamStartTime || publishedAt;
     if (!date) return "";
 
     const timeZone = "Asia/Tokyo";
     const zonedDate = utcToZonedTime(date, timeZone);
+    if (isExpanded) return format(zonedDate, "yyyy/MM/dd");
+
     const suffix = streamStartTime ? "前に配信" : "前に公開";
     return formatDistanceToNowStrict(zonedDate, { locale: ja }) + suffix;
   }
@@ -125,7 +134,17 @@ export default function LiveOverview({
         if (!isOverviewExpanded) setIsOverviewExpanded(true);
       }}
     >
-      <p className="font-bold text-slate-900">{formatDate(StreamStartTime, live.published_at)}</p>
+      <div className="flex flex-wrap items-center gap-2 text-sm font-semibold tracking-tight text-slate-700">
+        {typeof viewCount === "number" && (
+          <>
+            <p aria-live="polite" className="text-slate-900">
+              {viewCount.toLocaleString("ja-JP")} 回再生
+            </p>
+            <span aria-hidden="true" className="h-3.5 w-px bg-slate-300" />
+          </>
+        )}
+        <p>{formatDate(StreamStartTime, live.published_at, isOverviewExpanded)}</p>
+      </div>
       <div
         id="video-overview"
         className={`relative ${isOverviewExpanded ? "" : "max-h-[5.5rem] overflow-hidden"}`}

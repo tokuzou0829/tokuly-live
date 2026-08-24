@@ -10,6 +10,7 @@ import {
   WatchWithFriendRoomId,
 } from "@/atoms/watchWithFriendAtom";
 import LiveOverview from "./liveOverview";
+import { ArchivePlaybackProvider } from "./archive-playback-context";
 
 const live = {
   status: "video",
@@ -33,9 +34,11 @@ describe("watch party creation", () => {
     store.set(IsPartyHost, true);
 
     render(
-      <Provider store={store}>
-        <LiveOverview live={live} />
-      </Provider>
+      <ArchivePlaybackProvider>
+        <Provider store={store}>
+          <LiveOverview live={live} />
+        </Provider>
+      </ArchivePlaybackProvider>
     );
     fireEvent.click(screen.getByRole("button", { name: "続きを見る" }));
     fireEvent.click(screen.getByRole("button", { name: "この動画をみんなで観る" }));
@@ -51,9 +54,11 @@ describe("watch party creation", () => {
     const store = createStore();
 
     render(
-      <Provider store={store}>
-        <LiveOverview live={live} />
-      </Provider>
+      <ArchivePlaybackProvider initialViewCount={1234}>
+        <Provider store={store}>
+          <LiveOverview live={live} />
+        </Provider>
+      </ArchivePlaybackProvider>
     );
 
     expect(screen.getByRole("button", { name: "続きを見る" })).toHaveAttribute(
@@ -61,9 +66,11 @@ describe("watch party creation", () => {
       "false"
     );
     expect(screen.getByText("概要")).toBeInTheDocument();
+    expect(screen.getByText("1,234 回再生")).toBeInTheDocument();
 
     fireEvent.click(screen.getByText(/前に配信$/));
 
+    expect(screen.getByText("2026/08/10")).toBeInTheDocument();
     expect(screen.getByText("概要")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "折りたたむ" })).toHaveAttribute(
       "aria-expanded",
@@ -75,12 +82,16 @@ describe("watch party creation", () => {
     const store = createStore();
 
     render(
-      <Provider store={store}>
-        <LiveOverview live={{ ...live, stream_start_time: "" }} />
-      </Provider>
+      <ArchivePlaybackProvider>
+        <Provider store={store}>
+          <LiveOverview live={{ ...live, stream_start_time: "" }} />
+        </Provider>
+      </ArchivePlaybackProvider>
     );
 
-    expect(screen.getByText(/前に公開$/)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/前に公開$/));
+
+    expect(screen.getByText("2026/08/09")).toBeInTheDocument();
     expect(screen.queryByText("ストリーマーを待機中")).not.toBeInTheDocument();
   });
 });

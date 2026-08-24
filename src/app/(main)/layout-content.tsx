@@ -6,7 +6,7 @@ import type { Channels } from "@/types/channel";
 import { useEffect, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { Nav } from "@/app/(main)/nav";
-import { Home, Radio } from "lucide-react";
+import { History, Home, Radio } from "lucide-react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { usePathname } from "next/navigation";
 import { is } from "date-fns/locale";
@@ -95,6 +95,13 @@ export default function LayoutContent({
                     href: "/",
                     variant: "default",
                     icon: Home,
+                    label: "",
+                  },
+                  {
+                    title: "視聴履歴",
+                    href: "/watch-history",
+                    variant: "ghost",
+                    icon: History,
                     label: "",
                   },
                   {

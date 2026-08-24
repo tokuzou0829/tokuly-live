@@ -14,6 +14,9 @@ import {
   getStudioStreams,
   getStudioReactionAnalytics,
   getStudioStreamReactionAnalytics,
+  getStudioChannelViewAnalytics,
+  getStudioClipViewAnalytics,
+  getStudioStreamViewAnalytics,
   getStudioStreamComments,
   removeStudioCommentReaction,
   StudioApiError,
@@ -103,6 +106,24 @@ describe("Studio API client", () => {
         headers: expect.objectContaining({ Authorization: "Bearer token" }),
       })
     );
+  });
+
+  it("loads monthly view analytics for channel, stream and clip scopes", async () => {
+    vi.mocked(fetch).mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ data: { month: "2026-08", summary: {}, daily: [] } }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+    );
+    await getStudioChannelViewAnalytics(12, "token", "2026-08");
+    await getStudioStreamViewAnalytics(34, "token", "2026-08");
+    await getStudioClipViewAnalytics("clip/key", "token", "2026-08");
+    expect(vi.mocked(fetch).mock.calls.map(([url]) => url)).toEqual([
+      "https://api.example.test/v1/live/studio/channels/12/view-analytics?month=2026-08",
+      "https://api.example.test/v1/live/studio/streams/34/view-analytics?month=2026-08",
+      "https://api.example.test/v1/live/studio/clips/clip%2Fkey/view-analytics?month=2026-08",
+    ]);
   });
 
   it("creates a Studio channel as JSON when no icon is selected", async () => {

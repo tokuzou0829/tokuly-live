@@ -2,20 +2,34 @@ import Chat from "@/app/(main)/live/[id]/chat";
 import { auth } from "@/auth";
 import { Button } from "@/components/ui/button";
 import { getStudioContext } from "@/lib/studio-context";
-import { getListenerAnalytics, getStudioStreams } from "@/requests/studio";
+import {
+  getListenerAnalytics,
+  getStudioChannelViewAnalytics,
+  getStudioStreams,
+} from "@/requests/studio";
+import { resolveAnalyticsMonth } from "@/lib/view-analytics";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import StudioCreateMenu from "./components/studio-create-menu";
 import StudioAnalytics from "./components/studio-analytics";
 import StudioMonitor from "./components/studio-monitor";
 import StreamStatus from "./components/stream-status";
+import StudioViewAnalytics from "./components/studio-view-analytics";
 
 export const metadata = { title: "ダッシュボード" };
 
-export default async function StudioDashboard() {
+export default async function StudioDashboard({
+  searchParams,
+}: {
+  searchParams: { month?: string };
+}) {
   const [{ token, channel }, session] = await Promise.all([getStudioContext(), auth()]);
   if (!channel) return null;
-  const page = await getStudioStreams(channel.id, token, { per_page: 20 });
+  const month = resolveAnalyticsMonth(searchParams.month);
+  const [page, viewAnalytics] = await Promise.all([
+    getStudioStreams(channel.id, token, { per_page: 20 }),
+    getStudioChannelViewAnalytics(channel.id, token, month).catch(() => null),
+  ]);
   const active = page.data.find((stream) => stream.status === "online");
   const analytics = active
     ? await getListenerAnalytics(active.id, token).catch(() => ({ summary: null, timeline: [] }))
@@ -59,6 +73,13 @@ export default async function StudioDashboard() {
           </div>
         </section>
       )}
+
+      <StudioViewAnalytics
+        analytics={viewAnalytics}
+        basePath="/studio"
+        token={token}
+        title="チャンネルの再生数"
+      />
 
       <section className="studio-card overflow-hidden">
         <div className="flex items-center justify-between border-b border-[var(--studio-border)] p-5">

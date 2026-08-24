@@ -6,7 +6,9 @@ import {
   getStudioSubtitles,
   getUploadSession,
   getStudioStreamReactionAnalytics,
+  getStudioStreamViewAnalytics,
 } from "@/requests/studio";
+import { resolveAnalyticsMonth } from "@/lib/view-analytics";
 import { notFound } from "next/navigation";
 import ContentDeleteSection from "../../components/content-delete-section";
 import StreamEditor from "../../components/stream-editor";
@@ -16,13 +18,14 @@ import VideoUploader from "../../components/video-uploader";
 import StudioClipList from "../../components/studio-clip-list";
 import StudioLatestCommentsCard from "../../components/studio-latest-comments-card";
 import StudioReactionAnalytics from "../../components/studio-reaction-analytics";
+import StudioViewAnalytics from "../../components/studio-view-analytics";
 
 export default async function VideoPage({
   params,
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { clip_page?: string };
+  searchParams: { clip_page?: string; month?: string };
 }) {
   const id = Number(params.id);
   if (!Number.isInteger(id)) notFound();
@@ -31,7 +34,8 @@ export default async function VideoPage({
   const ownsStream = channels.some((item) => Number(item.id) === Number(stream.channel_id));
   if (!ownsStream || stream.type !== "video") notFound();
   const clipPage = Math.max(1, Number(searchParams.clip_page) || 1);
-  const [upload, subtitles, clips, comments, reactionAnalytics] = await Promise.all([
+  const month = resolveAnalyticsMonth(searchParams.month);
+  const [upload, subtitles, clips, comments, reactionAnalytics, viewAnalytics] = await Promise.all([
     getUploadSession(id, token),
     getStudioSubtitles(id, token).catch(() => ({ data: [], can_upload: false })),
     getStudioContentClips(stream.channel_id, token, {
@@ -41,6 +45,7 @@ export default async function VideoPage({
     }),
     getStudioStreamComments(id, token, { view: "flat", per_page: 5, page: 1 }).catch(() => null),
     getStudioStreamReactionAnalytics(id, token).catch(() => null),
+    getStudioStreamViewAnalytics(id, token, month).catch(() => null),
   ]);
   const clipHref = (page: number) => `/studio/videos/${id}?clip_page=${page}`;
   return (
@@ -56,6 +61,12 @@ export default async function VideoPage({
       </div>
       <StudioLatestCommentsCard streamId={id} token={token} initial={comments} />
       <StudioReactionAnalytics analytics={reactionAnalytics} />
+      <StudioViewAnalytics
+        analytics={viewAnalytics}
+        basePath={`/studio/videos/${id}`}
+        token={token}
+        title="動画の再生数"
+      />
       <StudioClipList
         title="この動画のクリップ"
         result={clips}

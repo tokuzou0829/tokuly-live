@@ -26,6 +26,7 @@ export type ClipResource = {
   source_video: ClipSourceVideo;
   source_channel: ClipChannel | null;
   created_at: string;
+  view_count?: number;
 };
 
 export type ClipPagination = {

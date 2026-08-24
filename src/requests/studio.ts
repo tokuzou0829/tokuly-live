@@ -13,6 +13,7 @@ import type {
 } from "@/types/studio";
 import type { ClipPage, ClipResource, CreateClipInput } from "@/types/clip";
 import type { ReactionAnalytics } from "@/types/reaction";
+import type { ViewAnalytics } from "@/types/view-analytics";
 
 export class StudioApiError extends Error {
   status: number;
@@ -162,6 +163,45 @@ export async function getStudioStreamReactionAnalytics(
 ): Promise<ReactionAnalytics> {
   return data(
     await request<{ data: ReactionAnalytics }>(`/streams/${streamId}/reaction-analytics`, token)
+  );
+}
+
+export async function getStudioChannelViewAnalytics(
+  channelId: number,
+  token: string,
+  month?: string
+): Promise<ViewAnalytics> {
+  return data(
+    await request<{ data: ViewAnalytics }>(
+      `/channels/${channelId}/view-analytics${query({ month })}`,
+      token
+    )
+  );
+}
+
+export async function getStudioStreamViewAnalytics(
+  streamId: number,
+  token: string,
+  month?: string
+): Promise<ViewAnalytics> {
+  return data(
+    await request<{ data: ViewAnalytics }>(
+      `/streams/${streamId}/view-analytics${query({ month })}`,
+      token
+    )
+  );
+}
+
+export async function getStudioClipViewAnalytics(
+  clipKey: string,
+  token: string,
+  month?: string
+): Promise<ViewAnalytics> {
+  return data(
+    await request<{ data: ViewAnalytics }>(
+      `/clips/${encodeURIComponent(clipKey)}/view-analytics${query({ month })}`,
+      token
+    )
   );
 }
 

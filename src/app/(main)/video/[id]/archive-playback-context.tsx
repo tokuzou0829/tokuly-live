@@ -15,6 +15,7 @@ type ArchivePlaybackContextValue = {
   setDuration: (duration: number) => void;
   isEnded: boolean;
   setIsEnded: (isEnded: boolean) => void;
+  viewCount: number | undefined;
   registerController: (controller: ArchivePlaybackController | null) => void;
   seekTo: (time: number) => void;
   play: () => Promise<void>;
@@ -23,10 +24,17 @@ type ArchivePlaybackContextValue = {
 
 const ArchivePlaybackContext = createContext<ArchivePlaybackContextValue | null>(null);
 
-export function ArchivePlaybackProvider({ children }: { children: React.ReactNode }) {
+export function ArchivePlaybackProvider({
+  children,
+  initialViewCount,
+}: {
+  children: React.ReactNode;
+  initialViewCount?: number;
+}) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isEnded, setIsEnded] = useState(false);
+  const [viewCount] = useState<number | undefined>(initialViewCount);
   const controller = useRef<ArchivePlaybackController | null>(null);
   const registerController = useCallback((next: ArchivePlaybackController | null) => {
     controller.current = next;
@@ -44,12 +52,13 @@ export function ArchivePlaybackProvider({ children }: { children: React.ReactNod
       setDuration,
       isEnded,
       setIsEnded,
+      viewCount,
       registerController,
       seekTo,
       play,
       pause,
     }),
-    [currentTime, duration, isEnded, pause, play, registerController, seekTo]
+    [currentTime, duration, isEnded, pause, play, registerController, seekTo, viewCount]
   );
 
   return (

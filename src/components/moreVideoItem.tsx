@@ -59,9 +59,14 @@ export function MoreVideoItem({ video }: { video: MoreVideoList }) {
               />
             )}
           </div>
-          <p className="min-w-0 truncate text-[12px] leading-tight text-muted-foreground">
+          <p className="min-w-0 flex-1 truncate text-[12px] leading-tight text-muted-foreground">
             {video.ch_name}
           </p>
+          {video.type !== "live" && typeof video.view_count === "number" && (
+            <p className="ml-auto shrink-0 whitespace-nowrap text-[11px] tabular-nums text-muted-foreground">
+              {video.view_count.toLocaleString("ja-JP")} 回再生
+            </p>
+          )}
         </div>
       </div>
     </Link>

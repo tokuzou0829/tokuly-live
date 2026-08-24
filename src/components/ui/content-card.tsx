@@ -14,6 +14,7 @@ type ContentCardProps = {
   channelIcon: string;
   durationSeconds?: number | null;
   viewerCount?: number;
+  viewCount?: number;
   variant?: "live" | "archive";
   className?: string;
   children?: ReactNode;
@@ -29,6 +30,7 @@ export function ContentCard({
   channelIcon,
   durationSeconds,
   viewerCount,
+  viewCount,
   variant,
   className,
   children,
@@ -107,9 +109,14 @@ export function ContentCard({
               />
             )}
           </div>
-          <p className="min-w-0 truncate text-[12px] leading-tight text-muted-foreground">
+          <p className="min-w-0 flex-1 truncate text-[12px] leading-tight text-muted-foreground">
             {channelName}
           </p>
+          {!isLive && typeof viewCount === "number" && (
+            <p className="ml-auto shrink-0 whitespace-nowrap text-[11px] tabular-nums text-muted-foreground">
+              {viewCount.toLocaleString("ja-JP")} 回再生
+            </p>
+          )}
         </div>
       </div>
       {children}

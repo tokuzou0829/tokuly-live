@@ -30,6 +30,7 @@ export type Live = {
   duration_seconds: number | null;
   like_count: number;
   dislike_count: number;
+  view_count?: number;
 };
 
 export type MoreVideoList = {
@@ -49,6 +50,7 @@ export type MoreVideoList = {
   duration_seconds: number | null;
   like_count: number;
   dislike_count: number;
+  view_count?: number;
 };
 
 export type LiveList = {
@@ -63,6 +65,7 @@ export type LiveList = {
   duration_seconds: number | null;
   like_count: number;
   dislike_count: number;
+  view_count?: number;
 };
 
 export type OnlineLiveList = LiveList & {

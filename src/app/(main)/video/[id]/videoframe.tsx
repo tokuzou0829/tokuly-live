@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useEffect } from "react";
 import Video from "./player";
 import type { Live } from "@/types/live";
 type Flameprops = {
@@ -38,6 +38,10 @@ export default function Videoflame(props: Flameprops) {
           poster_url={live.static_thumbnail_url}
           isUploadVideo={live.status === "video"}
           subtitles={live.subtitles ?? []}
+          playbackContent={{
+            type: live.status === "video" ? "video" : "archive",
+            key: live.stream_name,
+          }}
         />
       </div>
     </div>

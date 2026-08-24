@@ -9,7 +9,9 @@ import {
   getStudioStreamComments,
   getStudioSubtitles,
   getStudioStreamReactionAnalytics,
+  getStudioStreamViewAnalytics,
 } from "@/requests/studio";
+import { resolveAnalyticsMonth } from "@/lib/view-analytics";
 import { notFound } from "next/navigation";
 import ContentDeleteSection from "../../components/content-delete-section";
 import StudioAnalytics from "../../components/studio-analytics";
@@ -19,13 +21,14 @@ import SubtitleManager from "../../components/subtitle-manager";
 import StudioClipList from "../../components/studio-clip-list";
 import StudioLatestCommentsCard from "../../components/studio-latest-comments-card";
 import StudioReactionAnalytics from "../../components/studio-reaction-analytics";
+import StudioViewAnalytics from "../../components/studio-view-analytics";
 
 export default async function StreamPage({
   params,
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { clip_page?: string };
+  searchParams: { clip_page?: string; month?: string };
 }) {
   const id = Number(params.id);
   if (!Number.isInteger(id)) notFound();
@@ -34,23 +37,34 @@ export default async function StreamPage({
   const channel = channels.find((item) => Number(item.id) === Number(stream.channel_id));
   if (!channel || stream.type !== "live") notFound();
   const clipPage = Math.max(1, Number(searchParams.clip_page) || 1);
-  const [analytics, subtitles, clips, comments, reactionAnalytics, streamServerInfo] =
-    await Promise.all([
-      getListenerAnalytics(id, token).catch(() => ({ summary: null, timeline: [] })),
-      getStudioSubtitles(id, token).catch(() => ({ data: [], can_upload: false })),
-      stream.status === "end"
-        ? getStudioContentClips(stream.channel_id, token, {
-            source_video_id: id,
-            page: clipPage,
-            per_page: 20,
-          })
-        : Promise.resolve(null),
-      getStudioStreamComments(id, token, { view: "flat", per_page: 5, page: 1 }).catch(() => null),
-      getStudioStreamReactionAnalytics(id, token).catch(() => null),
-      stream.status !== "end" && stream.stream_key_secret
-        ? getStreamServerInfo(token).catch(() => null)
-        : Promise.resolve(null),
-    ]);
+  const month = resolveAnalyticsMonth(searchParams.month);
+  const [
+    analytics,
+    subtitles,
+    clips,
+    comments,
+    reactionAnalytics,
+    streamServerInfo,
+    viewAnalytics,
+  ] = await Promise.all([
+    getListenerAnalytics(id, token).catch(() => ({ summary: null, timeline: [] })),
+    getStudioSubtitles(id, token).catch(() => ({ data: [], can_upload: false })),
+    stream.status === "end"
+      ? getStudioContentClips(stream.channel_id, token, {
+          source_video_id: id,
+          page: clipPage,
+          per_page: 20,
+        })
+      : Promise.resolve(null),
+    getStudioStreamComments(id, token, { view: "flat", per_page: 5, page: 1 }).catch(() => null),
+    getStudioStreamReactionAnalytics(id, token).catch(() => null),
+    stream.status !== "end" && stream.stream_key_secret
+      ? getStreamServerInfo(token).catch(() => null)
+      : Promise.resolve(null),
+    stream.status === "end"
+      ? getStudioStreamViewAnalytics(id, token, month).catch(() => null)
+      : Promise.resolve(null),
+  ]);
 
   if (stream.status === "end") {
     return (
@@ -66,6 +80,12 @@ export default async function StreamPage({
         </div>
         <StudioLatestCommentsCard streamId={id} token={token} initial={comments} />
         <StudioReactionAnalytics analytics={reactionAnalytics} />
+        <StudioViewAnalytics
+          analytics={viewAnalytics}
+          basePath={`/studio/streams/${id}`}
+          token={token}
+          title="アーカイブの再生数"
+        />
         {clips && (
           <StudioClipList
             title="この動画のクリップ"
