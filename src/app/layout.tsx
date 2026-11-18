@@ -7,6 +7,13 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "TokulyLive",
   description: "完璧で究極の配信プラットフォーム",
+    icons: {
+      icon: {
+        url: "/favicons/favicon-256.ico",
+        sizes: "256x256",
+        type: "image/vnd.microsoft.icon",
+      },
+    },
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
